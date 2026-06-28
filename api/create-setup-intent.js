@@ -1,6 +1,5 @@
 const Stripe = require('stripe');
-const stripe = new Stripe('sk_test_51TmkVPCG9UHvLerJVQiQOS5yGiTkL1YKKRbDleR0x8EycFF96q6DOgPxyeQjpdhZjJvkUUBvWGe1pYYiXiUH0YGO004GdiXE4L');
-
+const stripe = new Stripe('sk_test_51Tn7eiLtf2qHDiZoQGwHjK79BuhE9t4ONEkskrbWVlZ01RMuwl1BNfdARhqP00PVUw72oMxjtICuWL8d8sGI8M2t00npUyrws5');
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
