@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Nomi Go</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.pay.jp/v1/pay.js" data-key="pk_test_5d6152d2f055a7440fccb417"></script>
+<style>
+:root{
+  --hero:#6B1A24;--bg:#160D0F;--surface:#221015;--card:#2E151A;
+  --border:#4A2028;--border2:#38181E;
+  --wine:#C04050;--wine-bg:rgba(192,64,80,.18);
+  --cream:#EDE5E0;--muted:#9A8080;--lgray:#5A4040;
+  --gold:#D4A050;--gold-bg:rgba(212,160,80,.15);
+  --green:#5AAA70;--red:#CC4040;--red-bg:rgba(204,64,64,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0A0507;font-family:-apple-system,'Hiragino Sans','Yu Gothic UI',sans-serif;color:var(--cream)}
+#app{min-height:100%;max-width:430px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes pop{0%{transform:scale(.88);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.screen{flex:1;display:flex;flex-direction:column;animation:fadeUp .28s ease both}
+.hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:var(--bg);display:flex;align-items:center;gap:12px}
+.hdr-back{background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:13px;color:var(--muted);padding:4px 0;font-weight:600;flex-shrink:0}
+.hdr-info{flex:1}
+.hdr-step{font-size:10px;font-weight:700;color:var(--wine);letter-spacing:.12em;margin-bottom:2px}
+.hdr-title{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.body::-webkit-scrollbar{width:0}
+.ftr{padding:14px 20px 28px;flex-shrink:0;border-top:1px solid var(--border2);background:var(--bg)}
+.sdiv{height:6px;background:var(--surface);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2)}
+.btn{display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:inherit;font-weight:800;border-radius:10px;transition:all .15s;font-size:16px;padding:15px 20px;width:100%;letter-spacing:.01em}
+.btn-wine{background:var(--wine);color:#fff}
+.btn:active{transform:scale(.97)}
+.drow{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-bottom:1px solid var(--border2)}
+.drow:last-child{border-bottom:none}
+.drow-k{font-size:13px;color:var(--muted)}
+.drow-v{font-size:14px;font-weight:700}
+.inp{width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:16px;outline:none;transition:border-color .15s}
+.inp::placeholder{color:var(--muted)}
+.inp:focus{border-color:var(--wine)}
+.sel-btn{flex:1;padding:16px 10px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .18s}
+.sel-btn.on{border-color:var(--wine);background:var(--wine-bg);color:var(--cream)}
+.mode-card{text-align:left;padding:20px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:5px;position:relative;width:100%;transition:all .18s;border-radius:12px}
+.mode-card.on{border-color:var(--wine);background:var(--wine-bg)}
+.mode-check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;background:var(--wine);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900}
+.sec-label{font-size:10px;font-weight:700;color:var(--wine);letter-spacing:.14em;padding:16px 20px 10px}
+.info-box{background:var(--card);border-left:3px solid var(--border);padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.75;border-radius:0 8px 8px 0;margin:0 20px}
+.err-msg{font-size:12px;color:var(--red);padding:4px 0;text-align:center}
+.loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--wine);border-radius:50%;animation:spin 1s linear infinite}
+.match-wrap{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:0 0 40px}
+.member-row{display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border2)}
+.chat-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.chat-msgs::-webkit-scrollbar{width:0}
+.msg-system{text-align:center;font-size:11px;color:var(--muted);padding:7px 14px;background:var(--surface);border-radius:20px;align-self:center}
+.msg-row{display:flex;gap:10px;align-items:flex-end}
+.msg-row.mine{flex-direction:row-reverse}
+.msg-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.msg-bubble{padding:10px 13px;border-radius:14px;font-size:14px;max-width:200px;line-height:1.5}
+.chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;background:var(--bg);flex-shrink:0}
+.chat-inp{flex:1;padding:11px 14px;border-radius:24px;border:1.5px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:15px;outline:none}
+.chat-inp:focus{border-color:var(--wine)}
+.chat-send{width:42px;height:42px;border-radius:50%;background:var(--wine);border:none;cursor:pointer;color:#fff;font-size:18px;flex-shrink:0}
+.star-btn{font-size:32px;cursor:pointer;background:none;border:none;padding:4px}
+.check-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);cursor:pointer;transition:all .15s;width:100%;font-family:inherit;text-align:left}
+.check-item.on{border-color:var(--wine);background:var(--wine-bg)}
+.tab-btn{flex:1;padding:11px;border:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
+#payjp-card-element{padding:12px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;min-height:50px}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading"><div class="spinner"></div></div></div>
+<script>
+const {createClient} = supabase;
+const DB = createClient(
+  'https://dwubothomxjwfudkeepy.supabase.co',
+  'sb_publishable_vpUd5hulLV1-gI1wsAkgWA_hrB9ZOJ9'
+);
+
+const PAYJP_PK = 'pk_test_5d6152d2f055a7440fccb417';
+
+var cardMounted = false;
+
+const AREAS = [
+  {id:'umeda',name:'梅田',city:'大阪',station:'梅田駅 中央改札前'},
+  {id:'shinjuku',name:'新宿',city:'東京',station:'新宿駅 東口改札前'},
+  {id:'shibuya',name:'渋谷',city:'東京',station:'渋谷駅 ハチ公口前'},
+  {id:'ueno',name:'上野',city:'東京',station:'上野駅 正面改札前'},
+];
+const SLOTS = ['19:00','20:00','21:00','22:00'];
+
+var S = {
+  screen:'loading', user:null, profile:null,
+  authTab:'register',
+  form:{gender:null,area:null,mode:null,slot:null},
+  registration:null, match:null, matchMembers:[],
+  chatMsgs:[], reviewStars:0, reviewChecks:[false,false,false],
+  stats:{active:0,todayMatches:0},
+  error:'', pollTimer:null, chargeId:null,
+};
+
+function render() {
+  var map = {
+    loading:loadingH, splash:splashH, email:emailH,
+    profile_new:profileNewH, area:areaH, mode:modeH, time:timeH,
+    card:cardH, waiting:waitH, matched:matchedH, chat:chatH, review:reviewH
+  };
+  document.getElementById('app').innerHTML = (map[S.screen]||loadingH)();
+}
+
+function go(sc) {
+  S.screen = sc; S.error = '';
+  if(sc !== 'card') { cardMounted = false; payjpCardElement = null; }
+  render();
+  if(sc === 'card') setTimeout(mountPayjpCard, 300);
+}
+function re(sc) { S.screen = sc; render(); }
+
+function mountPayjpCard() {
+  // input方式のため不要
+}
+
+async function init() {
+  try {
+    var r = await Promise.race([
+      DB.auth.getSession(),
+      new Promise(function(res){ setTimeout(function(){ res({data:{session:null}}); },5000); })
+    ]);
+    var sess = r.data && r.data.session;
+    if(sess && sess.user) { S.user=sess.user; await loadProfile(); }
+    else { go('splash'); }
+    loadStats();
+  } catch(e) { go('splash'); }
+}
+
+async function doSignUp() {
+  var email=document.getElementById('einp').value.trim();
+  var pass=document.getElementById('pinp').value;
+  if(!email||!pass){S.error='メールとパスワードを入力してください';re('email');return;}
+  if(pass.length<6){S.error='パスワードは6文字以上です';re('email');return;}
+  go('loading');
+  var res=await DB.auth.signUp({email:email,password:pass});
+  if(res.error){
+    var r2=await DB.auth.signInWithPassword({email:email,password:pass});
+    if(r2.error){S.error='登録に失敗しました';go('email');return;}
+    S.user=r2.data.user; await loadProfile(); return;
+  }
+  if(res.data&&res.data.session){S.user=res.data.user;await loadProfile();return;}
+  if(res.data&&res.data.user){
+    var r3=await DB.auth.signInWithPassword({email:email,password:pass});
+    if(r3.error){S.error='ログインタブからサインインしてください';go('email');return;}
+    S.user=r3.data.user; await loadProfile(); return;
+  }
+  S.error='登録に失敗しました'; go('email');
+}
+
+async function doSignIn() {
+  var email=document.getElementById('einp').value.trim();
+  var pass=document.getElementById('pinp').value;
+  if(!email||!pass){S.error='メールとパスワードを入力してください';re('email');return;}
+  go('loading');
+  var res=await DB.auth.signInWithPassword({email:email,password:pass});
+  if(res.error){S.error='メールかパスワードが違います';go('email');return;}
+  S.user=res.data.user; await loadProfile();
+}
+
+async function doReset() {
+  var email=document.getElementById('einp').value.trim();
+  if(!email){alert('メールアドレスを入力してください');return;}
+  await DB.auth.resetPasswordForEmail(email);
+  alert('パスワードリセットのメールを送りました');
+}
+
+async function logout() {
+  if(S.pollTimer) clearInterval(S.pollTimer);
+  await DB.auth.signOut();
+  S.user=null; S.profile=null; S.registration=null; S.match=null;
+  go('splash');
+}
+
+async function loadProfile() {
+  var res=await DB.from('profiles').select('*').eq('user_id',S.user.id).single();
+  S.profile=res.data;
+  if(S.profile) {
+    S.form.gender=S.profile.gender;
+    var reg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
+    if(reg.data){
+      S.registration=reg.data;
+      S.form={gender:S.profile.gender,area:reg.data.area_id,mode:reg.data.mode,slot:reg.data.slot};
+      startPolling(); go('waiting');
+    } else { go('splash'); }
+  } else { go('profile_new'); }
+}
+
+async function saveProfile() {
+  var nn=document.getElementById('pf-nn').value.trim();
+  var ag=document.getElementById('pf-ag').value;
+  var gn=window._gender;
+  if(!nn||!gn){S.error='名前と性別は必須です';re('profile_new');return;}
+  go('loading');
+  await DB.from('profiles').upsert({user_id:S.user.id,nickname:nn,age:ag?parseInt(ag):null,gender:gn,verified_level:1,updated_at:new Date().toISOString()});
+  await DB.from('user_stats').upsert({user_id:S.user.id});
+  S.profile={user_id:S.user.id,nickname:nn,age:ag,gender:gn};
+  go('area');
+}
+
+async function loadStats() {
+  try {
+    var r1=await DB.from('registrations').select('*',{count:'exact',head:true}).eq('status','waiting');
+    var r2=await DB.from('matches').select('*',{count:'exact',head:true}).gte('created_at',new Date().toISOString().split('T')[0]);
+    S.stats.active=r1.count||0; S.stats.todayMatches=r2.count||0;
+    var el=document.getElementById('live-n'); if(el) el.textContent=S.stats.active;
+  } catch(e){}
+}
+
+async function registerAndMatch() {
+  if(S.profile&&S.profile.gender==='male') { go('card'); return; }
+  await doRegisterAndMatch();
+}
+
+async function confirmCard() {
+  var btn=document.getElementById('card-btn');
+  var errEl=document.getElementById('card-err');
+  var cardNum = document.getElementById('inp-card').value.replace(/\s/g,'');
+  var expiry = document.getElementById('inp-exp').value.replace(/\s/g,'');
+  var cvc = document.getElementById('inp-cvc').value;
+  var expParts = expiry.split('/');
+  var expMonth = expParts[0] ? expParts[0].trim() : '';
+  var expYear = expParts[1] ? expParts[1].trim() : '';
+
+  if(!cardNum||!expMonth||!expYear||!cvc){
+    if(errEl) errEl.textContent='すべての項目を入力してください';
+    return;
+  }
+  if(btn){btn.disabled=true;btn.textContent='処理中...';}
+
+  try {
+    // PAY.JP v1でトークン作成
+    Payjp.setPublicKey('pk_test_5d6152d2f055a7440fccb417');
+    Payjp.createToken({
+      number: cardNum,
+      cvc: cvc,
+      exp_month: expMonth,
+      exp_year: expYear.length === 2 ? '20'+expYear : expYear
+    }, async function(status, response) {
+      if(response.error) {
+        if(errEl) errEl.textContent = response.error.message;
+        if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}
+        return;
+      }
+      var token = response.id;
+      try {
+        var res = await fetch('/api/charge', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({token:token, amount:3000, description:'Nomi Go 参加費'})
+        });
+        var data = await res.json();
+        if(!data.success){
+          if(errEl) errEl.textContent=data.error||'決済に失敗しました';
+          if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}
+          return;
+        }
+        S.chargeId = data.charge_id;
+        await doRegisterAndMatch();
+      } catch(e) {
+        if(errEl) errEl.textContent='エラー: '+e.message;
+        if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}
+      }
+    });
+  } catch(e) {
+    if(errEl) errEl.textContent='エラー: '+e.message;
+    if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}
+  }
+}
+
+async function doRegisterAndMatch() {
+  go('loading');
+  try {
+    var ins=await DB.from('registrations').insert({
+      user_id:S.user.id, area_id:S.form.area, slot:S.form.slot,
+      mode:S.form.mode, gender:S.profile.gender,
+      payment_intent_id:S.chargeId||null
+    }).select().single();
+    if(ins.error){S.error=ins.error.message;go('time');return;}
+    S.registration=ins.data;
+    var rpc=await DB.rpc('try_match',{p_area:S.form.area,p_slot:S.form.slot,p_mode:S.form.mode});
+    if(rpc.data&&rpc.data[0]&&rpc.data[0].matched){
+      var m=await DB.from('matches').select('*').eq('id',rpc.data[0].match_id).single();
+      S.match=m.data; await loadMatchMembers(); go('matched');
+    } else { startPolling(); go('waiting'); }
+  } catch(e){S.error='登録に失敗しました';go('time');}
+}
+
+function startPolling() {
+  if(S.pollTimer) clearInterval(S.pollTimer);
+  S.pollTimer=setInterval(async function(){
+    try {
+      var rpc=await DB.rpc('try_match',{p_area:S.form.area,p_slot:S.form.slot,p_mode:S.form.mode});
+      if(rpc.data&&rpc.data[0]&&rpc.data[0].matched){
+        clearInterval(S.pollTimer);
+        var reg=await DB.from('registrations').select('*').eq('id',S.registration.id).single();
+        if(reg.data&&reg.data.match_id){
+          var m=await DB.from('matches').select('*').eq('id',reg.data.match_id).single();
+          S.match=m.data; await loadMatchMembers(); go('matched');
+        }
+      }
+      loadStats();
+    }catch(e){}
+  },10000);
+}
+
+async function cancelReg() {
+  if(S.pollTimer) clearInterval(S.pollTimer);
+  if(S.registration) await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
+  S.registration=null; S.match=null; S.chargeId=null; go('splash');
+}
+
+async function cancelAfterMatch() {
+  if(S.match) await DB.from('matches').update({status:'cancelled'}).eq('id',S.match.id);
+  S.registration=null; S.match=null; S.chargeId=null; go('splash');
+}
+
+async function loadMatchMembers() {
+  if(!S.match) return;
+  var r=await DB.from('match_members').select('*, profiles(nickname,gender), user_stats(rating_avg,match_count)').eq('match_id',S.match.id);
+  S.matchMembers=r.data||[];
+}
+
+function initChat() {
+  if(S.chatMsgs.length===0){
+    var area=AREAS.find(function(a){return a.id===S.match.area_id;});
+    S.chatMsgs=[
+      {type:'system',content:'マッチング成立！チャットが作成されました'},
+      {type:'system',content:'集合場所：'+(area?area.station:'')+' / 開始：'+S.match.slot}
+    ];
+  }
+}
+
+function sendMsg() {
+  var inp=document.getElementById('cinput');
+  var txt=inp?inp.value.trim():'';
+  if(!txt) return;
+  inp.value='';
+  S.chatMsgs.push({user_id:S.user.id,profiles:{nickname:S.profile.nickname,gender:S.profile.gender},content:txt,mine:true});
+  render();
+  setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
+}
+
+async function submitReview() {
+  if(!S.match||S.reviewStars===0) return;
+  var targets=S.matchMembers.filter(function(m){return m.user_id!==S.user.id;});
+  for(var i=0;i<targets.length;i++){
+    await DB.from('reviews').insert({
+      match_id:S.match.id,reviewer_id:S.user.id,reviewee_id:targets[i].user_id,
+      stars:S.reviewStars,tag_punctual:S.reviewChecks[0],tag_friendly:S.reviewChecks[1],tag_again:S.reviewChecks[2]
+    });
+  }
+  await DB.from('matches').update({status:'completed',completed_at:new Date().toISOString()}).eq('id',S.match.id);
+  resetSession();
+}
+
+function resetSession() {
+  S.registration=null;S.match=null;S.matchMembers=[];
+  S.form={gender:S.profile?S.profile.gender:null,area:null,mode:null,slot:null};
+  S.reviewStars=0;S.reviewChecks=[false,false,false];S.chatMsgs=[];S.chargeId=null;
+  go('splash');
+}
+
+function loadingH(){return '<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:var(--muted);margin-top:8px">読み込み中...</div></div>';}
+
+function splashH(){
+  var li=!!S.user;
+  return '<div class="screen" style="padding:0">'
+    +'<div style="background:var(--hero);padding:20px 20px 0">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">'
+    +'<div style="font-size:20px;font-weight:900">Nomi Go</div>'
+    +'<div style="font-size:11px;color:rgba(237,229,224,.7);font-weight:600"><span id="live-n">'+S.stats.active+'</span>人が募集中</div>'
+    +'</div>'
+    +'<div style="font-size:36px;font-weight:900;line-height:1.1;letter-spacing:-.03em;margin-bottom:10px">今飲みたい人を<br>5分で探す</div>'
+    +'<div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">仕事終わりに、気軽に飲める相手を見つけよう</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:20px">'
+    +'<div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:22px;font-weight:900;color:#7BE090">無料</div></div>'
+    +'<div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:22px;font-weight:900">3,000円</div><div style="font-size:9px;color:rgba(237,229,224,.45);margin-top:2px">不成立なら返却</div></div>'
+    +'<div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">今日の成立</div><div style="font-size:22px;font-weight:900;color:var(--gold)">'+S.stats.todayMatches+'</div></div>'
+    +'</div>'
+    +'<div style="padding-bottom:20px">'
+    +'<button class="btn btn-wine" onclick="go(\''+(li?'area':'email')+'\')" style="font-size:17px;padding:16px">'+(li?'今すぐ探す →':'無料で始める →')+'</button>'
+    +(li?'<div style="text-align:center;margin-top:10px;font-size:12px;color:rgba(237,229,224,.4);cursor:pointer" onclick="logout()">ログアウト</div>':'')
+    +'</div></div>'
+    +'<div class="body" style="gap:0">'
+    +'<div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な人間関係が生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。</div>'
+    +'</div></div>';
+}
+
+function emailH(){
+  var isReg=S.authTab!=='login';
+  return '<div class="screen">'
+    +'<div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button>'
+    +'<div class="hdr-info"><div class="hdr-title">新規登録 / ログイン</div></div></div>'
+    +'<div class="body" style="padding:24px;gap:14px;display:flex;flex-direction:column">'
+    +'<div style="display:flex;gap:0;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border2)">'
+    +'<button class="tab-btn" style="background:'+(isReg?'var(--wine)':'transparent')+';color:'+(isReg?'#fff':'var(--muted)')+';" onclick="S.authTab=\'register\';re(\'email\')">新規登録</button>'
+    +'<button class="tab-btn" style="background:'+(!isReg?'var(--wine)':'transparent')+';color:'+(!isReg?'#fff':'var(--muted)')+';" onclick="S.authTab=\'login\';re(\'email\')">ログイン</button>'
+    +'</div>'
+    +'<input class="inp" id="einp" type="email" placeholder="メールアドレス" style="font-size:16px">'
+    +'<input class="inp" id="pinp" type="password" placeholder="パスワード（6文字以上）" style="font-size:16px">'
+    +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
+    +'</div>'
+    +'<div class="ftr"><button class="btn btn-wine" onclick="'+(isReg?'doSignUp':'doSignIn')+'()">'+(isReg?'登録して始める →':'ログイン →')+'</button></div>'
+    +'</div>';
+}
+
+function profileNewH(){
+  return '<div class="screen">'
+    +'<div class="hdr"><div class="hdr-info"><div class="hdr-step">プロフィール設定</div><div class="hdr-title">はじめまして</div></div></div>'
+    +'<div class="body">'
+    +'<div style="padding:20px 20px 0"><div class="sec-label" style="padding:0 0 10px">ニックネーム</div>'
+    +'<input class="inp" id="pf-nn" type="text" placeholder="例：たける" maxlength="10"></div>'
+    +'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 10px">年齢（任意）</div>'
+    +'<input class="inp" id="pf-ag" type="number" placeholder="例：28" style="max-width:120px"></div>'
+    +'<div class="sdiv" style="margin-top:20px"></div>'
+    +'<div class="sec-label">性別</div>'
+    +'<div style="display:flex;gap:10px;padding:0 20px 20px">'
+    +'<button class="sel-btn" id="btn-m" onclick="window._gender=\'male\';document.getElementById(\'btn-m\').classList.add(\'on\');document.getElementById(\'btn-f\').classList.remove(\'on\')">'
+    +'<span style="font-size:24px">♂</span><span style="font-size:15px;font-weight:800">男性</span><span style="font-size:11px;color:var(--muted)">3,000円/回</span></button>'
+    +'<button class="sel-btn" id="btn-f" onclick="window._gender=\'female\';document.getElementById(\'btn-f\').classList.add(\'on\');document.getElementById(\'btn-m\').classList.remove(\'on\')">'
+    +'<span style="font-size:24px">♀</span><span style="font-size:15px;font-weight:800">女性</span><span style="font-size:11px;color:var(--muted)">完全無料</span></button>'
+    +'</div>'
+    +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
+    +'</div>'
+    +'<div class="ftr"><button class="btn btn-wine" onclick="saveProfile()">登録して始める →</button></div>'
+    +'</div>';
+}
+
+function areaH(){
+  var f=S.form;
+  var cities=[];
+  AREAS.forEach(function(a){if(cities.indexOf(a.city)===-1)cities.push(a.city);});
+  var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">STEP 1 / 3</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body">';
+  cities.forEach(function(city){
+    html+='<div class="sec-label">'+city+'</div>';
+    AREAS.filter(function(a){return a.city===city;}).forEach(function(a){
+      var sel=f.area===a.id;
+      html+='<button onclick="S.form.area=\''+a.id+'\';re(\'area\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border2);background:'+(sel?'var(--wine-bg)':'transparent')+';border-left:'+(sel?'3px solid var(--wine)':'3px solid transparent')+';cursor:pointer;width:100%;font-family:inherit;border-top:none;border-right:none;transition:all .15s">'
+        +'<div style="text-align:left"><div style="font-size:16px;font-weight:800;color:'+(sel?'var(--wine)':'var(--cream)')+'">'+a.name+'</div><div style="font-size:12px;color:var(--muted);margin-top:2px">'+a.station+'</div></div>'
+        +(sel?'<div style="width:22px;height:22px;border-radius:50%;background:var(--wine);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">✓</div>':'')
+        +'</button>';
+    });
+  });
+  html+='</div><div class="ftr"><button class="btn btn-wine" '+(f.area?'':'disabled')+'onclick="go(\'mode\')">次へ →</button></div></div>';
+  return html;
+}
+
+function modeH(){
+  var f=S.form;
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'area\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">STEP 2 / 3</div><div class="hdr-title">人数を選ぶ</div></div></div>'
+    +'<div class="body" style="padding:20px;gap:12px;display:flex;flex-direction:column">'
+    +'<button class="mode-card '+(f.mode==='1v1'?'on':'')+'" onclick="S.form.mode=\'1v1\';re(\'mode\')">'
+    +(f.mode==='1v1'?'<div class="mode-check">✓</div>':'')
+    +'<span style="font-size:28px;margin-bottom:4px">🥂</span><span style="font-size:20px;font-weight:900;color:var(--cream)">1 対 1</span><span style="font-size:13px;color:var(--muted)">男性1名 + 女性1名　じっくり話したい夜に</span></button>'
+    +'<button class="mode-card '+(f.mode==='2v2'?'on':'')+'" onclick="S.form.mode=\'2v2\';re(\'mode\')">'
+    +(f.mode==='2v2'?'<div class="mode-check">✓</div>':'')
+    +'<span style="font-size:28px;margin-bottom:4px">🍻</span><span style="font-size:20px;font-weight:900;color:var(--cream)">2 対 2</span><span style="font-size:13px;color:var(--muted)">男性2名 + 女性2名　わいわい飲みたい夜に</span></button>'
+    +'</div><div class="ftr"><button class="btn btn-wine" '+(f.mode?'':'disabled')+'onclick="go(\'time\')">次へ →</button></div></div>';
+}
+
+function timeH(){
+  var f=S.form;
+  var area=AREAS.find(function(a){return a.id===f.area;});
+  var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">STEP 3 / 3</div><div class="hdr-title">時間を選ぶ</div></div></div><div class="body"><div>';
+  SLOTS.forEach(function(t){
+    var sel=f.slot===t;
+    html+='<button onclick="S.form.slot=\''+t+'\';re(\'time\')" style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border2);background:'+(sel?'var(--wine-bg)':'transparent')+';border-left:'+(sel?'3px solid var(--wine)':'3px solid transparent')+';cursor:pointer;width:100%;font-family:inherit;border-top:none;border-right:none;transition:all .15s">'
+      +'<div><div style="font-size:20px;font-weight:900;color:'+(sel?'var(--wine)':'var(--cream)')+'">'+t+'〜</div></div>'
+      +(sel?'<div style="width:22px;height:22px;border-radius:50%;background:var(--wine);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">✓</div>':'')
+      +'</button>';
+  });
+  html+='</div>';
+  if(f.slot){
+    html+='<div style="background:var(--surface);border-top:1px solid var(--border2)">'
+      +'<div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+(area?area.name:'')+'</span></div>'
+      +'<div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(f.mode==='1v1'?'1対1':'2対2')+'</span></div>'
+      +'<div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+f.slot+'〜</span></div>'
+      +'<div class="drow"><span class="drow-k">参加費</span><span class="drow-v">'+(S.profile&&S.profile.gender==='male'?'3,000円（不成立なら返却）':'無料')+'</span></div>'
+      +'</div>';
+  }
+  html+='<div style="padding:16px 20px 20px"><div style="background:var(--red-bg);border:1px solid rgba(204,64,64,.2);border-radius:10px;padding:13px;font-size:12px;color:#E08080;line-height:1.75">⚠️ 成立後のキャンセルは男女問わず一律 3,000円 のペナルティです</div></div>'
+    +'</div><div class="ftr"><button class="btn btn-wine" '+(f.slot?'':'disabled')+'onclick="registerAndMatch()">'+(S.profile&&S.profile.gender==='male'?'参加登録する →':'無料で参加登録する →')+'</button></div></div>';
+  return html;
+}
+
+function cardH(){
+  return '<div class="screen">'
+    +'<div class="hdr"><button class="hdr-back" onclick="go(\'time\')">← 戻る</button>'
+    +'<div class="hdr-info"><div class="hdr-step">お支払い情報</div><div class="hdr-title">カード登録</div></div></div>'
+    +'<div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+    +'<div style="background:var(--gold-bg);border:1px solid rgba(212,160,80,.3);border-radius:10px;padding:14px;font-size:13px;color:var(--gold);line-height:1.75">'
+    +'💳 参加費 <strong>3,000円</strong> をカードに請求します。<br>マッチングしなかった場合は全額返金されます。</div>'
+    +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
+    +'<div style="display:flex;flex-direction:column;gap:10px">'
+    +'<input class="inp" id="inp-card" type="tel" placeholder="カード番号（4242 4242 4242 4242）" maxlength="19" oninput="this.value=this.value.replace(/[^0-9]/g,\'\').replace(/(.{4})/g,\'$1 \').trim()">'
+    +'<div style="display:flex;gap:10px">'
+    +'<input class="inp" id="inp-exp" type="tel" placeholder="有効期限（MM/YY）" maxlength="5" style="flex:1" oninput="var v=this.value.replace(/[^0-9]/g,\'\');if(v.length>=3)v=v.slice(0,2)+\'/\'+v.slice(2);this.value=v;">'
+    +'<input class="inp" id="inp-cvc" type="tel" placeholder="CVC" maxlength="4" style="flex:1">'
+    +'</div>'
+    +'</div>'
+    +'<div id="card-err" class="err-msg"></div>'
+    +'</div>'
+    +'<div class="ftr"><button class="btn btn-wine" id="card-btn" onclick="confirmCard()">このカードで登録する →</button></div>'
+    +'</div>';
+}
+
+function waitH(){
+  var f=S.form;
+  var area=AREAS.find(function(a){return a.id===f.area;});
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="cancelReg()">← キャンセル</button><div class="hdr-info"><div class="hdr-step">マッチング中</div><div class="hdr-title">参加登録完了</div></div></div>'
+    +'<div class="body"><div style="background:var(--hero);padding:28px 20px 24px;text-align:center">'
+    +'<div style="font-size:11px;color:rgba(237,229,224,.6);font-weight:700;letter-spacing:.1em;margin-bottom:8px;animation:pulse 2s infinite">● マッチング中</div>'
+    +'<div style="font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px">近くで飲みたい人を<br>探しています</div>'
+    +'<div style="font-size:13px;color:rgba(237,229,224,.6)">成立するとこの画面が切り替わります</div></div>'
+    +'<div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+(area?area.name:'')+'</span></div>'
+    +'<div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(f.mode==='1v1'?'1対1':'2対2')+'</span></div>'
+    +'<div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+f.slot+'〜</span></div>'
+    +'</div></div>';
+}
+
+function matchedH(){
+  var m=S.match;
+  if(!m) return '';
+  var area=AREAS.find(function(a){return a.id===m.area_id;});
+  var membersHtml=S.matchMembers.map(function(u){
+    var isMe=u.user_id===S.user.id;
+    var gn=u.profiles?u.profiles.gender:u.gender;
+    var nick=u.profiles?u.profiles.nickname:'???';
+    return '<div class="member-row"><div style="width:38px;height:38px;border-radius:50%;background:'+(gn==='male'?'rgba(50,80,160,.35)':'rgba(160,50,100,.35)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(gn==='male'?'♂':'♀')+'</div>'
+      +'<div><div style="font-size:14px;font-weight:600">'+nick+(isMe?' <span style="font-size:10px;background:var(--wine-bg);color:var(--wine);padding:1px 6px;border-radius:4px;font-weight:700">あなた</span>':'')+'</div></div></div>';
+  }).join('');
+  return '<div class="match-wrap"><div style="padding:36px 20px 28px;border-bottom:1px solid var(--border2);text-align:center;background:var(--hero)">'
+    +'<span style="font-size:56px;animation:pop .5s ease both;display:block;margin-bottom:16px">🍻</span>'
+    +'<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 16px;border-radius:20px;background:var(--gold-bg);color:var(--gold);font-size:13px;font-weight:800;margin-bottom:8px">✓ 成立しました</div>'
+    +'<div style="font-size:30px;font-weight:900;letter-spacing:-.025em;margin-bottom:4px">よし、飲みに行こう！</div>'
+    +'<div style="font-size:13px;color:var(--muted)">'+(area?area.name:'')+' · '+(m.mode==='1v1'?'1対1':'2対2')+' · '+m.slot+'〜</div></div>'
+    +'<div style="border-bottom:1px solid var(--border2)"><div class="sec-label">集合情報</div>'
+    +'<div class="drow"><span class="drow-k">📍 集合場所</span><span class="drow-v">'+(area?area.station:'')+'</span></div>'
+    +'<div class="drow"><span class="drow-k">⏰ 開始時間</span><span class="drow-v" style="color:var(--gold)">'+m.slot+'</span></div></div>'
+    +'<div style="border-bottom:1px solid var(--border2)"><div class="sec-label">今夜のメンバー</div>'+membersHtml+'</div>'
+    +'<div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;padding-bottom:40px">'
+    +'<button class="btn btn-wine" onclick="initChat();go(\'chat\')">チャットを開く 💬</button>'
+    +'<button class="btn" style="background:transparent;color:var(--green);font-size:14px;padding:13px;border-radius:10px;border:1px solid rgba(90,170,112,.3)" onclick="go(\'review\')">飲み終わった ✓</button>'
+    +'<button class="btn" style="background:transparent;color:var(--red);font-size:12px;padding:10px" onclick="if(confirm(\'キャンセルすると3,000円のペナルティが発生します。よろしいですか？\'))cancelAfterMatch()">キャンセルする（3,000円ペナルティ）</button>'
+    +'</div></div>';
+}
+
+function chatH(){
+  var m=S.match;
+  var area=AREAS.find(function(a){return a.id===(m?m.area_id:'');});
+  var msgsHtml=S.chatMsgs.map(function(msg){
+    if(msg.type==='system') return '<div class="msg-system">'+msg.content+'</div>';
+    var isMe=msg.user_id===S.user.id;
+    var gn=msg.profiles?msg.profiles.gender:'';
+    var nick=msg.profiles?msg.profiles.nickname:'?';
+    return '<div class="msg-row '+(isMe?'mine':'')+'">'
+      +(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')
+      +'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')
+      +'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+msg.content+'</div></div></div>';
+  }).join('');
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button>'
+    +'<div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title" style="font-size:16px">'+(area?area.name:'')+' '+(m?m.slot:'')+'〜</div></div>'
+    +'<button style="background:transparent;color:var(--muted);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:600;cursor:pointer" onclick="go(\'review\')">飲み終わった</button></div>'
+    +'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div>'
+    +'<div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()">'
+    +'<button class="chat-send" onclick="sendMsg()">↑</button></div></div></div>';
+}
+
+function reviewH(){
+  var checks=['時間を守った','話しやすかった','また飲みたい'];
+  var starsHtml=[1,2,3,4,5].map(function(n){
+    return '<button class="star-btn" onclick="S.reviewStars='+n+';re(\'review\')">'+(n<=S.reviewStars?'⭐':'☆')+'</button>';
+  }).join('');
+  var checksHtml=checks.map(function(c,i){
+    return '<button class="check-item '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'
+      +'<span style="font-size:18px">'+(S.reviewChecks[i]?'✅':'⬜')+'</span>'
+      +'<span style="font-size:14px;font-weight:600;color:var(--cream)">'+c+'</span></button>';
+  }).join('');
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div>'
+    +'<div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)">'
+    +'<div style="font-size:32px;margin-bottom:12px">🍺</div>'
+    +'<div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div>'
+    +'<div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div>'
+    +'<div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'
+    +'<div style="padding:16px 20px;display:flex;flex-direction:column;gap:8px">'+checksHtml+'</div>'
+    +'</div><div class="ftr" style="display:flex;flex-direction:column;gap:8px">'
+    +'<button class="btn btn-wine" '+(S.reviewStars===0?'disabled':'')+'onclick="submitReview()">評価を送信する</button>'
+    +'<button class="btn" style="background:transparent;color:var(--muted);font-size:13px;padding:10px" onclick="resetSession()">スキップ</button>'
+    +'</div></div>';
+}
+
+DB.auth.onAuthStateChange(function(event,session){
+  if(event==='SIGNED_IN'&&session&&session.user&&!S.user){
+    S.user=session.user; loadProfile();
+  }
+});
+
+init();
+setInterval(loadStats,30000);
+</script>
+</body>
+</html>
