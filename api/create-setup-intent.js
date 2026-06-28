@@ -8,7 +8,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
   try {
-    const stripe = Stripe('sk_test_51TmkVPCG9UHvLerJVQiQOS5yGiTkL1YKKRbDleR0x8EycFF96q6DOgPxyeQjpdhZjJvkUUBvWGe1pYYiXiUH0YGO004GdiXE4L'););
+    const stripe = new Stripe('sk_test_51TmkVPCG9UHvLerJVQiQOS5yGiTkL1YKKRbDleR0x8EycFF96q6DOgPxyeQjpdhZjJvkUUBvWGe1pYYiXiUH0YGO004GdiXE4L');
     const { user_id, email } = req.body;
 
     // 既存のStripe顧客を検索、なければ作成
