@@ -275,6 +275,7 @@ async function confirmCard(){
 async function doRegister(){
   go('loading');
   try{
+    console.log('doRegister開始 area:'+S.form.area+' drink:'+S.form.drink_style+' timing:'+S.form.timing);
     var ins=await DB.from('registrations').insert({
       user_id:S.user.id,
       area_id:S.form.area,
@@ -288,12 +289,18 @@ async function doRegister(){
       payment_intent_id:S.chargeId||null,
       status:'waiting'
     }).select().single();
-    if(ins.error){S.error=ins.error.message;go('recruit');return;}
+    console.log('registration insert結果 error:'+JSON.stringify(ins.error)+' data:'+JSON.stringify(ins.data));
+    if(ins.error){S.error='登録エラー: '+ins.error.message;go('recruit');return;}
     S.registration=ins.data;
+    console.log('tryMatch呼び出し');
     var matched=await tryMatch();
+    console.log('tryMatch結果:'+matched);
     if(matched){go('matched');}
     else{startPolling();go('waiting');}
-  }catch(e){S.error='登録に失敗しました';go('recruit');}
+  }catch(e){
+    console.log('doRegister例外:'+e.message);
+    S.error='登録に失敗しました: '+e.message;go('recruit');
+  }
 }
 
 async function tryMatch(){
