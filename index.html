@@ -209,21 +209,26 @@ async function loadProfile(){
   }
 }
 
+function saveInputs(){
+  var nn=document.getElementById('pf-nn');
+  var ag=document.getElementById('pf-ag');
+  if(nn)S.pf.nickname=nn.value.trim();
+  if(ag)S.pf.age=ag.value;
+}
+
 async function saveProfile(){
   var p=S.pf;
-  var nn=document.getElementById('pf-nn')?document.getElementById('pf-nn').value.trim():p.nickname;
-  var ag=document.getElementById('pf-ag')?document.getElementById('pf-ag').value:p.age;
-  if(!nn||!ag||!p.gender||!p.area||!p.job||p.smoke===null||p.alcohol===null){
+  if(!p.nickname||!p.age||!p.gender||!p.job||p.smoke===null||p.alcohol===null){
     S.error='すべての項目を入力してください';re('profile_new');return;
   }
   go('loading');
   await DB.from('profiles').upsert({
-    user_id:S.user.id,nickname:nn,age:parseInt(ag),gender:p.gender,
-    area:p.area,job:p.job,smoke:p.smoke,alcohol:p.alcohol,
+    user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,
+    job:p.job,smoke:p.smoke,alcohol:p.alcohol,
     verified_level:1,updated_at:new Date().toISOString()
   });
   await DB.from('user_stats').upsert({user_id:S.user.id});
-  S.profile={user_id:S.user.id,nickname:nn,age:parseInt(ag),gender:p.gender,area:p.area,job:p.job,smoke:p.smoke,alcohol:p.alcohol};
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol};
   go('splash');
 }
 
@@ -238,7 +243,7 @@ async function loadStats(){
 
 async function startRecruit(){
   var f=S.form;
-  if(!f.drink_style||!f.timing||!f.age_pref){S.error='すべて選択してください';re('recruit');return;}
+  if(!f.area||!f.drink_style||!f.timing||!f.age_pref){S.error='すべて選択してください';re('recruit');return;}
   if(S.profile&&S.profile.gender==='male'){
     var fp=await DB.from('profiles').select('stripe_customer_id').eq('user_id',S.user.id).single();
     var cid=fp.data&&fp.data.stripe_customer_id;
@@ -261,6 +266,7 @@ async function confirmCard(){
       if(!data.success){if(errEl)errEl.textContent=data.error||'決済に失敗しました';if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}return;}
       S.chargeId=data.charge_id;
       await DB.from('profiles').update({stripe_customer_id:data.charge_id}).eq('user_id',S.user.id);
+      S.profile.stripe_customer_id=data.charge_id;
       await doRegister();
     }catch(e){if(errEl)errEl.textContent='エラー: '+e.message;if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}}
   })();
@@ -271,7 +277,7 @@ async function doRegister(){
   try{
     var ins=await DB.from('registrations').insert({
       user_id:S.user.id,
-      area_id:S.profile.area,
+      area_id:S.form.area,
       gender:S.profile.gender,
       drink_style:S.form.drink_style,
       timing:S.form.timing,
@@ -296,7 +302,7 @@ async function tryMatch(){
   var candidates=await DB.from('registrations')
     .select('*, profiles(*)')
     .eq('status','waiting')
-    .eq('area_id',p.area)
+    .eq('area_id',S.form.area)
     .neq('gender',p.gender)
     .neq('user_id',S.user.id);
   if(!candidates.data||candidates.data.length===0)return false;
@@ -459,61 +465,47 @@ function profileNewH(){
   return '<div class="screen">'
     +'<div class="hdr"><div class="hdr-info"><div class="hdr-step">プロフィール設定</div><div class="hdr-title">基本情報を登録</div></div></div>'
     +'<div class="body" style="padding:0 0 20px">'
-
-    // ニックネーム・年齢
     +'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div>'
-    +'<input class="inp" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'"></div>'
+    +'<input class="inp" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value"></div>'
     +'<div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div>'
-    +'<input class="inp" id="pf-ag" type="number" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'"></div>'
-
-    // 性別
+    +'<input class="inp" id="pf-ag" type="number" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="S.pf.age=this.value"></div>'
     +'<div class="sec-label">性別</div>'
     +'<div style="display:flex;gap:10px;padding:0 20px 4px">'
-    +'<button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button>'
-    +'<button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button>'
+    +'<button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button>'
+    +'<button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button>'
     +'</div>'
-
-    // エリア
-    +'<div class="sec-label">居住エリア</div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 4px">'
-    +AREAS.map(function(a){return '<button class="sel-btn '+(p.area===a?'on':'')+'" style="flex:none;padding:10px 14px" onclick="S.pf.area=\''+a+'\';re(\'profile_new\')">'+a+'</button>';}).join('')
-    +'</div>'
-
-    // 職業
     +'<div class="sec-label">職業</div>'
     +'<div style="padding:0 20px;display:flex;flex-direction:column;gap:6px">'
-    +JOBS.map(function(j){return '<button class="choice-btn '+(p.job===j?'on':'')+'" onclick="S.pf.job=\''+j+'\';re(\'profile_new\')">'+j+(p.job===j?' <span style="color:var(--wine)">✓</span>':'')+'</button>';}).join('')
+    +JOBS.map(function(j){return '<button class="choice-btn '+(p.job===j?'on':'')+'" onclick="saveInputs();S.pf.job=\''+j+'\';re(\'profile_new\')">'+j+(p.job===j?' <span style="color:var(--wine)">✓</span>':'')+'</button>';}).join('')
     +'</div>'
-
-    // タバコ
     +'<div class="sec-label">タバコ</div>'
     +'<div style="display:flex;gap:10px;padding:0 20px 4px">'
-    +'<button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button>'
-    +'<button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button>'
+    +'<button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button>'
+    +'<button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button>'
     +'</div>'
-
-    // お酒の強さ
     +'<div class="sec-label">お酒の強さ</div>'
     +'<div class="range-row">'
-    +ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')
+    +ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')
     +'</div>'
-
     +(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')
     +'</div>'
-    +'<div class="ftr"><button class="btn btn-wine" onclick="saveProfile()">登録して始める →</button></div>'
+    +'<div class="ftr"><button class="btn btn-wine" onclick="saveInputs();saveProfile()">登録して始める →</button></div>'
     +'</div>';
 }
 
 function recruitH(){
   var f=S.form;
-  var allOk=f.drink_style&&f.timing&&f.age_pref;
+  var allOk=f.area&&f.drink_style&&f.timing&&f.age_pref;
   return '<div class="screen">'
     +'<div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button>'
     +'<div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div>'
     +'<div class="body" style="padding:0 0 20px">'
 
-    // 飲みべ
-    +'<div class="sec-label">① 飲みスタイル</div>'
+    +'<div class="sec-label">① エリア</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 8px">'
+    +AREAS.map(function(a){return '<button class="sel-btn '+(f.area===a?'on':'')+'" style="flex:none;padding:10px 16px" onclick="S.form.area=\''+a+'\';re(\'recruit\')">'+a+'</button>';}).join('')
+    +'</div>'
+    +'<div class="sec-label">② 飲みスタイル</div>'
     +'<div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">'
     +DRINK_STYLES.map(function(d){
       var emoji=d==='ガッツリ飲みたい'?'🍺':d==='ゆっくり飲みたい'?'🥂':'🍽️';
@@ -523,13 +515,13 @@ function recruitH(){
     +'</div>'
 
     // タイミング
-    +'<div class="sec-label">② タイミング</div>'
+    +'<div class="sec-label">③ タイミング</div>'
     +'<div style="display:flex;gap:8px;padding:0 20px">'
     +TIMINGS.map(function(t){return '<button class="sel-btn '+(f.timing===t?'on':'')+'" onclick="S.form.timing=\''+t+'\';re(\'recruit\')">'+t+'</button>';}).join('')
     +'</div>'
 
     // 希望年齢
-    +'<div class="sec-label">③ 希望年齢</div>'
+    +'<div class="sec-label">④ 希望年齢</div>'
     +'<div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">'
     +AGE_PREFS.map(function(a){
       var isOmakase=a==='おまかせ';
