@@ -110,7 +110,7 @@ var S={
 };
 
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,recruit:recruitH,card:cardH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH};
   document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
 }
 
@@ -118,9 +118,9 @@ function go(sc){
   if(sc!=='chat'&&S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;_sendingMsg=false;}
   S.screen=sc;S.error='';
   sessionStorage.setItem('ngo_screen',sc);
-  if(sc!=='card'&&sc!=='cardregister'&&_payjpCardEl){try{_payjpCardEl.unmount();}catch(e){}_payjpCardEl=null;_payjpElements=null;}
+  if(sc!=='cardregister'&&_payjpCardEl){try{_payjpCardEl.unmount();}catch(e){}_payjpCardEl=null;_payjpElements=null;}
   render();
-  if(sc==='card'||sc==='cardregister'){
+  if(sc==='cardregister'){
     _payjpCardEl=null;_payjpElements=null;
     var tries=0;
     function tryMount(){var el=document.getElementById('payjp-card-el');if(el){mountPayjp();}else if(tries++<20){setTimeout(tryMount,100);}}
@@ -329,26 +329,6 @@ async function startRecruit(){
   }
   _isSubmitting=true;
   await doRegister();
-}
-
-async function confirmCard(){
-  var btn=document.getElementById('card-btn');
-  var errEl=document.getElementById('card-err');
-  if(!_payjp||!_payjpCardEl){if(errEl)errEl.textContent='カードが読み込まれていません';return;}
-  if(btn){btn.disabled=true;btn.textContent='処理中...';}
-  (async function(){
-    try{
-      var r=await _payjp.createToken(_payjpCardEl);
-      if(r.error){if(errEl)errEl.textContent=r.error.message;if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}return;}
-      var res=await fetch('/api/charge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:r.id,amount:3000,description:'Nomi Go 参加費'})});
-      var data=await res.json();
-      if(!data.success){if(errEl)errEl.textContent=data.error||'決済に失敗しました';if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}return;}
-      S.chargeId=data.charge_id;
-      await DB.from('profiles').update({stripe_customer_id:data.charge_id}).eq('user_id',S.user.id);
-      S.profile.stripe_customer_id=data.charge_id;
-      await doRegister();
-    }catch(e){if(errEl)errEl.textContent='エラー: '+e.message;if(btn){btn.disabled=false;btn.textContent='このカードで登録する →';}}
-  })();
 }
 
 async function goBuyTicket(){
@@ -712,12 +692,6 @@ async function loadMatchMembers(){
 async function openChat(){
   var registered=await isCardRegistered();
   if(!registered){go('cardregister');return;}
-  await initChat();
-  go('chat');
-}
-async function openChat(){
-  var registered=await isCardRegistered();
-  if(!registered){go('cardregister');return;}
   // initChatで全データ（match・通報状態・メッセージ）を確定させてから描画
   if(S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;}
   if(S.user){
@@ -997,10 +971,6 @@ function recruitH(){
   }
   html+='</div><div class="ftr"><button class="btn btn-wine" '+(allOk&&!_isSubmitting?'':'disabled ')+'onclick="startRecruit()">'+(_isSubmitting?'処理中...':(S.profile&&S.profile.gender==='male'?'参加登録する（3,000円）→':'無料で参加登録する →'))+'</button></div></div>';
   return html;
-}
-
-function cardH(){
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'recruit\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">お支払い情報</div><div class="hdr-title">カード登録</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px"><div style="background:var(--gold-bg);border:1px solid rgba(212,160,80,.3);border-radius:10px;padding:14px;font-size:13px;color:var(--gold);line-height:1.75">💳 参加費 <strong>3,000円</strong> をカードに請求します。<br>マッチングしなかった場合は全額返金されます。</div>'+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'<div style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:16px"><div id="payjp-card-el" style="min-height:44px"></div></div><div id="card-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="card-btn" onclick="confirmCard()">このカードで登録する →</button></div></div>';
 }
 
 function cardRegisterH(){
