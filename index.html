@@ -827,6 +827,14 @@ function confirmSubmitReview(){
   if(!S.match||S.reviewStars===0)return;
   var anyTagSelected=S.reviewChecks.some(function(c){return c;});
   if(!anyTagSelected){alert('評価タグを1つ以上選んでください');return;}
+  // ★修正：「その他」を選んでいる場合は、文字が入力されているか確認する
+  var isLowNow=S.reviewStars>0&&S.reviewStars<=2;
+  var checksNow=isLowNow?REVIEW_TAGS_LOW:REVIEW_TAGS;
+  var otherIdxNow=checksNow.length-1;
+  if(S.reviewChecks[otherIdxNow]&&(!S.reviewOtherText||!S.reviewOtherText.trim())){
+    alert('「その他」を選んだ場合は内容を入力してください');
+    return;
+  }
   if(!confirm('評価を送信しますか？\nこの操作は送信後に変更できません。'))return;
   _reviewSubmitting=true;
   re('review');
