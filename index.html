@@ -444,9 +444,7 @@ async function doRegister(){
 }
 
 function dbgLog(msg){
-  S._dbg=(S._dbg||[]); S._dbg.push(msg);
-  var el=document.getElementById('dbg-box');
-  if(el){el.innerHTML=S._dbg.slice(-8).map(function(m){return '<div>'+m+'</div>';}).join('');}
+  // 開発中の記録機能は本番では不要なため停止（呼び出し箇所自体は残るが何もしない）
 }
 
 async function tryMatch(){
@@ -847,15 +845,6 @@ async function submitReview(){
   }
   await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
   await saveUserResult(matchId,'completed');
-  if(S.registration)await DB.from('registrations').update({status:'completed'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
-  S.reviewStars=0;S.reviewChecks=[false,false,false];S.reviewOtherText='';S.chatMsgs=[];S.chargeId=null;go('splash');
-}
-
-async function skipReview(){
-  var matchId=S.match?S.match.id:null;
-  if(matchId)await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
-  if(matchId)await saveUserResult(matchId,'completed');
   if(S.registration)await DB.from('registrations').update({status:'completed'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
   S.reviewStars=0;S.reviewChecks=[false,false,false];S.reviewOtherText='';S.chatMsgs=[];S.chargeId=null;go('splash');
