@@ -92,6 +92,12 @@ const ALCOHOL_LEVELS=['とても弱い','弱い','普通','強い','とても強
 
 function areaName(id){var a=AREAS.find(function(x){return x.id===id;});return a?a.name:id||'';}
 
+// ユーザーが入力した文字を画面にそのまま貼り付けても安全な形に変換する（チャット等のなりすまし・不正表示対策）
+function escapeHtml(str){
+  if(str==null)return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 var _isSubmitting=false;
 var S={
   screen:'loading',user:null,profile:null,authTab:'register',
@@ -858,7 +864,12 @@ async function submitReview(){
       }
       return tagSource[idx];
     }).filter(function(t){return t!==null;});
-    await DB.from('reviews').insert({match_id:matchId,reviewer_id:S.user.id,reviewee_id:targets[i].user_id,stars:S.reviewStars,tag_punctual:S.reviewChecks[0],tag_friendly:S.reviewChecks[1],tag_again:S.reviewChecks[2],review_tags:selectedTags});
+    // ★修正：古い3項目(tag_punctual等)は「良い評価」の意味専用の場所。悪い評価の時はここには入れない(false固定)
+    var isLowNow2=S.reviewStars>0&&S.reviewStars<=2;
+    var legacyPunctual=isLowNow2?false:S.reviewChecks[0];
+    var legacyFriendly=isLowNow2?false:S.reviewChecks[1];
+    var legacyAgain=isLowNow2?false:S.reviewChecks[2];
+    await DB.from('reviews').insert({match_id:matchId,reviewer_id:S.user.id,reviewee_id:targets[i].user_id,stars:S.reviewStars,tag_punctual:legacyPunctual,tag_friendly:legacyFriendly,tag_again:legacyAgain,review_tags:selectedTags});
   }
   await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
   await saveUserResult(matchId,'completed');
@@ -1043,7 +1054,7 @@ function matchedH(){
   var membersHtml=S.matchMembers.map(function(u){
     var isMe=u.user_id===S.user.id;
     var gn=u.profiles?u.profiles.gender:'';
-    var nick=u.profiles?u.profiles.nickname:'???';
+    var nick=escapeHtml(u.profiles?u.profiles.nickname:'???');
     var age=u.profiles?u.profiles.age:'';
     var job=u.profiles?u.profiles.job:'';
     var smoke=u.profiles?u.profiles.smoke:null;
@@ -1098,7 +1109,7 @@ function matchedH(){
 }
 
 function chatH(){
-  var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+msg.content+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=msg.nickname||(msg.profiles?msg.profiles.nickname:'?');return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+msg.content+'</div></div></div>';}).join('');
+  var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+escapeHtml(msg.content)+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=escapeHtml(msg.nickname||(msg.profiles?msg.profiles.nickname:'?'));return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+escapeHtml(msg.content)+'</div></div></div>';}).join('');
   var reportBanner=S._hasReported?'<div style="padding:8px 16px;background:rgba(204,64,64,.1);border-bottom:1px solid rgba(204,64,64,.2);font-size:11px;color:var(--red);text-align:center">通報済み：運営が内容を確認中です</div>':'';
   return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div></div><button style="background:transparent;color:var(--muted);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:600;cursor:pointer" onclick="go(\'review\')">飲み終わった</button></div>'+reportBanner+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" onclick="sendMsg()">↑</button></div></div></div>';
 }
