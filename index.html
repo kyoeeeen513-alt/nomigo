@@ -518,6 +518,11 @@ async function tryMatch(){
 
   if(u1.error||u2.error)return false;
 
+  // ★修正：DBだけでなくアプリ内のメモ(S.registration)もmatchedに更新する
+  // これがないと「トップへ戻る」時に古い状態(waiting)のままと誤判定されてしまう
+  S.registration.status='matched';
+  S.registration.match_id=matchRes.data.id;
+
   // ★修正：チケット消費対象は「マッチした2人のうち男性」に固定する
   // p=自分のprofile、best.profileData=相手のprofile。どちらが男性かを判定してIDを渡す
   var maleUserId=(p.gender==='male')?S.user.id:best.user_id;
@@ -578,7 +583,12 @@ function startPolling(){
         if(reg.data&&reg.data.status==='matched'&&reg.data.match_id){
           clearInterval(S.pollTimer);
           var m=await DB.from('matches').select('*').eq('id',reg.data.match_id).single();
-          if(m.data){S.match=m.data;await loadMatchMembers();_isSubmitting=false;go('matched');return;}
+          if(m.data){
+            // ★修正：DBだけでなくアプリ内のメモ(S.registration)もmatchedに更新する
+            S.registration.status='matched';
+            S.registration.match_id=reg.data.match_id;
+            S.match=m.data;await loadMatchMembers();_isSubmitting=false;go('matched');return;
+          }
         }
       }
       var matched=await tryMatch();
@@ -660,6 +670,15 @@ async function cancelAfterMatch(){
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.chargeId=null;go('splash');
+}
+
+// キャンセルボタンの二重送信防止用ラッパー（cancelAfterMatch自体は変更しない）
+var _cancelSubmitting=false;
+function confirmCancelAfterMatch(){
+  if(_cancelSubmitting)return;
+  if(!confirm('キャンセルすると3,000円のペナルティが発生します。よろしいですか？'))return;
+  _cancelSubmitting=true;
+  cancelAfterMatch().catch(function(){}).finally(function(){_cancelSubmitting=false;});
 }
 
 async function noShowMatch(){
@@ -889,7 +908,7 @@ function splashH(){
   var recruitBtn=isMatched
     ?'<button class="btn" onclick="goRecruit()" style="font-size:17px;padding:16px;background:var(--surface);border:1.5px solid var(--border);color:var(--muted)">マッチ中のため募集停止中</button>'
     :'<button class="btn btn-wine" onclick="goRecruit()" style="font-size:17px;padding:16px">今すぐ募集する →</button>';
-  return '<div class="screen" style="padding:0"><div style="background:var(--hero);padding:20px 20px 24px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="font-size:11px;color:rgba(237,229,224,.7)"><span id="live-n">'+S.stats.active+'</span>人が募集中</div></div><div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div><div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:#7BE090">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900">3,000円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">今日の成立</div><div style="font-size:20px;font-weight:900;color:var(--gold)">'+S.stats.todayMatches+'</div></div></div>'+recruitBtn+matchCard+(li&&S.profile&&S.profile.gender==='male'?'<div style="text-align:center;margin-top:12px;font-size:12px;color:rgba(237,229,224,.6)">チケット残数：'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚<span style="margin-left:8px;text-decoration:underline;cursor:pointer" onclick="goBuyTicket()">購入する</span></div>':'')+(li?'<div style="text-align:center;margin-top:10px;font-size:12px;color:rgba(237,229,224,.4);cursor:pointer" onclick="logout()">ログアウト</div><div style="text-align:center;margin-top:6px;font-size:12px;color:rgba(237,229,224,.3);cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</div>':'')+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。</div></div></div>';
+  return '<div class="screen" style="padding:0"><div style="background:var(--hero);padding:20px 20px 24px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="font-size:11px;color:rgba(237,229,224,.7)"><span id="live-n">'+S.stats.active+'</span>人が募集中</div></div><div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div><div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:#7BE090">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900">3,000円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">今日の成立</div><div style="font-size:20px;font-weight:900;color:var(--gold)">'+S.stats.todayMatches+'</div></div></div>'+recruitBtn+matchCard+(li&&S.profile&&S.profile.gender==='male'?'<div style="text-align:center;margin-top:12px;font-size:12px;color:rgba(237,229,224,.6)">チケット残数：'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚<span style="margin-left:8px;text-decoration:underline;cursor:pointer" onclick="goBuyTicket()">購入する</span></div>':'')+(li?(isMatched?'':'<div style="text-align:center;margin-top:10px;font-size:12px;color:rgba(237,229,224,.4);cursor:pointer" onclick="logout()">ログアウト</div>')+'<div style="text-align:center;margin-top:6px;font-size:12px;color:rgba(237,229,224,.3);cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</div>':'')+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。</div></div></div>';
 }
 
 function emailH(){
@@ -931,7 +950,7 @@ function recruitH(){
   }else if(S.error){
     html+='<div class="err-msg" style="margin:8px 20px">'+S.error+'</div>';
   }
-  html+='</div><div class="ftr"><button class="btn btn-wine" '+(allOk?'':'disabled ')+'onclick="startRecruit()">'+(S.profile&&S.profile.gender==='male'?'参加登録する（3,000円）→':'無料で参加登録する →')+'</button></div></div>';
+  html+='</div><div class="ftr"><button class="btn btn-wine" '+(allOk&&!_isSubmitting?'':'disabled ')+'onclick="startRecruit()">'+(_isSubmitting?'処理中...':(S.profile&&S.profile.gender==='male'?'参加登録する（3,000円）→':'無料で参加登録する →'))+'</button></div></div>';
   return html;
 }
 
@@ -941,7 +960,7 @@ function cardH(){
 
 function cardRegisterH(){
   var hasReg=S.registration&&S.registration.id;
-  var backBtn=hasReg?'<button class="hdr-back" onclick="go(\'recruit\')">← 戻る</button>':'';
+  var backBtn='<button class="hdr-back" onclick="go(\''+(hasReg?'recruit':'splash')+'\')">← 戻る</button>';
   var isMale=S.profile&&S.profile.gender==='male';
   var freeBox=isMale?'':'<div style="background:rgba(123,224,144,.15);border:1.5px solid rgba(123,224,144,.5);border-radius:12px;padding:18px;text-align:center"><div style="font-size:24px;font-weight:900;color:#7BE090;letter-spacing:.02em;margin-bottom:8px">女性は無料です</div><div style="font-size:13px;color:var(--cream);line-height:1.6">女性は利用料金無料でご利用いただけます。</div></div>';
   var heading=isMale?'チケット購入のため、<br>カード登録をお願いしています。':'安心してご利用いただくため、<br>カード登録をお願いしています。';
@@ -1017,7 +1036,7 @@ function matchedH(){
     '<div style="margin-top:8px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">'
     +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="goReport()"><span>⚠️</span><span>問題を報告する</span></button>'
     +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="goNoShowReport()"><span>🚷</span><span>相手が来なかった</span></button>'
-    +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(204,64,64,.3);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="if(confirm(\'キャンセルすると3,000円のペナルティが発生します。よろしいですか？\'))cancelAfterMatch()"><span>✕</span><span>キャンセルする（3,000円ペナルティ）</span></button>'
+    +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(204,64,64,.3);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="confirmCancelAfterMatch()"><span>✕</span><span>キャンセルする（3,000円ペナルティ）</span></button>'
     +'</div>'
   ):'';
 
@@ -1055,7 +1074,7 @@ function reviewH(){
   var starsHtml=[1,2,3,4,5].map(function(n){return '<button class="star-btn" onclick="S.reviewStars='+n+';re(\'review\')">'+(n<=S.reviewStars?'⭐':'☆')+'</button>';}).join('');
   var checksHtml=checks.map(function(c,i){return '<button class="tag-chip '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'+c+'</button>';}).join('');
   var submitBtnLabel=_reviewSubmitting?'送信中...':'評価を送信する';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)"><div style="font-size:32px;margin-bottom:12px">🍺</div><div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div><div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px">'+checksHtml+'</div></div><div class="ftr" style="display:flex;flex-direction:column;gap:8px"><button class="btn btn-wine" '+(S.reviewStars===0||_reviewSubmitting?'disabled':'')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button><button class="btn" '+(_reviewSubmitting?'disabled':'')+' style="background:transparent;color:var(--muted);font-size:13px;padding:10px" onclick="skipReview()">スキップ</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)"><div style="font-size:32px;margin-bottom:12px">🍺</div><div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div><div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px">'+checksHtml+'</div></div><div class="ftr"><button class="btn btn-wine" '+(S.reviewStars===0||_reviewSubmitting?'disabled':'')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
 }
 
 function reportH(){
