@@ -87,6 +87,7 @@ const TIMINGS=['一次会','二次会','どちらでもOK'];
 const AGE_PREFS=['年下','近い年齢','年上','年齢問わない','おまかせ'];
 const SLOTS=['19:00','20:00','21:00','22:00'];
 const REVIEW_TAGS=['時間を守った','話しやすかった','また飲みたい','礼儀正しかった','優しかった','聞き上手だった','盛り上げ上手だった','写真通りだった'];
+const REVIEW_TAGS_LOW=['時間を守らなかった','話しにくかった','もう会いたくない','礼儀が良くなかった','冷たい態度だった','会話が弾まなかった','場を盛り下げた','写真と印象が違った'];
 const ALCOHOL_LEVELS=['とても弱い','弱い','普通','強い','とても強い'];
 
 function areaName(id){var a=AREAS.find(function(x){return x.id===id;});return a?a.name:id||'';}
@@ -808,9 +809,23 @@ function sendMsg(){
 
 // 評価送信の確認ダイアログ用（submitReview()自体は変更しない）
 var _reviewSubmitting=false;
+
+// 星を押した時に呼ぶ。2個以下⇔3個以上でタグの種類が変わるため、切り替わったら選択をリセットする
+function setReviewStars(n){
+  var wasLow=S.reviewStars>0&&S.reviewStars<=2;
+  var isLow=n<=2;
+  if(wasLow!==isLow){
+    S.reviewChecks=REVIEW_TAGS.map(function(){return false;});
+  }
+  S.reviewStars=n;
+  re('review');
+}
+
 function confirmSubmitReview(){
   if(_reviewSubmitting)return;
   if(!S.match||S.reviewStars===0)return;
+  var anyTagSelected=S.reviewChecks.some(function(c){return c;});
+  if(!anyTagSelected){alert('評価タグを1つ以上選んでください');return;}
   if(!confirm('評価を送信しますか？\nこの操作は送信後に変更できません。'))return;
   _reviewSubmitting=true;
   re('review');
@@ -823,7 +838,9 @@ async function submitReview(){
   var targets=S.matchMembers.filter(function(m){return m.user_id!==S.user.id;});
   for(var i=0;i<targets.length;i++){
     // 選ばれたタグの名前だけを配列にまとめる（新しい保存場所：review_tags）
-    var selectedTags=S.reviewChecks.map(function(checked,idx){return checked?REVIEW_TAGS[idx]:null;}).filter(function(t){return t!==null;});
+    // ★修正：星2以下は低評価用タグ、星3以上は通常タグから正しい名前を選ぶ
+    var tagSource=(S.reviewStars>0&&S.reviewStars<=2)?REVIEW_TAGS_LOW:REVIEW_TAGS;
+    var selectedTags=S.reviewChecks.map(function(checked,idx){return checked?tagSource[idx]:null;}).filter(function(t){return t!==null;});
     await DB.from('reviews').insert({match_id:matchId,reviewer_id:S.user.id,reviewee_id:targets[i].user_id,stars:S.reviewStars,tag_punctual:S.reviewChecks[0],tag_friendly:S.reviewChecks[1],tag_again:S.reviewChecks[2],review_tags:selectedTags});
   }
   await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
@@ -1070,11 +1087,16 @@ function chatH(){
 }
 
 function reviewH(){
-  var checks=REVIEW_TAGS;
-  var starsHtml=[1,2,3,4,5].map(function(n){return '<button class="star-btn" onclick="S.reviewStars='+n+';re(\'review\')">'+(n<=S.reviewStars?'⭐':'☆')+'</button>';}).join('');
+  var isLow=S.reviewStars>0&&S.reviewStars<=2;
+  var checks=isLow?REVIEW_TAGS_LOW:REVIEW_TAGS;
+  var starsHtml=[1,2,3,4,5].map(function(n){return '<button class="star-btn" onclick="setReviewStars('+n+')">'+(n<=S.reviewStars?'⭐':'☆')+'</button>';}).join('');
   var checksHtml=checks.map(function(c,i){return '<button class="tag-chip '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'+c+'</button>';}).join('');
+  // ★修正：星を押す前はタグ欄自体を表示しない
+  var checksSection=S.reviewStars>0?'<div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px">'+checksHtml+'</div>':'';
+  var anyTagSelected=S.reviewChecks.some(function(c){return c;});
+  var canSubmit=S.reviewStars>0&&anyTagSelected&&!_reviewSubmitting;
   var submitBtnLabel=_reviewSubmitting?'送信中...':'評価を送信する';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)"><div style="font-size:32px;margin-bottom:12px">🍺</div><div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div><div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px">'+checksHtml+'</div></div><div class="ftr"><button class="btn btn-wine" '+(S.reviewStars===0||_reviewSubmitting?'disabled':'')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)"><div style="font-size:32px;margin-bottom:12px">🍺</div><div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'+checksSection+'</div><div class="ftr"><button class="btn btn-wine" '+(canSubmit?'':'disabled ')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
 }
 
 function reportH(){
