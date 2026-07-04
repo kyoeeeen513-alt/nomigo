@@ -518,8 +518,10 @@ async function tryMatch(){
 
   if(u1.error||u2.error)return false;
 
-  // テスト：条件を一時的に外して必ず実行
-  await consumeTicket(matchRes.data.id);
+  // ★修正：チケット消費対象は「マッチした2人のうち男性」に固定する
+  // p=自分のprofile、best.profileData=相手のprofile。どちらが男性かを判定してIDを渡す
+  var maleUserId=(p.gender==='male')?S.user.id:best.user_id;
+  await consumeTicket(matchRes.data.id,maleUserId);
   
   // ★重要：消費後に必ずstate同期
   await syncUserState();
@@ -530,7 +532,7 @@ async function tryMatch(){
   return true;
 }
 
-async function consumeTicket(matchId){
+async function consumeTicket(matchId,targetUserId){
   dbgLog('T0: consumeTicket呼び出し matchId='+matchId.slice(0,8));
   // 条件付き更新：ticket_consumed=falseの行だけを対象にすることで二重消費を防止（冪等性の担保）
   var lockRes=await DB.from('matches').update({ticket_consumed:true}).eq('id',matchId).eq('ticket_consumed',false).select().single();
@@ -539,13 +541,14 @@ async function consumeTicket(matchId){
     dbgLog('T1x: 消費済みor対象なしのため中断');
     return;
   }
-  var current=await DB.from('profiles').select('ticket_count').eq('user_id',S.user.id).single();
+  // ★修正：S.user.id（操作した人）ではなく、渡された男性ユーザーIDを対象にする
+  var current=await DB.from('profiles').select('ticket_count').eq('user_id',targetUserId).single();
   dbgLog('T2: current err='+(current.error?current.error.message:'なし')+' ticket_count='+(current.data?current.data.ticket_count:'null'));
   var oldCount=current.data&&current.data.ticket_count?current.data.ticket_count:0;
   var newCount=oldCount-1;
   if(newCount<0)newCount=0;
   // 読み取った時点のticket_countを条件に含めることで、その間に他の処理が値を変えていた場合の上書きを防ぐ
-  var upd=await DB.from('profiles').update({ticket_count:newCount}).eq('user_id',S.user.id).eq('ticket_count',oldCount).select().single();
+  var upd=await DB.from('profiles').update({ticket_count:newCount}).eq('user_id',targetUserId).eq('ticket_count',oldCount).select().single();
   dbgLog('T3: upd err='+(upd.error?upd.error.message:'なし')+' newCount='+(upd.data?upd.data.ticket_count:'null'));
   if(upd.error||!upd.data){
     dbgLog('T3x: DB更新失敗');
