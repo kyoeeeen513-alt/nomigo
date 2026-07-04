@@ -1109,14 +1109,29 @@ function reviewH(){
   var otherIdx=checks.length-1;
   var starsHtml=[1,2,3,4,5].map(function(n){return '<button class="star-btn" onclick="setReviewStars('+n+')">'+(n<=S.reviewStars?'⭐':'☆')+'</button>';}).join('');
   var checksHtml=checks.map(function(c,i){return '<button class="tag-chip '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'+c+'</button>';}).join('');
-  // 「その他」が選ばれている時だけ、下に文字入力欄を出す
-  var otherInput=S.reviewChecks[otherIdx]?'<div style="padding:0 20px 16px"><input class="inp" id="review-other-inp" type="text" placeholder="自由に入力してください" maxlength="50" value="'+(S.reviewOtherText||'')+'" oninput="S.reviewOtherText=this.value"></div>':'';
+  // 「その他」が選ばれている時だけ、下に文字入力欄を出す。入力のたびにボタンの押せる状態だけ直接更新する（画面全体は再描画しない）
+  var otherInput=S.reviewChecks[otherIdx]?'<div style="padding:0 20px 16px"><input class="inp" id="review-other-inp" type="text" placeholder="自由に入力してください" maxlength="50" value="'+(S.reviewOtherText||'')+'" oninput="S.reviewOtherText=this.value;updateReviewSubmitBtn()"></div>':'';
   // ★修正：星を押す前はタグ欄自体を表示しない
   var checksSection=S.reviewStars>0?'<div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px">'+checksHtml+'</div>'+otherInput:'';
   var anyTagSelected=S.reviewChecks.some(function(c){return c;});
-  var canSubmit=S.reviewStars>0&&anyTagSelected&&!_reviewSubmitting;
+  // ★修正：「その他」を選んでいる場合は文字が入っていないとボタンも押せないようにする
+  var otherOk=!S.reviewChecks[otherIdx]||(S.reviewOtherText&&S.reviewOtherText.trim().length>0);
+  var canSubmit=S.reviewStars>0&&anyTagSelected&&otherOk&&!_reviewSubmitting;
   var submitBtnLabel=_reviewSubmitting?'送信中...':'評価を送信する';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)"><div style="font-size:32px;margin-bottom:12px">🍺</div><div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'+checksSection+'</div><div class="ftr"><button class="btn btn-wine" '+(canSubmit?'':'disabled ')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)"><div style="font-size:32px;margin-bottom:12px">🍺</div><div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'+checksSection+'</div><div class="ftr"><button class="btn btn-wine" id="review-submit-btn" '+(canSubmit?'':'disabled ')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
+}
+
+// 「その他」の文字入力のたびに、送信ボタンの押せる/押せないだけを直接書き換える（画面全体は再描画しない）
+function updateReviewSubmitBtn(){
+  var btn=document.getElementById('review-submit-btn');
+  if(!btn)return;
+  var isLow=S.reviewStars>0&&S.reviewStars<=2;
+  var checks=isLow?REVIEW_TAGS_LOW:REVIEW_TAGS;
+  var otherIdx=checks.length-1;
+  var anyTagSelected=S.reviewChecks.some(function(c){return c;});
+  var otherOk=!S.reviewChecks[otherIdx]||(S.reviewOtherText&&S.reviewOtherText.trim().length>0);
+  var canSubmit=S.reviewStars>0&&anyTagSelected&&otherOk&&!_reviewSubmitting;
+  btn.disabled=!canSubmit;
 }
 
 function reportH(){
