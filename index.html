@@ -74,7 +74,6 @@ var _payjp=null,_payjpElements=null,_payjpCardEl=null;
 var _sbReady=false;
 var DB;
 
-const SCORE={DRINK_MATCH:30,AGE_CLOSE_5:20,AGE_CLOSE_10:10,AGE_CLOSE_20:5,SMOKE_MATCH:20,ALCOHOL_MATCH:15,ALCOHOL_NEAR:8};
 const AREAS=[
   {id:'umeda',name:'梅田'},
   {id:'shinjuku',name:'新宿'},
@@ -544,18 +543,6 @@ async function consumeTicket(matchId,targetUserId){
     dbgLog('T3x: DB更新失敗');
   }
   // ※ここではstate更新をしない（syncUserStateで後から行う）
-}
-
-function calcScore(myProfile,myForm,theirReg,theirProfile){
-  var score=0;
-  if(myForm.drink_style===theirReg.drink_style)score+=SCORE.DRINK_MATCH;
-  var ageDiff=Math.abs((myProfile.age||25)-(theirProfile&&theirProfile.age?theirProfile.age:25));
-  if(ageDiff<=5)score+=SCORE.AGE_CLOSE_5;else if(ageDiff<=10)score+=SCORE.AGE_CLOSE_10;else if(ageDiff<=20)score+=SCORE.AGE_CLOSE_20;
-  if(myProfile.smoke&&theirProfile&&myProfile.smoke===theirProfile.smoke)score+=SCORE.SMOKE_MATCH;
-  var a1=myProfile.alcohol||2;var a2=theirProfile&&theirProfile.alcohol!=null?theirProfile.alcohol:2;
-  var alcoholDiff=Math.abs(a1-a2);
-  if(alcoholDiff===0)score+=SCORE.ALCOHOL_MATCH;else if(alcoholDiff===1)score+=SCORE.ALCOHOL_NEAR;
-  return score;
 }
 
 function startPolling(){
