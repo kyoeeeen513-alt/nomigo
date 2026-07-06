@@ -67,7 +67,7 @@ html,body{height:100%;background:#0A0507;font-family:-apple-system,'Hiragino San
 .chat-inp{flex:1;padding:11px 14px;border-radius:24px;border:1.5px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:15px;outline:none}
 .chat-inp:focus{border-color:var(--wine)}
 .chat-send{width:42px;height:42px;border-radius:50%;background:var(--wine);border:none;cursor:pointer;color:#fff;font-size:18px;flex-shrink:0}
-.star-btn{font-size:32px;cursor:pointer;background:none;border:none;padding:4px;outline:none;-webkit-appearance:none;appearance:none;box-shadow:none}
+.star-btn{cursor:pointer;background:none;border:none;padding:4px;outline:none;-webkit-appearance:none;appearance:none;box-shadow:none;display:inline-flex}
 .star-btn:focus,.star-btn:active,.star-btn:focus-visible{outline:2px solid var(--gold) !important;outline-offset:2px;border-radius:6px;box-shadow:none !important}
 .check-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);cursor:pointer;transition:all .15s;width:100%;font-family:inherit;text-align:left}
 .check-item.on{border-color:var(--wine);background:var(--wine-bg)}
@@ -1203,7 +1203,8 @@ function reviewH(){
   var isLow=S.reviewStars>0&&S.reviewStars<=2;
   var checks=isLow?REVIEW_TAGS_LOW:REVIEW_TAGS;
   var otherIdx=checks.length-1;
-  var starsHtml=[1,2,3,4,5].map(function(n){return '<button class="star-btn" onclick="setReviewStars('+n+')">'+(n<=S.reviewStars?'⭐':'☆')+'</button>';}).join('');
+  var starSvg='<svg width="32" height="32" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7L2 9.2l7.1-.6z" fill="{FILL}" stroke="var(--gold)" stroke-width="1.5"/></svg>';
+  var starsHtml=[1,2,3,4,5].map(function(n){var svg=starSvg.replace('{FILL}',n<=S.reviewStars?'var(--gold)':'transparent');return '<button class="star-btn" onclick="setReviewStars('+n+')">'+svg+'</button>';}).join('');
   var checksHtml=checks.map(function(c,i){return '<button class="tag-chip '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'+c+'</button>';}).join('');
   // 「その他」が選ばれている時だけ、下に文字入力欄を出す。入力のたびにボタンの押せる状態だけ直接更新する（画面全体は再描画しない）
   var otherInput=S.reviewChecks[otherIdx]?'<div style="padding:0 20px 16px"><input class="inp" id="review-other-inp" type="text" placeholder="自由に入力してください" maxlength="50" value="'+(S.reviewOtherText||'')+'" oninput="S.reviewOtherText=this.value;updateReviewSubmitBtn()"></div>':'';
