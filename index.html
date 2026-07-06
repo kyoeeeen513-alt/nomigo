@@ -398,6 +398,7 @@ async function startRecruit(){
   if(_isSubmitting)return;
   var f=S.form;
   if(!f.area||!f.slot||!f.drink_style||!f.age_pref){S.error='すべて選択してください';re('recruit');return;}
+  if(f.mode==='2v2'&&!f.partner_age){S.error='すべて選択してください';re('recruit');return;}
   if(S.profile&&S.profile.gender==='male'){
     if(!S.profile.ticket_count||S.profile.ticket_count<1){S.error='ticket_zero';re('recruit');return;}
   }
@@ -507,6 +508,7 @@ async function doRegister(){
       age:S.profile.age,
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
+      partner_age:S.form.mode==='2v2'&&S.form.partner_age?parseInt(S.form.partner_age):null,
       payment_intent_id:S.chargeId||null,
       status:'waiting'
     }).select().single();
@@ -1082,7 +1084,8 @@ function profileEditH(){
 
 function recruitH(){
   var f=S.form;
-  var allOk=f.area&&f.slot&&f.drink_style&&f.age_pref;
+  var isPair=f.mode==='2v2';
+  var allOk=f.area&&f.slot&&f.drink_style&&f.age_pref&&(!isPair||f.partner_age);
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① エリア</div><div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 8px">';
   AREAS.forEach(function(a){html+='<button class="sel-btn '+(f.area===a.id?'on':'')+'" style="flex:none;padding:10px 16px" onclick="S.form.area=\''+a.id+'\';re(\'recruit\')">'+a.name+'</button>';});
@@ -1096,6 +1099,9 @@ function recruitH(){
   html+='<div class="sec-label">④ 希望年齢</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
   AGE_PREFS.forEach(function(a){var isO=a==='おまかせ';html+='<button class="choice-btn '+(f.age_pref===a?'on':'')+'" onclick="S.form.age_pref=\''+a+'\';re(\'recruit\')"><span>'+(isO?'✨ ':'')+a+(isO?' （おすすめ）':'')+'</span>'+(f.age_pref===a?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
+  if(isPair){
+    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="number" placeholder="例：27" style="max-width:120px" value="'+(f.partner_age||'')+'" oninput="S.form.partner_age=this.value"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
+  }
   html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※マッチ率を優先するため、ご希望以外の年代の方とマッチングする場合があります。</div>';
   if(S.ticketPurchaseSuccess){
     html+='<div style="margin:8px 20px;padding:14px;background:rgba(90,170,112,.15);border:1px solid rgba(90,170,112,.3);border-radius:10px;color:var(--green);font-size:13px;line-height:1.7">✓ 購入完了！チケット残数：'+(S.profile&&S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div>';
