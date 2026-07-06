@@ -632,7 +632,9 @@ function startPolling(){
 async function cancelReg(){
   if(S.pollTimer)clearInterval(S.pollTimer);
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.chargeId=null;go('splash');
+  S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
+  S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
+  go('splash');
 }
 
 // マッチ結果ステータスを一度だけ更新する（status='confirmed'の行のみ対象。二重送信・上書き防止）
