@@ -136,6 +136,7 @@ function go(sc){
   S.screen=sc;S.error='';S.info='';
   sessionStorage.setItem('ngo_screen',sc);
   sessionStorage.setItem('ngo_form',JSON.stringify(S.form));
+  sessionStorage.setItem('ngo_pf',JSON.stringify(S.pf));
   if(sc!=='cardregister'&&_payjpCardEl){try{_payjpCardEl.unmount();}catch(e){}_payjpCardEl=null;_payjpElements=null;}
   render();
   if(sc==='cardregister'){
@@ -161,7 +162,7 @@ async function syncTicketCount(){
     }
   }
 }
-function re(sc){S.screen=sc;render();}
+function re(sc){S.screen=sc;sessionStorage.setItem('ngo_screen',sc);sessionStorage.setItem('ngo_pf',JSON.stringify(S.pf));render();}
 
 function mountPayjp(){
   if(_payjpCardEl)return;
@@ -261,6 +262,21 @@ async function loadProfile(){
 // 画面遷移の責務はここだけが持つ。loadProfileとは完全に分離
 async function routeAfterLoad(){
   if(!S.profile){
+    var lastScreen0=sessionStorage.getItem('ngo_screen');
+    if(lastScreen0==='email'){
+      go('email');
+      return;
+    }
+    if(lastScreen0==='profile_new'&&S.user){
+      var savedPf=sessionStorage.getItem('ngo_pf');
+      if(savedPf){
+        try{S.pf=JSON.parse(savedPf);}catch(e){S.pf={nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null};}
+      }else{
+        S.pf={nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null};
+      }
+      go('profile_new');
+      return;
+    }
     S.pf={nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null};
     go('splash');
     return;
@@ -1051,7 +1067,7 @@ async function saveProfileEdit(){
 
 function profileNewH(){
   var p=S.pf;
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール設定</div><div class="hdr-title">基本情報を登録</div></div></div><div class="body" style="padding:0 0 20px"><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" id="pf-ag" type="number" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="S.pf.age=this.value"></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px;display:flex;flex-direction:column;gap:6px">'+JOBS.map(function(j){return '<button class="choice-btn '+(p.job===j?'on':'')+'" onclick="saveInputs();S.pf.job=\''+j+'\';re(\'profile_new\')">'+j+(p.job===j?' <span style="color:var(--wine)">✓</span>':'')+'</button>';}).join('')+'</div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール設定</div><div class="hdr-title">基本情報を登録</div></div></div><div class="body" style="padding:0 0 20px"><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem('ngo_pf',JSON.stringify(S.pf))"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" id="pf-ag" type="number" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="S.pf.age=this.value;sessionStorage.setItem('ngo_pf',JSON.stringify(S.pf))"></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px;display:flex;flex-direction:column;gap:6px">'+JOBS.map(function(j){return '<button class="choice-btn '+(p.job===j?'on':'')+'" onclick="saveInputs();S.pf.job=\''+j+'\';re(\'profile_new\')">'+j+(p.job===j?' <span style="color:var(--wine)">✓</span>':'')+'</button>';}).join('')+'</div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
 }
 
 // プロフィール編集画面（見た目は新規登録画面と同じ形。保存先の関数だけ違う）
