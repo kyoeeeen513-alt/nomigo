@@ -522,9 +522,18 @@ async function chargeForTicket(customerId){
 
 async function doRegister(){
   go('loading');
+  // ★追加：万が一通信が返ってこなくても、10秒で強制的に諦めて画面を戻す(永久に固まるのを防ぐ)
+  var timeoutFlag={hit:false};
+  var timeoutId=setTimeout(function(){
+    timeoutFlag.hit=true;
+    _isSubmitting=false;
+    S.error='通信に時間がかかっています。もう一度お試しください。';
+    go('recruit');
+  },10000);
   try{
     var existing=await DB.from('registrations').select('id').eq('user_id',S.user.id).eq('status','waiting').single();
-    if(existing.data){_isSubmitting=false;S.registration=existing.data;startPolling();go('waiting');return;}
+    if(timeoutFlag.hit)return;
+    if(existing.data){clearTimeout(timeoutId);_isSubmitting=false;S.registration=existing.data;startPolling();go('waiting');return;}
     var ins=await DB.from('registrations').insert({
       user_id:S.user.id,
       area_id:S.form.area,
@@ -537,15 +546,16 @@ async function doRegister(){
       age:S.profile.age,
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
-      partner_age:S.form.mode==='2v2'&&S.form.partner_age?parseInt(S.form.partner_age):null,
       payment_intent_id:S.chargeId||null,
       status:'waiting'
     }).select().single();
-    if(ins.error){_isSubmitting=false;S.error='登録エラー: '+ins.error.message;go('recruit');return;}
+    if(timeoutFlag.hit)return;
+    if(ins.error){clearTimeout(timeoutId);_isSubmitting=false;S.error='登録エラー: '+ins.error.message;go('recruit');return;}
+    clearTimeout(timeoutId);
     S.registration=ins.data;
     var matched=await tryMatch();
     if(matched){go('matched');}else{startPolling();go('waiting');}
-  }catch(e){_isSubmitting=false;S.error='登録に失敗しました: '+e.message;go('recruit');}
+  }catch(e){clearTimeout(timeoutId);if(!timeoutFlag.hit){_isSubmitting=false;S.error='登録に失敗しました: '+e.message;go('recruit');}}
 }
 
 function dbgLog(msg){
