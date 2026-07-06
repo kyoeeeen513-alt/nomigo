@@ -355,6 +355,10 @@ async function routeAfterLoad(){
       go('review');
     }else if(lastScreen==='matched'){
       go('matched');
+    }else if(lastScreen==='report'){
+      var opponentR=S.matchMembers.find(function(m){return m.user_id!==S.user.id;});
+      S._reportTargetUserId=opponentR?opponentR.user_id:null;
+      go('report');
     }else{
       go('splash'); // matched状態はトップへ。マッチ継続カードで案内する
     }
@@ -363,8 +367,8 @@ async function routeAfterLoad(){
   // ★追加：マッチ中でも待機中でもない場合も、リロード前の画面と入力内容を復元する
   // ただし「アプリを閉じてしばらく経っている」場合は、募集内容はまっさらに戻す
   var lastScreen2=sessionStorage.getItem('ngo_screen');
-  var restorable=['mode_select','recruit','profile_edit','terms','privacy','inquiry'];
-  var recruitFlowScreens=['mode_select','recruit'];
+  var restorable=['area_select','mode_select','recruit','profile_edit','terms','privacy','inquiry','faqbot','forgot_password'];
+  var recruitFlowScreens=['area_select','mode_select','recruit'];
   var lastActive=parseInt(sessionStorage.getItem('ngo_last_active')||'0');
   var awayMs=Date.now()-lastActive;
   var wasAwayLong=lastActive>0&&awayMs>2*60*1000; // 2分以上離れていたら「閉じていた」とみなす
@@ -384,6 +388,8 @@ async function routeAfterLoad(){
     }
     if(lastScreen2==='profile_edit'){
       goProfileEdit();
+    }else if(lastScreen2==='faqbot'){
+      if(!S.faqMsgs||!S.faqMsgs.length){goFaqBot();}else{go('faqbot');}
     }else{
       go(lastScreen2);
     }
