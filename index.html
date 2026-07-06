@@ -83,6 +83,10 @@ html,body{height:100%;background:#0A0507;font-family:-apple-system,'Hiragino San
 .mode-card-square img{object-position:center 25%}
 .mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:18px 16px 14px}
 .mode-card-title{font-size:17px;font-weight:900;color:#fff}
+.area-card img{filter:saturate(.65) contrast(1.08) brightness(.85)}
+.area-card-tint{position:absolute;inset:0;background:linear-gradient(180deg,rgba(74,18,26,.35),rgba(74,18,26,.15) 40%,rgba(0,0,0,.65));pointer-events:none}
+.area-card-label{position:absolute;bottom:0;left:0;right:0;padding:16px}
+.area-card-title{font-size:22px;font-weight:900;color:#fff;letter-spacing:.02em;text-shadow:0 2px 8px rgba(0,0,0,.6)}
 </style>
 </head>
 <body>
@@ -93,10 +97,10 @@ var _sbReady=false;
 var DB;
 
 const AREAS=[
-  {id:'umeda',name:'梅田'},
-  {id:'shinjuku',name:'新宿'},
-  {id:'shibuya',name:'渋谷'},
-  {id:'ueno',name:'上野'}
+  {id:'susukino',name:'すすきの',img:'area_susukino.jpg'},
+  {id:'ueno',name:'上野',img:'area_ueno.jpg'},
+  {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg'},
+  {id:'umeda',name:'梅田',img:'area_umeda.jpg'}
 ];
 const JOBS=['会社員','自営業・フリーランス','学生','公務員','医療・福祉','IT・エンジニア','クリエイター','サービス業','その他'];
 const DRINK_STYLES=['ガッツリ飲みたい','ゆっくり飲みたい','ご飯メイン'];
@@ -149,7 +153,7 @@ var S={
 };
 
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH};
   document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
 }
 
@@ -395,7 +399,20 @@ async function goRecruit(){
   }
   var registered=await isCardRegistered();
   if(!registered){go('cardregister');return;}
+  go('area_select');
+}
+
+// エリアを選ぶ画面（選んだら人数選択画面へ進む）
+function selectArea(areaId){
+  S.form.area=areaId;
   go('mode_select');
+}
+
+function areaSelectH(){
+  var cardsHtml=AREAS.map(function(a){
+    return '<div class="mode-card area-card" onclick="selectArea(\''+a.id+'\')"><img src="'+a.img+'" alt="'+a.name+'"><div class="area-card-tint"></div><div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
+  }).join('');
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'</div></div>';
 }
 
 // 1:1か2:2かを選ぶ画面（選んだら募集画面へ進む）
@@ -406,7 +423,7 @@ function selectMode(m){
 
 function modeSelectH(){
   var m=S.form.mode;
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">人数を選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'area_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">人数を選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'
     +'<div class="mode-card mode-card-square" onclick="selectMode(\'1v1\')"><img src="mode_1v1.jpg" alt="1対1で飲む"><div class="mode-card-label"><span class="mode-card-title">🍺 1対1で飲む</span></div></div>'
     +'<div class="mode-card" onclick="selectMode(\'2v2\')"><img src="mode_2v2.jpg" alt="2対2で飲む"><div class="mode-card-label"><span class="mode-card-title">🍻 2対2で飲む</span></div></div>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">同じ人数を希望する人同士でマッチングします。</div>'
@@ -1134,20 +1151,17 @@ function recruitH(){
   var isPair=f.mode==='2v2';
   var allOk=f.area&&f.slot&&f.drink_style&&f.age_pref&&(!isPair||f.partner_age);
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
-  html+='<div class="sec-label">① エリア</div><div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 8px">';
-  AREAS.forEach(function(a){html+='<button class="sel-btn '+(f.area===a.id?'on':'')+'" style="flex:none;padding:10px 16px" onclick="S.form.area=\''+a.id+'\';re(\'recruit\')">'+a.name+'</button>';});
-  html+='</div>';
-  html+='<div class="sec-label">② 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
+  html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
   SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
   html+='</div>';
-  html+='<div class="sec-label">③ 飲みスタイル</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
+  html+='<div class="sec-label">② 飲みスタイル</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
   DRINK_STYLES.forEach(function(d){var emoji=d==='ガッツリ飲みたい'?'🍺':d==='ゆっくり飲みたい'?'🥂':'🍽️';html+='<button class="choice-btn '+(f.drink_style===d?'on':'')+'" onclick="S.form.drink_style=\''+d+'\';re(\'recruit\')"><span>'+emoji+' '+d+'</span>'+(f.drink_style===d?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
-  html+='<div class="sec-label">④ 希望年齢</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
+  html+='<div class="sec-label">③ 希望年齢</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
   AGE_PREFS.forEach(function(a){var isO=a==='おまかせ';html+='<button class="choice-btn '+(f.age_pref===a?'on':'')+'" onclick="S.form.age_pref=\''+a+'\';re(\'recruit\')"><span>'+(isO?'✨ ':'')+a+(isO?' （おすすめ）':'')+'</span>'+(f.age_pref===a?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
   if(isPair){
-    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="number" placeholder="例：27" style="max-width:120px;background:#FFFFFF;color:#6A4A50" value="'+(f.partner_age||'')+'" oninput="S.form.partner_age=this.value"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
+    html+='<div class="sec-label">④ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="number" placeholder="例：27" style="max-width:120px;background:#FFFFFF;color:#6A4A50" value="'+(f.partner_age||'')+'" oninput="S.form.partner_age=this.value"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
   }
   html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※マッチ率を優先するため、ご希望以外の年代の方とマッチングする場合があります。</div>';
   if(S.ticketPurchaseSuccess){
