@@ -1100,7 +1100,7 @@ function recruitH(){
   AGE_PREFS.forEach(function(a){var isO=a==='おまかせ';html+='<button class="choice-btn '+(f.age_pref===a?'on':'')+'" onclick="S.form.age_pref=\''+a+'\';re(\'recruit\')"><span>'+(isO?'✨ ':'')+a+(isO?' （おすすめ）':'')+'</span>'+(f.age_pref===a?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
   if(isPair){
-    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="number" placeholder="例：27" style="max-width:120px" value="'+(f.partner_age||'')+'" oninput="S.form.partner_age=this.value"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
+    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="number" placeholder="例：27" style="max-width:120px;background:#FFFFFF;color:#6A4A50" value="'+(f.partner_age||'')+'" oninput="S.form.partner_age=this.value"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
   }
   html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※マッチ率を優先するため、ご希望以外の年代の方とマッチングする場合があります。</div>';
   if(S.ticketPurchaseSuccess){
