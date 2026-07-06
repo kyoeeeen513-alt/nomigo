@@ -361,8 +361,19 @@ async function routeAfterLoad(){
     return;
   }
   // ★追加：マッチ中でも待機中でもない場合も、リロード前の画面と入力内容を復元する
+  // ただし「アプリを閉じてしばらく経っている」場合は、募集内容はまっさらに戻す
   var lastScreen2=sessionStorage.getItem('ngo_screen');
-  var restorable=['profile_edit','terms','privacy','inquiry'];
+  var restorable=['mode_select','recruit','profile_edit','terms','privacy','inquiry'];
+  var recruitFlowScreens=['mode_select','recruit'];
+  var lastActive=parseInt(sessionStorage.getItem('ngo_last_active')||'0');
+  var awayMs=Date.now()-lastActive;
+  var wasAwayLong=lastActive>0&&awayMs>2*60*1000; // 2分以上離れていたら「閉じていた」とみなす
+  if(lastScreen2&&recruitFlowScreens.indexOf(lastScreen2)!==-1&&wasAwayLong){
+    // 長時間離れていた場合は募集の途中内容を捨てて、トップからやり直してもらう
+    S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
+    go('splash');
+    return;
+  }
   if(lastScreen2&&restorable.indexOf(lastScreen2)!==-1){
     var savedForm=sessionStorage.getItem('ngo_form');
     if(savedForm){
@@ -1223,6 +1234,12 @@ function profileEditH(){
 function recruitH(){
   var f=S.form;
   var isPair=f.mode==='2v2';
+  // ★修正：年齢の初期値を先に埋めてから、ボタンが押せるかどうかを判定する
+  var myAgeNum=S.profile&&S.profile.age?parseInt(S.profile.age):25;
+  var defaultMin=Math.max(20,myAgeNum-5);
+  var defaultMax=myAgeNum+5;
+  if(f.age_min==null||f.age_min===''){f.age_min=defaultMin;}
+  if(f.age_max==null||f.age_max===''){f.age_max=defaultMax;}
   var allOk=f.area&&f.slot&&f.drink_style&&(f.age_any||(f.age_min&&f.age_max&&parseInt(f.age_min)<=parseInt(f.age_max)))&&(!isPair||f.partner_age);
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
@@ -1231,12 +1248,6 @@ function recruitH(){
   html+='<div class="sec-label">② 飲みスタイル</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
   DRINK_STYLES.forEach(function(d){var emoji=d==='ガッツリ飲みたい'?'🍺':d==='ゆっくり飲みたい'?'🥂':'🍽️';html+='<button class="choice-btn '+(f.drink_style===d?'on':'')+'" onclick="S.form.drink_style=\''+d+'\';re(\'recruit\')"><span>'+emoji+' '+d+'</span>'+(f.drink_style===d?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
-  var myAgeNum=S.profile&&S.profile.age?parseInt(S.profile.age):25;
-  var defaultMin=Math.max(20,myAgeNum-5);
-  var defaultMax=myAgeNum+5;
-  // 初回だけ、上下5歳を初期値として自動で入れておく（それ以降は本人の入力を優先）
-  if(f.age_min==null||f.age_min===''){f.age_min=defaultMin;}
-  if(f.age_max==null||f.age_max===''){f.age_max=defaultMax;}
   var ageFloor=20;
   var ageCeil=99;
   html+='<div class="sec-label">③ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">✨ 何歳でもいい</span></label>'+(f.age_any?'':'<div style="display:flex;align-items:center;gap:10px"><input class="inp" type="number" placeholder="下限" style="max-width:130px" value="'+(f.age_min||'')+'" onfocus="this.select()" oninput="S.form.age_min=this.value" onblur="this.value=clampAgeMin(this.value,'+defaultMin+');S.form.age_min=this.value;re(\'recruit\')"><span style="color:var(--muted)">〜</span><input class="inp" type="number" placeholder="上限" style="max-width:130px" value="'+(f.age_max||'')+'" onfocus="this.select()" oninput="S.form.age_max=this.value" onblur="this.value=clampAgeMax(this.value,'+defaultMax+');S.form.age_max=this.value;re(\'recruit\')"></div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">※初期設定はご自身の年齢の上下5歳（最低20歳）です。数字を変えれば、さらに範囲を広げることもできます。範囲内で、より年齢が近い相手が優先的にマッチします。</div></div>';
@@ -1520,6 +1531,14 @@ function inquiryH(){
   }
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">お問い合わせ</div><div class="hdr-title">運営へ連絡する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><div class="sec-label" style="padding:0 0 8px">お名前（任意）</div><input id="inquiry-name" class="inp" type="text" placeholder="例：山田太郎"><div class="sec-label" style="padding:0 0 8px">メールアドレス（必須）</div><input id="inquiry-email" class="inp" type="email" placeholder="例：sample@mail.com"><div class="sec-label" style="padding:0 0 8px">お問い合わせ内容</div><textarea id="inquiry-content" class="inp" style="height:160px;resize:none" placeholder="ご質問・ご要望・お困りのことをご記入ください"></textarea><div id="inquiry-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="inquiry-btn" onclick="submitInquiry()">送信する</button></div></div>';
 }
+
+// 画面が非表示になった瞬間(アプリを閉じた・タブを切り替えた等)の時刻を記録しておく
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){sessionStorage.setItem('ngo_last_active',String(Date.now()));}
+});
+window.addEventListener('pagehide',function(){
+  sessionStorage.setItem('ngo_last_active',String(Date.now()));
+});
 
 init();
 setInterval(loadStats,30000);
