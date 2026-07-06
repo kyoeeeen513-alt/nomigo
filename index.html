@@ -76,9 +76,9 @@ html,body{height:100%;background:#0A0507;font-family:-apple-system,'Hiragino San
 .range-row{display:flex;gap:6px;padding:0 20px}
 .range-btn{flex:1;padding:10px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit;cursor:pointer;font-size:11px;font-weight:700;text-align:center;transition:all .18s}
 .range-btn.on{border-color:var(--wine);background:var(--wine-bg);color:var(--cream)}
-.mode-card{position:relative;border-radius:16px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .18s}
+.mode-card{position:relative;border-radius:16px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .18s;background:#000}
 .mode-card:active{transform:scale(.98)}
-.mode-card img{width:100%;height:180px;object-fit:cover;display:block}
+.mode-card img{width:100%;height:220px;object-fit:contain;display:block}
 .mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:18px 16px 14px}
 .mode-card-title{font-size:17px;font-weight:900;color:#fff}
 </style>
@@ -133,6 +133,7 @@ function go(sc){
   if(sc!=='chat'&&S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;_sendingMsg=false;}
   S.screen=sc;S.error='';S.info='';
   sessionStorage.setItem('ngo_screen',sc);
+  sessionStorage.setItem('ngo_form',JSON.stringify(S.form));
   if(sc!=='cardregister'&&_payjpCardEl){try{_payjpCardEl.unmount();}catch(e){}_payjpCardEl=null;_payjpElements=null;}
   render();
   if(sc==='cardregister'){
@@ -284,6 +285,24 @@ async function routeAfterLoad(){
       go('matched');
     }else{
       go('splash'); // matched状態はトップへ。マッチ継続カードで案内する
+    }
+    return;
+  }
+  // ★追加：マッチ中でも待機中でもない場合も、リロード前の画面と入力内容を復元する
+  var lastScreen2=sessionStorage.getItem('ngo_screen');
+  var restorable=['mode_select','recruit','profile_edit','terms','privacy','inquiry'];
+  if(lastScreen2&&restorable.indexOf(lastScreen2)!==-1){
+    var savedForm=sessionStorage.getItem('ngo_form');
+    if(savedForm){
+      try{
+        var parsed=JSON.parse(savedForm);
+        S.form=Object.assign(S.form,parsed);
+      }catch(e){}
+    }
+    if(lastScreen2==='profile_edit'){
+      goProfileEdit();
+    }else{
+      go(lastScreen2);
     }
     return;
   }
