@@ -379,7 +379,7 @@ async function isCardRegistered(){
 async function startRecruit(){
   if(_isSubmitting)return;
   var f=S.form;
-  if(!f.area||!f.slot||!f.drink_style||!f.timing||!f.age_pref){S.error='すべて選択してください';re('recruit');return;}
+  if(!f.area||!f.slot||!f.drink_style||!f.age_pref){S.error='すべて選択してください';re('recruit');return;}
   if(S.profile&&S.profile.gender==='male'){
     if(!S.profile.ticket_count||S.profile.ticket_count<1){S.error='ticket_zero';re('recruit');return;}
   }
