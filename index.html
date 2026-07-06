@@ -120,7 +120,7 @@ const FAQ_QA=[
   {keywords:['2対2','2:2','2v2','友達'],answer:'2対2は、友達と一緒に参加して、同じく2人組の相手とマッチする仕組みです。1対1と2対2は別々にマッチングされます。'},
   {keywords:['1対1','1:1','1v1'],answer:'1対1は、あなた1人と、お相手1人とのマッチです。'},
   {keywords:['マッチ','マッチング','相手','見つから'],answer:'条件に合うお相手が見つかり次第、自動でマッチが成立します。すぐに見つからない場合は、条件を変えてみるのもおすすめです。'},
-  {keywords:['年齢','年上','年下'],answer:'募集の際に「年下」「近い年齢」「年上」「年齢問わない」「おまかせ」から希望を選べます。ただしマッチ率を優先するため、希望と異なる年代とマッチする場合もあります。'},
+  {keywords:['年齢','年上','年下'],answer:'募集の際に、許容できる年齢の範囲（例：23〜30歳）を入力するか、「何歳でもいい」を選べます。お互いの範囲に収まる相手とマッチングされます。'},
   {keywords:['退会','やめたい','解約'],answer:'退会をご希望の場合は、トップ画面右上のメニューから「退会希望の方はこちら」を選んで申請してください。運営が確認後、対応します。'},
   {keywords:['通報','迷惑','危険','嫌な思い'],answer:'マッチ後の画面にある「その他のメニュー」から通報できます。運営が内容を確認し、必要な対応をします。'},
   {keywords:['評価','レビュー','星'],answer:'飲み会が終わったら「飲み終わった」ボタンから、お相手を星とタグで評価できます。'},
@@ -136,6 +136,23 @@ const ALCOHOL_LEVELS=['とても弱い','弱い','普通','強い','とても強
 
 function areaName(id){var a=AREAS.find(function(x){return x.id===id;});return a?a.name:id||'';}
 
+// 「年下」「年上」「近い年齢」などの希望が、実際の相手の年齢と合っているか判定する
+// 「許容できる年齢の範囲」に、相手の実際の年齢が入っているか判定する
+// 入力された年齢を、許された範囲(floor〜ceil)からはみ出さないように収める
+function clampAge(val,floor,ceil){
+  var n=parseInt(val);
+  if(isNaN(n))return '';
+  if(n<floor)n=floor;
+  if(n>ceil)n=ceil;
+  return n;
+}
+
+function ageMatches(isAny,minAge,maxAge,otherAge){
+  if(isAny)return true;
+  if(otherAge==null||minAge==null||maxAge==null)return true;
+  return otherAge>=minAge&&otherAge<=maxAge;
+}
+
 // ユーザーが入力した文字を画面にそのまま貼り付けても安全な形に変換する（チャット等のなりすまし・不正表示対策）
 function escapeHtml(str){
   if(str==null)return '';
@@ -145,7 +162,7 @@ function escapeHtml(str){
 var _isSubmitting=false;
 var S={
   screen:'loading',user:null,profile:null,authTab:'register',
-  form:{area:null,slot:null,drink_style:null,timing:null,age_pref:null},
+  form:{area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false},
   registration:null,match:null,matchMembers:[],
   chatMsgs:[],reviewStars:0,reviewChecks:[false,false,false],
   stats:{active:0,todayMatches:0},
@@ -271,7 +288,7 @@ async function loadProfile(){
   var matchedReg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
   if(matchedReg.data&&matchedReg.data.match_id){
     S.registration=matchedReg.data;
-    S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,drink_style:matchedReg.data.drink_style,timing:matchedReg.data.timing,age_pref:matchedReg.data.age_pref};
+    S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,drink_style:matchedReg.data.drink_style,timing:matchedReg.data.timing,age_min:matchedReg.data.age_min,age_max:matchedReg.data.age_max,age_any:matchedReg.data.age_any};
     var m=await DB.from('matches').select('*').eq('id',matchedReg.data.match_id).single();
     if(m.data)S.match=m.data;
     await loadMatchMembers();
@@ -282,7 +299,7 @@ async function loadProfile(){
   var reg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
   if(reg.data){
     S.registration=reg.data;
-    S.form={area:reg.data.area_id,slot:reg.data.slot,drink_style:reg.data.drink_style,timing:reg.data.timing,age_pref:reg.data.age_pref};
+    S.form={area:reg.data.area_id,slot:reg.data.slot,drink_style:reg.data.drink_style,timing:reg.data.timing,age_min:reg.data.age_min,age_max:reg.data.age_max,age_any:reg.data.age_any};
   }
 }
 
@@ -452,7 +469,7 @@ async function isCardRegistered(){
 async function startRecruit(){
   if(_isSubmitting)return;
   var f=S.form;
-  if(!f.area||!f.slot||!f.drink_style||!f.age_pref){S.error='すべて選択してください';re('recruit');return;}
+  if(!f.area||!f.slot||!f.drink_style||(!f.age_any&&(!f.age_min||!f.age_max||parseInt(f.age_min)>parseInt(f.age_max)))){S.error='すべて選択してください';re('recruit');return;}
   if(f.mode==='2v2'&&!f.partner_age){S.error='すべて選択してください';re('recruit');return;}
   if(S.profile&&S.profile.gender==='male'){
     if(!S.profile.ticket_count||S.profile.ticket_count<1){S.error='ticket_zero';re('recruit');return;}
@@ -568,7 +585,9 @@ async function doRegister(){
       gender:S.profile.gender,
       drink_style:S.form.drink_style,
       timing:'どちらでもOK',
-      age_pref:S.form.age_pref,
+      age_any:!!S.form.age_any,
+      age_min:S.form.age_any?null:parseInt(S.form.age_min),
+      age_max:S.form.age_any?null:parseInt(S.form.age_max),
       age:S.profile.age,
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
@@ -599,9 +618,12 @@ async function tryMatch(){
   dbgLog('S2: err='+(candidates.error?candidates.error.message:'なし')+' 件数='+(candidates.data?candidates.data.length:0));
   if(!candidates.data||candidates.data.length===0){return false;}
 
+  // ★追加：飲みスタイルが同じ人 かつ お互いの希望年齢を満たす人だけに絞り込む
   var filtered=candidates.data.filter(function(c){
-    var t1=S.form.timing;var t2=c.timing;
-    return t1==='どちらでもOK'||t2==='どちらでもOK'||t1===t2;
+    if(c.drink_style!==S.form.drink_style)return false;
+    var iWantThem=ageMatches(S.form.age_any,S.form.age_min?parseInt(S.form.age_min):null,S.form.age_max?parseInt(S.form.age_max):null,c.age);
+    var theyWantMe=ageMatches(c.age_any,c.age_min,c.age_max,p.age);
+    return iWantThem&&theyWantMe;
   });
   dbgLog('S3: filtered='+filtered.length);
   if(filtered.length===0){return false;}
@@ -717,7 +739,7 @@ async function cancelReg(){
   if(S.pollTimer)clearInterval(S.pollTimer);
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
-  S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
+  S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
 
@@ -787,7 +809,7 @@ async function cancelAfterMatch(){
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
-  S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
+  S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
 
@@ -807,7 +829,7 @@ async function noShowMatch(){
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
-  S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
+  S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
 
@@ -982,7 +1004,7 @@ async function submitReview(){
   await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
   await saveUserResult(matchId,'completed');
   if(S.registration)await DB.from('registrations').update({status:'completed'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};_isSubmitting=false;
+  S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};_isSubmitting=false;
   S.reviewStars=0;S.reviewChecks=[false,false,false];S.reviewOtherText='';S.chatMsgs=[];S.chargeId=null;go('splash');
 }
 
@@ -1158,7 +1180,7 @@ function profileEditH(){
 function recruitH(){
   var f=S.form;
   var isPair=f.mode==='2v2';
-  var allOk=f.area&&f.slot&&f.drink_style&&f.age_pref&&(!isPair||f.partner_age);
+  var allOk=f.area&&f.slot&&f.drink_style&&(f.age_any||(f.age_min&&f.age_max&&parseInt(f.age_min)<=parseInt(f.age_max)))&&(!isPair||f.partner_age);
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
   SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
@@ -1166,13 +1188,14 @@ function recruitH(){
   html+='<div class="sec-label">② 飲みスタイル</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
   DRINK_STYLES.forEach(function(d){var emoji=d==='ガッツリ飲みたい'?'🍺':d==='ゆっくり飲みたい'?'🥂':'🍽️';html+='<button class="choice-btn '+(f.drink_style===d?'on':'')+'" onclick="S.form.drink_style=\''+d+'\';re(\'recruit\')"><span>'+emoji+' '+d+'</span>'+(f.drink_style===d?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
-  html+='<div class="sec-label">③ 希望年齢</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
-  AGE_PREFS.forEach(function(a){var isO=a==='おまかせ';html+='<button class="choice-btn '+(f.age_pref===a?'on':'')+'" onclick="S.form.age_pref=\''+a+'\';re(\'recruit\')"><span>'+(isO?'✨ ':'')+a+(isO?' （おすすめ）':'')+'</span>'+(f.age_pref===a?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
-  html+='</div>';
+  var myAgeNum=S.profile&&S.profile.age?parseInt(S.profile.age):25;
+  var ageFloor=Math.max(20,myAgeNum-5);
+  var ageCeil=myAgeNum+5;
+  html+='<div class="sec-label">③ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">✨ 何歳でもいい</span></label>'+(f.age_any?'':'<div style="display:flex;align-items:center;gap:10px"><input class="inp" type="number" placeholder="下限" min="'+ageFloor+'" max="'+ageCeil+'" style="max-width:130px" value="'+(f.age_min||'')+'" oninput="S.form.age_min=clampAge(this.value,'+ageFloor+','+ageCeil+');this.value=S.form.age_min"><span style="color:var(--muted)">〜</span><input class="inp" type="number" placeholder="上限" min="'+ageFloor+'" max="'+ageCeil+'" style="max-width:130px" value="'+(f.age_max||'')+'" oninput="S.form.age_max=clampAge(this.value,'+ageFloor+','+ageCeil+');this.value=S.form.age_max"></div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">※ご自身の年齢の上下5歳（最低20歳、'+ageFloor+'〜'+ageCeil+'歳）が対象になります。この範囲内で、より年齢が近い相手が優先的にマッチします。</div></div>';
   if(isPair){
     html+='<div class="sec-label">④ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="number" placeholder="例：27" style="max-width:120px;background:#FFFFFF;color:#6A4A50" value="'+(f.partner_age||'')+'" oninput="S.form.partner_age=this.value"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
   }
-  html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※マッチ率を優先するため、ご希望以外の年代の方とマッチングする場合があります。</div>';
+  html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。</div>';
   if(S.ticketPurchaseSuccess){
     html+='<div style="margin:8px 20px;padding:14px;background:rgba(90,170,112,.15);border:1px solid rgba(90,170,112,.3);border-radius:10px;color:var(--green);font-size:13px;line-height:1.7">✓ 購入完了！チケット残数：'+(S.profile&&S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div>';
   }
