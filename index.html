@@ -83,6 +83,7 @@ html,body{height:100%;background:#0A0507;font-family:-apple-system,'Hiragino San
 .mode-card-square img{object-position:center 25%}
 .mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:18px 16px 14px}
 .mode-card-title{font-size:17px;font-weight:900;color:#fff}
+.card-selected{border-color:var(--gold) !important;box-shadow:0 0 0 3px var(--gold-bg),0 0 20px 4px rgba(224,176,96,.7);transition:box-shadow .15s,border-color .15s}
 .area-card img{filter:saturate(.65) contrast(1.08) brightness(.85)}
 .area-card-tint{position:absolute;inset:0;background:linear-gradient(180deg,rgba(74,18,26,.35),rgba(74,18,26,.15) 40%,rgba(0,0,0,.65));pointer-events:none}
 .area-card-label{position:absolute;bottom:0;left:0;right:0;padding:16px}
@@ -403,29 +404,37 @@ async function goRecruit(){
 }
 
 // エリアを選ぶ画面（選んだら人数選択画面へ進む）
-function selectArea(areaId){
-  S.form.area=areaId;
-  go('mode_select');
+function selectArea(areaId,el){
+  if(el){
+    el.classList.add('card-selected');
+    setTimeout(function(){S.form.area=areaId;go('mode_select');},220);
+  }else{
+    S.form.area=areaId;go('mode_select');
+  }
 }
 
 function areaSelectH(){
   var cardsHtml=AREAS.map(function(a){
-    return '<div class="mode-card area-card" onclick="selectArea(\''+a.id+'\')"><img src="'+a.img+'" alt="'+a.name+'"><div class="area-card-tint"></div><div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
+    return '<div class="mode-card area-card" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'"><div class="area-card-tint"></div><div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
   }).join('');
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'</div></div>';
 }
 
 // 1:1か2:2かを選ぶ画面（選んだら募集画面へ進む）
-function selectMode(m){
-  S.form.mode=m;
-  go('recruit');
+function selectMode(m,el){
+  if(el){
+    el.classList.add('card-selected');
+    setTimeout(function(){S.form.mode=m;go('recruit');},220);
+  }else{
+    S.form.mode=m;go('recruit');
+  }
 }
 
 function modeSelectH(){
   var m=S.form.mode;
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'area_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">人数を選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'
-    +'<div class="mode-card mode-card-square" onclick="selectMode(\'1v1\')"><img src="mode_1v1.jpg" alt="1対1で飲む"><div class="mode-card-label"><span class="mode-card-title">🍺 1対1で飲む</span></div></div>'
-    +'<div class="mode-card" onclick="selectMode(\'2v2\')"><img src="mode_2v2.jpg" alt="2対2で飲む"><div class="mode-card-label"><span class="mode-card-title">🍻 2対2で飲む</span></div></div>'
+    +'<div class="mode-card mode-card-square" onclick="selectMode(\'1v1\',this)"><img src="mode_1v1.jpg" alt="1対1で飲む"><div class="mode-card-label"><span class="mode-card-title">🍺 1対1で飲む</span></div></div>'
+    +'<div class="mode-card" onclick="selectMode(\'2v2\',this)"><img src="mode_2v2.jpg" alt="2対2で飲む"><div class="mode-card-label"><span class="mode-card-title">🍻 2対2で飲む</span></div></div>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">同じ人数を希望する人同士でマッチングします。</div>'
     +'</div></div>';
 }
