@@ -546,6 +546,7 @@ async function doRegister(){
       age:S.profile.age,
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
+      partner_age:S.form.mode==='2v2'&&S.form.partner_age?parseInt(S.form.partner_age):null,
       payment_intent_id:S.chargeId||null,
       status:'waiting'
     }).select().single();
