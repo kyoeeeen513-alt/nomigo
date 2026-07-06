@@ -1364,7 +1364,17 @@ function sendFaqMsg(){
     S.faqMsgs.push({type:'bot',content:answer});
   }else{
     S.faqMsgs.push({type:'bot',content:'申し訳ありません、うまくお答えできませんでした。お手数ですが「お問い合わせ」フォームからご連絡ください。'});
+    // 答えられなかった質問を記録しておく(次に追加すべき質問がわかるように)
+    DB.from('faq_misses').insert({user_id:S.user?S.user.id:null,question:txt}).then(function(){}).catch(function(){});
   }
+  re('faqbot');
+  setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
+}
+
+// ボタンをタップした時、そのまま質問を送ったのと同じ扱いにする
+function tapFaqQuestion(label,answer){
+  S.faqMsgs.push({type:'user',content:label});
+  S.faqMsgs.push({type:'bot',content:answer});
   re('faqbot');
   setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
 }
@@ -1374,7 +1384,17 @@ function faqBotH(){
     var isBot=m.type==='bot';
     return '<div class="msg-row '+(isBot?'':'mine')+'">'+(isBot?'<div class="msg-av" style="background:var(--wine-bg);color:var(--wine)">🤖</div>':'')+'<div><div class="msg-bubble" style="background:'+(isBot?'var(--card)':'var(--wine)')+';color:'+(isBot?'var(--cream)':'#fff')+'">'+escapeHtml(m.content)+'</div></div></div>';
   }).join('');
-  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">サポート</div><div class="hdr-title">よくある質問</div></div></div><div class="chat-wrap"><div class="chat-msgs" id="faqmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="faq-input" type="text" placeholder="質問を入力..." onkeydown="if(event.key===\'Enter\')sendFaqMsg()"><button class="chat-send" onclick="sendFaqMsg()">↑</button></div></div></div>';
+  // よく聞かれる質問をボタンで用意(タップするだけで答えが見られる)
+  var quickList=[
+    {label:'料金はいくら?',ans:FAQ_QA[0].answer},
+    {label:'キャンセルしたら?',ans:FAQ_QA[2].answer},
+    {label:'2対2ってどういうこと?',ans:FAQ_QA[6].answer},
+    {label:'対応エリアは?',ans:FAQ_QA[4].answer},
+    {label:'退会したい',ans:FAQ_QA[10].answer},
+    {label:'安全性が心配',ans:FAQ_QA[16].answer}
+  ];
+  var quickHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2)">'+quickList.map(function(q){return '<button class="tag-chip" onclick="tapFaqQuestion(\''+q.label+'\',\''+q.ans.replace(/'/g,"\\'")+'\')" style="font-size:12px">'+q.label+'</button>';}).join('')+'</div>';
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">サポート</div><div class="hdr-title">よくある質問</div></div></div>'+quickHtml+'<div class="chat-wrap"><div class="chat-msgs" id="faqmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="faq-input" type="text" placeholder="質問を入力..." onkeydown="if(event.key===\'Enter\')sendFaqMsg()"><button class="chat-send" onclick="sendFaqMsg()">↑</button></div></div></div>';
 }
 
 function inquiryH(){
