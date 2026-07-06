@@ -1203,8 +1203,11 @@ function reviewH(){
   var isLow=S.reviewStars>0&&S.reviewStars<=2;
   var checks=isLow?REVIEW_TAGS_LOW:REVIEW_TAGS;
   var otherIdx=checks.length-1;
-  var starSvg='<svg width="32" height="32" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7L2 9.2l7.1-.6z" fill="{FILL}" stroke="var(--gold)" stroke-width="1.5"/></svg>';
-  var starsHtml=[1,2,3,4,5].map(function(n){var svg=starSvg.replace('{FILL}',n<=S.reviewStars?'var(--gold)':'transparent');return '<button class="star-btn" onclick="setReviewStars('+n+')">'+svg+'</button>';}).join('');
+  var starsHtml=[1,2,3,4,5].map(function(n){
+    var gid='starGrad'+n,sid='starShadow'+n;
+    var svg='<svg width="42" height="42" viewBox="0 0 24 24"><defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFE9B0"/><stop offset="55%" stop-color="var(--gold)"/><stop offset="100%" stop-color="#A9701E"/></linearGradient><filter id="'+sid+'" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="1.4" flood-color="#000" flood-opacity="0.65"/></filter></defs><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7L2 9.2l7.1-.6z" fill="'+(n<=S.reviewStars?'url(#'+gid+')':'transparent')+'" stroke="var(--gold)" stroke-width="1.5" filter="url(#'+sid+')"/></svg>';
+    return '<button class="star-btn" onclick="setReviewStars('+n+')">'+svg+'</button>';
+  }).join('');
   var checksHtml=checks.map(function(c,i){return '<button class="tag-chip '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'+c+'</button>';}).join('');
   // 「その他」が選ばれている時だけ、下に文字入力欄を出す。入力のたびにボタンの押せる状態だけ直接更新する（画面全体は再描画しない）
   var otherInput=S.reviewChecks[otherIdx]?'<div style="padding:0 20px 16px"><input class="inp" id="review-other-inp" type="text" placeholder="自由に入力してください" maxlength="50" value="'+(S.reviewOtherText||'')+'" oninput="S.reviewOtherText=this.value;updateReviewSubmitBtn()"></div>':'';
