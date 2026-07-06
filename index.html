@@ -76,6 +76,11 @@ html,body{height:100%;background:#0A0507;font-family:-apple-system,'Hiragino San
 .range-row{display:flex;gap:6px;padding:0 20px}
 .range-btn{flex:1;padding:10px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-family:inherit;cursor:pointer;font-size:11px;font-weight:700;text-align:center;transition:all .18s}
 .range-btn.on{border-color:var(--wine);background:var(--wine-bg);color:var(--cream)}
+.mode-card{position:relative;border-radius:16px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .18s}
+.mode-card:active{transform:scale(.98)}
+.mode-card img{width:100%;height:180px;object-fit:cover;display:block}
+.mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:18px 16px 14px}
+.mode-card-title{font-size:17px;font-weight:900;color:#fff}
 </style>
 </head>
 <body>
@@ -335,8 +340,8 @@ function selectMode(m){
 function modeSelectH(){
   var m=S.form.mode;
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">人数を選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'
-    +'<button class="choice-btn" style="padding:20px 16px" onclick="selectMode(\'1v1\')"><span style="font-size:15px;font-weight:800">🍺 1対1で飲む</span></button>'
-    +'<button class="choice-btn" style="padding:20px 16px" onclick="selectMode(\'2v2\')"><span style="font-size:15px;font-weight:800">🍻 2対2で飲む</span></button>'
+    +'<div class="mode-card" onclick="selectMode(\'1v1\')"><img src="mode_1v1.jpg" alt="1対1で飲む"><div class="mode-card-label"><span class="mode-card-title">🍺 1対1で飲む</span></div></div>'
+    +'<div class="mode-card" onclick="selectMode(\'2v2\')"><img src="mode_2v2.jpg" alt="2対2で飲む"><div class="mode-card-label"><span class="mode-card-title">🍻 2対2で飲む</span></div></div>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">同じ人数を希望する人同士でマッチングします。</div>'
     +'</div></div>';
 }
