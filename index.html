@@ -520,7 +520,7 @@ async function isCardRegistered(){
 async function startRecruit(){
   if(_isSubmitting)return;
   var f=S.form;
-  if(!f.area||!f.slot||!f.drink_style||(!f.age_any&&(!f.age_min||!f.age_max||parseInt(f.age_min)>parseInt(f.age_max)))){S.error='すべて選択してください';re('recruit');return;}
+  if(!f.area||!f.slot||!f.drink_style){S.error='すべて選択してください';re('recruit');return;}
   if(f.mode==='2v2'&&!f.partner_age){S.error='すべて選択してください';re('recruit');return;}
   if(S.profile&&S.profile.gender==='male'){
     if(!S.profile.ticket_count||S.profile.ticket_count<1){S.error='ticket_zero';re('recruit');return;}
@@ -1246,7 +1246,7 @@ function recruitH(){
   var defaultMax=myAgeNum+5;
   if(f.age_min==null||f.age_min===''){f.age_min=defaultMin;}
   if(f.age_max==null||f.age_max===''){f.age_max=defaultMax;}
-  var allOk=f.area&&f.slot&&f.drink_style&&(f.age_any||(f.age_min&&f.age_max&&parseInt(f.age_min)<=parseInt(f.age_max)))&&(!isPair||f.partner_age);
+  var allOk=f.area&&f.slot&&f.drink_style&&(!isPair||f.partner_age);
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
   SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
@@ -1419,7 +1419,7 @@ function updateRecruitSubmitBtn(){
   if(!btn)return;
   var f=S.form;
   var isPair=f.mode==='2v2';
-  var allOk=f.area&&f.slot&&f.drink_style&&(f.age_any||(f.age_min&&f.age_max&&parseInt(f.age_min)<=parseInt(f.age_max)))&&(!isPair||f.partner_age);
+  var allOk=f.area&&f.slot&&f.drink_style&&(!isPair||f.partner_age);
   btn.disabled=!(allOk&&!_isSubmitting);
 }
 
