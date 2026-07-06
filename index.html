@@ -279,6 +279,7 @@ async function routeAfterLoad(){
     // リロード前の画面をsessionStorageから復元
     var lastScreen=sessionStorage.getItem('ngo_screen');
     if(lastScreen==='chat'){
+      await initChat();
       go('chat');
     }else if(lastScreen==='review'){
       go('review');
