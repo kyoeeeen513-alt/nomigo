@@ -718,7 +718,9 @@ async function cancelAfterMatch(){
     await saveUserResult(S.match.id,'cancelled');
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.chargeId=null;go('splash');
+  S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
+  S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
+  go('splash');
 }
 
 // キャンセルボタンの二重送信防止用ラッパー（cancelAfterMatch自体は変更しない）
@@ -736,7 +738,9 @@ async function noShowMatch(){
     await saveUserResult(S.match.id,'no_show');
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.chargeId=null;go('splash');
+  S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
+  S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
+  go('splash');
 }
 
 async function loadMatchMembers(){
@@ -910,7 +914,7 @@ async function submitReview(){
   await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
   await saveUserResult(matchId,'completed');
   if(S.registration)await DB.from('registrations').update({status:'completed'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};
+  S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,timing:null,age_pref:null};_isSubmitting=false;
   S.reviewStars=0;S.reviewChecks=[false,false,false];S.reviewOtherText='';S.chatMsgs=[];S.chargeId=null;go('splash');
 }
 
