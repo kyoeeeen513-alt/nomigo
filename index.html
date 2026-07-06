@@ -1133,7 +1133,7 @@ function recruitH(){
   var f=S.form;
   var isPair=f.mode==='2v2';
   var allOk=f.area&&f.slot&&f.drink_style&&f.age_pref&&(!isPair||f.partner_age);
-  var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
+  var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① エリア</div><div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 8px">';
   AREAS.forEach(function(a){html+='<button class="sel-btn '+(f.area===a.id?'on':'')+'" style="flex:none;padding:10px 16px" onclick="S.form.area=\''+a.id+'\';re(\'recruit\')">'+a.name+'</button>';});
   html+='</div>';
@@ -1381,7 +1381,7 @@ function sendFaqMsg(){
   if(answer){
     S.faqMsgs.push({type:'bot',content:answer});
   }else{
-    S.faqMsgs.push({type:'bot',content:'申し訳ありません、うまくお答えできませんでした。お手数ですが「お問い合わせ」フォームからご連絡ください。'});
+    S.faqMsgs.push({type:'bot',content:'申し訳ありません、うまくお答えできませんでした。',showInquiryBtn:true});
     // 答えられなかった質問を記録しておく(次に追加すべき質問がわかるように)
     DB.from('faq_misses').insert({user_id:S.user?S.user.id:null,question:txt}).then(function(){}).catch(function(){});
   }
@@ -1400,7 +1400,8 @@ function tapFaqQuestion(label,answer){
 function faqBotH(){
   var msgsHtml=(S.faqMsgs||[]).map(function(m){
     var isBot=m.type==='bot';
-    return '<div class="msg-row '+(isBot?'':'mine')+'">'+(isBot?'<div class="msg-av" style="background:var(--wine-bg);color:var(--wine)">🤖</div>':'')+'<div><div class="msg-bubble" style="background:'+(isBot?'var(--card)':'var(--wine)')+';color:'+(isBot?'var(--cream)':'#fff')+'">'+escapeHtml(m.content)+'</div></div></div>';
+    var inquiryBtn=m.showInquiryBtn?'<button style="margin-top:8px;padding:8px 14px;border-radius:20px;border:1.5px solid var(--wine);background:transparent;color:var(--wine);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせはこちら →</button>':'';
+    return '<div class="msg-row '+(isBot?'':'mine')+'">'+(isBot?'<div class="msg-av" style="background:var(--wine-bg);color:var(--wine)">🤖</div>':'')+'<div><div class="msg-bubble" style="background:'+(isBot?'var(--card)':'var(--wine)')+';color:'+(isBot?'var(--cream)':'#fff')+'">'+escapeHtml(m.content)+'</div>'+inquiryBtn+'</div></div>';
   }).join('');
   // よく聞かれる質問をボタンで用意(タップするだけで答えが見られる)
   var quickList=[
