@@ -223,7 +223,7 @@ function mountPayjp(){
   if(!el)return;
   if(!_payjp)_payjp=Payjp('pk_test_5d6152d2f055a7440fccb417');
   _payjpElements=_payjp.elements();
-  var style={base:{color:'#EDE5E0',fontSize:'16px','::placeholder':{color:'#9A8080'}},invalid:{color:'#CC4040'}};
+  var style={base:{color:'#3A2020',fontSize:'16px','::placeholder':{color:'#B08E8E'}},invalid:{color:'#CC4040'}};
   _payjpCardEl=_payjpElements.create('card',{style:style});
   _payjpCardEl.mount('#payjp-card-el');
 }
@@ -1338,7 +1338,7 @@ function cardRegisterH(){
   var penaltyNote=isMale?'':'<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:10px"><span style="font-size:18px;color:var(--gold)">●</span><span style="font-size:13px;color:var(--muted);line-height:1.7">双方が安心して利用できるよう、マッチ成立後の無断キャンセル・当日不参加が確認された場合のみ、<span style="color:var(--cream)">3,000円</span>をご請求する場合があります。</span></div>';
   var maleNote='<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:10px"><span style="font-size:18px;color:var(--gold)">●</span><span style="font-size:13px;color:var(--muted);line-height:1.7">登録したカードは、次回以降のチケット購入時にそのままご利用いただけます。</span></div>';
   var securityNote='<div style="font-size:11px;color:var(--muted);line-height:1.7;text-align:center;padding:0 8px">※カード情報はPAY.JPの安全な決済システムで管理されます。<br>Nomi Goがカード番号を保持することはありません。</div>';
-  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">カード登録</div><div class="hdr-title">決済カードを登録</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+freeBox+'<div style="font-size:15px;font-weight:800;color:var(--cream);line-height:1.6;text-align:center;padding:4px 0">'+heading+'</div>'+noChargeBox+firstTimeOnlyBox+(isMale?maleNote:penaltyNote)+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'<div style="background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:16px"><div id="payjp-card-el" style="min-height:44px"></div></div>'+securityNote+'<div id="cardreg-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="cardreg-btn" onclick="confirmCardRegister()">カードを登録して続ける →</button></div></div>';
+  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">カード登録</div><div class="hdr-title">決済カードを登録</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+freeBox+'<div style="font-size:15px;font-weight:800;color:var(--cream);line-height:1.6;text-align:center;padding:4px 0">'+heading+'</div>'+noChargeBox+firstTimeOnlyBox+(isMale?maleNote:penaltyNote)+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'<div style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:10px;padding:16px"><div id="payjp-card-el" style="min-height:44px"></div></div>'+securityNote+'<div id="cardreg-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="cardreg-btn" onclick="confirmCardRegister()">カードを登録して続ける →</button></div></div>';
 }
 
 function waitH(){
