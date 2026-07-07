@@ -636,6 +636,7 @@ async function doRegister(){
       gender:S.profile.gender,
       drink_style:S.form.drink_style,
       timing:'どちらでもOK',
+      duration_pref:S.form.slot==='今すぐ'?(S.form.duration_pref||null):null,
       age_any:!!S.form.age_any,
       age_min:S.form.age_any?null:parseInt(S.form.age_min),
       age_max:S.form.age_any?null:parseInt(S.form.age_max),
@@ -1251,6 +1252,12 @@ function recruitH(){
   html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
   SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
   html+='</div>';
+  if(f.slot==='今すぐ'){
+    html+='<div style="padding:4px 20px 4px"><div style="display:flex;gap:8px">';
+    html+='<button class="sel-btn '+(f.duration_pref==='サクッと'?'on':'')+'" onclick="S.form.duration_pref=\'サクッと\';re(\'recruit\')">⏱ サクッと（1時間程度）</button>';
+    html+='<button class="sel-btn '+(f.duration_pref==='ゆっくり'?'on':'')+'" onclick="S.form.duration_pref=\'ゆっくり\';re(\'recruit\')">🍷 ゆっくり</button>';
+    html+='</div></div>';
+  }
   html+='<div class="sec-label">② 飲みスタイル</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
   DRINK_STYLES.forEach(function(d){var emoji=d==='ガッツリ飲みたい'?'🍺':d==='ゆっくり飲みたい'?'🥂':'🍽️';html+='<button class="choice-btn '+(f.drink_style===d?'on':'')+'" onclick="S.form.drink_style=\''+d+'\';re(\'recruit\')"><span>'+emoji+' '+d+'</span>'+(f.drink_style===d?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
