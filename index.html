@@ -540,13 +540,22 @@ async function goBuyTicket(){
 }
 
 // カード登録専用（決済は行わない）。完了後はトップへ
+// カード登録が終わった後の行き先を決める。LINEがまだ未連携なら連携画面へ、済んでいればトップへ
+async function goAfterCardRegister(){
+  if(S.profile&&!S.profile.line_user_id){
+    await goLineConnect();
+  }else{
+    go('splash');
+  }
+}
+
 async function confirmCardRegister(){
   var btn=document.getElementById('cardreg-btn');
   var errEl=document.getElementById('cardreg-err');
   // 二重登録防止：DB基準で既に登録済みならPAY.JPへのリクエストを行わず終了
   var alreadyRegistered=await isCardRegistered();
   if(alreadyRegistered){
-    go('splash');
+    goAfterCardRegister();
     return;
   }
   if(!_payjp||!_payjpCardEl){if(errEl)errEl.textContent='カードが読み込まれていません';return;}
@@ -560,7 +569,7 @@ async function confirmCardRegister(){
     var custUpd=await DB.from('profiles').update({stripe_customer_id:regData.customer_id}).eq('user_id',S.user.id);
     if(custUpd.error){if(errEl)errEl.textContent='カード情報の保存に失敗しました: '+custUpd.error.message;if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}return;}
     S.profile.stripe_customer_id=regData.customer_id;
-    go('splash');
+    goAfterCardRegister();
   }catch(e){if(errEl)errEl.textContent='エラー: '+e.message;if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}}
 }
 
@@ -1223,11 +1232,13 @@ async function goLineConnect(){
 }
 
 function lineConnectH(){
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'profile_edit\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">LINE連携</div><div class="hdr-title">LINEと連携する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
-    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
+  var backTo=S.registration||S.match?'splash':'profile_edit';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">新規登録</div><div class="hdr-title">LINEと連携する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、この画面に戻った時に反映されます。</div>'
+    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="go(\'splash\')">あとで連携する</button>'
     +'</div></div>';
 }
 
