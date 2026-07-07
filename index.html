@@ -180,7 +180,7 @@ var S={
 };
 
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH};
   document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
 }
 
@@ -732,9 +732,21 @@ async function tryMatch(){
   await syncUserState();
 
   await loadMatchMembers();
+  // ★追加：マッチ成立を両方のLINEに通知する(連携していない人には送らない)
+  sendMatchLineNotify(p,best.profileData);
   // ★重要：state更新後に描画
   render();
   return true;
+}
+
+// マッチ成立をLINEで知らせる(失敗しても画面には影響させない)
+function sendMatchLineNotify(myProfile,otherProfile){
+  var targets=[myProfile,otherProfile];
+  targets.forEach(function(t){
+    if(t&&t.line_user_id){
+      fetch('/api/line-notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineUserId:t.line_user_id,message:'🍻 マッチが成立しました！Nomi Goアプリを開いてチャットを確認してください。'})}).catch(function(){});
+    }
+  });
 }
 
 async function consumeTicket(matchId,targetUserId){
@@ -1202,6 +1214,23 @@ function newPasswordH(){
 }
 
 // プロフィール編集画面を開く（今の登録内容をコピーしてから編集開始）
+// LINE連携画面を開く：6桁のランダムコードを発行してSupabaseに保存する
+async function goLineConnect(){
+  var code=String(Math.floor(100000+Math.random()*900000));
+  await DB.from('profiles').update({line_link_code:code}).eq('user_id',S.user.id);
+  S._lineLinkCode=code;
+  go('line_connect');
+}
+
+function lineConnectH(){
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'profile_edit\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">LINE連携</div><div class="hdr-title">LINEと連携する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
+    +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
+    +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、この画面に戻った時に反映されます。</div>'
+    +'</div></div>';
+}
+
 function goProfileEdit(){
   if(!S.profile)return;
   S.pf={nickname:S.profile.nickname,age:String(S.profile.age),gender:S.profile.gender,job:S.profile.job,smoke:S.profile.smoke,alcohol:S.profile.alcohol};
@@ -1234,9 +1263,14 @@ function profileNewH(){
 // プロフィール編集画面（見た目は新規登録画面と同じ形。保存先の関数だけ違う）
 function profileEditH(){
   var p=S.pf;
+  var lineSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">LINE連携</div>'
+    +(S.profile&&S.profile.line_user_id
+      ?'<div style="padding:12px 14px;background:rgba(90,170,112,.15);border:1px solid rgba(90,170,112,.3);border-radius:10px;color:var(--green);font-size:13px">✓ 連携済みです。マッチ通知などがLINEに届きます。</div>'
+      :'<button class="btn btn-wine" onclick="goLineConnect()">LINEと連携する →</button>')
+    +'</div>';
   var photoPreview=p.photoPreview?'<img src="'+p.photoPreview+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':(S.profile&&S.profile.photo_url?'<img src="'+S.profile.photo_url+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':'<div style="width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">👤</div>');
   var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">プロフィール写真（任意）</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を変更<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_edit\')"></label></div></div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" id="pf-ag" type="number" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="S.pf.age=this.value"></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px;display:flex;flex-direction:column;gap:6px">'+JOBS.map(function(j){return '<button class="choice-btn '+(p.job===j?'on':'')+'" onclick="S.pf.job=\''+j+'\';re(\'profile_edit\')">'+j+(p.job===j?' <span style="color:var(--wine)">✓</span>':'')+'</button>';}).join('')+'</div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" id="pf-ag" type="number" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="S.pf.age=this.value"></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px;display:flex;flex-direction:column;gap:6px">'+JOBS.map(function(j){return '<button class="choice-btn '+(p.job===j?'on':'')+'" onclick="S.pf.job=\''+j+'\';re(\'profile_edit\')">'+j+(p.job===j?' <span style="color:var(--wine)">✓</span>':'')+'</button>';}).join('')+'</div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
 }
 
 function recruitH(){
