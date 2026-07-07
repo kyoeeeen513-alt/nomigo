@@ -459,11 +459,10 @@ async function goRecruit(){
     alert('現在マッチ中です。現在のマッチが終了すると、新しいお相手を探せます。');
     return;
   }
-  // ★追加：直近7日以内のキャンセル回数が多い場合は注意を促す(悪質な連続キャンセル対策)
-  var sevenDaysAgo=new Date(Date.now()-7*24*60*60*1000).toISOString();
-  var cancelCheck=await DB.from('registrations').select('id',{count:'exact',head:true}).eq('user_id',S.user.id).eq('status','cancelled').gte('created_at',sevenDaysAgo);
-  if(cancelCheck.count!=null&&cancelCheck.count>=3){
-    var proceed=confirm('直近でキャンセルが続いています。マッチ成立後のキャンセルにはペナルティが発生します。このまま募集を続けますか？');
+  // ★修正：マッチ前のキャンセルは対象外。「マッチ成立後にキャンセルした」回数が過去に2回以上あれば注意を促す
+  var cancelCheck=await DB.from('registrations').select('id',{count:'exact',head:true}).eq('user_id',S.user.id).eq('status','cancelled').not('match_id','is',null);
+  if(cancelCheck.count!=null&&cancelCheck.count>=2){
+    var proceed=confirm('過去にマッチ成立後のキャンセルが2回以上あります。マッチ成立後のキャンセルにはペナルティが発生します。このまま募集を続けますか？');
     if(!proceed)return;
   }
   var registered=await isCardRegistered();
