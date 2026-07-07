@@ -180,7 +180,7 @@ var S={
 };
 
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH};
   document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
 }
 
@@ -1233,12 +1233,49 @@ async function goLineConnect(){
 
 function lineConnectH(){
   var backTo=S.registration||S.match?'splash':'profile_edit';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">新規登録</div><div class="hdr-title">LINEと連携する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\''+backTo+'\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">新規登録</div><div class="hdr-title">LINEと連携する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
     +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、この画面に戻った時に反映されます。</div>'
-    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="go(\'splash\')">あとで連携する</button>'
+    +'<button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="goEmailVerify()">連携できたので次へ →</button>'
+    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="goEmailVerify()">あとで連携する</button>'
+    +'</div></div>';
+}
+
+// メール確認画面を開く：6桁のコードを発行し、Supabaseに保存しつつメールで送る
+async function goEmailVerify(){
+  var code=String(Math.floor(100000+Math.random()*900000));
+  await DB.from('profiles').update({email_verify_code:code}).eq('user_id',S.user.id);
+  var emailTo=S.user.email;
+  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:emailTo,subject:'【Nomi Go】確認コード',message:'確認コードは '+code+' です。アプリに入力してください。'})}).catch(function(){});
+  go('email_verify');
+}
+
+// 入力されたコードを照合し、合っていればemail_verifiedをtrueにする
+async function submitEmailVerify(){
+  var inp=document.getElementById('everify-inp');
+  var errEl=document.getElementById('everify-err');
+  var code=inp?inp.value.trim():'';
+  if(!code){if(errEl)errEl.textContent='コードを入力してください';return;}
+  var res=await DB.from('profiles').select('email_verify_code').eq('user_id',S.user.id).single();
+  if(res.data&&res.data.email_verify_code===code){
+    await DB.from('profiles').update({email_verified:true,email_verify_code:null}).eq('user_id',S.user.id);
+    S.profile.email_verified=true;
+    go('splash');
+  }else{
+    if(errEl)errEl.textContent='コードが違います';
+  }
+}
+
+function emailVerifyH(){
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">新規登録</div><div class="hdr-title">メールを確認</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">'+(S.user?S.user.email:'')+' 宛に確認コードを送りました。届いた6桁の番号を入力してください。</div>'
+    +'<input class="inp" id="everify-inp" type="text" placeholder="例：123456" maxlength="6">'
+    +'<div id="everify-err" class="err-msg"></div>'
+    +'<button class="btn btn-wine" onclick="submitEmailVerify()">確認する →</button>'
+    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="goEmailVerify()">コードを再送する</button>'
+    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="go(\'splash\')">あとで確認する</button>'
     +'</div></div>';
 }
 
