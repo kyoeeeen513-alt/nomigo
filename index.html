@@ -1258,8 +1258,9 @@ async function submitEmailVerify(){
   var errEl=document.getElementById('everify-err');
   var code=inp?inp.value.trim():'';
   if(!code){if(errEl)errEl.textContent='コードを入力してください';return;}
-  var res=await DB.from('profiles').select('email_verify_code').eq('user_id',S.user.id).single();
-  if(res.data&&res.data.email_verify_code===code){
+  var res=await DB.from('profiles').select('email_verify_code').eq('user_id',S.user.id);
+  var savedCode=res.data&&res.data.length>0?res.data[0].email_verify_code:null;
+  if(savedCode&&savedCode===code){
     await DB.from('profiles').update({email_verified:true,email_verify_code:null}).eq('user_id',S.user.id);
     if(S.profile)S.profile.email_verified=true;
     if(S.profile&&S.profile.nickname){
