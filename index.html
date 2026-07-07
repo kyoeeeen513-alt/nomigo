@@ -257,8 +257,8 @@ async function doSignUp(){
   go('loading');
   var res=await DB.auth.signUp({email:email,password:pass});
   if(res.error){var r2=await DB.auth.signInWithPassword({email:email,password:pass});if(r2.error){S.error='登録に失敗しました';go('email');return;}S.user=r2.data.user;await loadProfile();routeAfterLoad();return;}
-  if(res.data&&res.data.session){S.user=res.data.user;await loadProfile();routeAfterLoad();return;}
-  if(res.data&&res.data.user){var r3=await DB.auth.signInWithPassword({email:email,password:pass});if(r3.error){S.error='ログインタブからサインインしてください';go('email');return;}S.user=r3.data.user;await loadProfile();routeAfterLoad();return;}
+  if(res.data&&res.data.session){S.user=res.data.user;await loadProfile();if(!S.profile){await goEmailVerify();}else{routeAfterLoad();}return;}
+  if(res.data&&res.data.user){var r3=await DB.auth.signInWithPassword({email:email,password:pass});if(r3.error){S.error='ログインタブからサインインしてください';go('email');return;}S.user=r3.data.user;await loadProfile();if(!S.profile){await goEmailVerify();}else{routeAfterLoad();}return;}
   S.error='登録に失敗しました';go('email');
 }
 
@@ -1238,15 +1238,15 @@ function lineConnectH(){
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、この画面に戻った時に反映されます。</div>'
-    +'<button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="goEmailVerify()">連携できたので次へ →</button>'
-    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="goEmailVerify()">あとで連携する</button>'
+    +'<button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="go(\'splash\')">連携できたので次へ →</button>'
+    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="go(\'splash\')">あとで連携する</button>'
     +'</div></div>';
 }
 
 // メール確認画面を開く：6桁のコードを発行し、Supabaseに保存しつつメールで送る
 async function goEmailVerify(){
   var code=String(Math.floor(100000+Math.random()*900000));
-  await DB.from('profiles').update({email_verify_code:code}).eq('user_id',S.user.id);
+  await DB.from('profiles').upsert({user_id:S.user.id,email_verify_code:code});
   var emailTo=S.user.email;
   fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:emailTo,subject:'【Nomi Go】確認コード',message:'確認コードは '+code+' です。アプリに入力してください。'})}).catch(function(){});
   go('email_verify');
@@ -1261,8 +1261,13 @@ async function submitEmailVerify(){
   var res=await DB.from('profiles').select('email_verify_code').eq('user_id',S.user.id).single();
   if(res.data&&res.data.email_verify_code===code){
     await DB.from('profiles').update({email_verified:true,email_verify_code:null}).eq('user_id',S.user.id);
-    S.profile.email_verified=true;
-    go('splash');
+    if(S.profile)S.profile.email_verified=true;
+    if(S.profile&&S.profile.nickname){
+      go('splash');
+    }else{
+      S.pf={nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null};
+      go('profile_new');
+    }
   }else{
     if(errEl)errEl.textContent='コードが違います';
   }
