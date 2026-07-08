@@ -201,6 +201,11 @@ function go(sc){
   if(sc==='splash'&&S.user){
     syncTicketCount();
   }
+  if(sc==='line_connect'){
+    startLineLinkPolling();
+  }else if(S._lineLinkTimer){
+    clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;
+  }
 }
 
 // トップ画面表示時にDBから最新のticket_countを取得し直す（表示はDBを基準に同期）
@@ -1237,8 +1242,8 @@ function lineConnectH(){
     +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
-    +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、この画面に戻った時に反映されます。</div>'
-    +'<button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="go(\'splash\')">連携できたので次へ →</button>'
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、自動で次の画面に進みます。</div>'
+    +'<button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="checkLineLinkNow()">自動で移らなければこちらを押してください</button>'
     +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="go(\'splash\')">あとで連携する</button>'
     +'</div></div>';
 }
@@ -1287,6 +1292,32 @@ function emailVerifyH(){
     +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="goEmailVerify()">コードを再送する</button>'
     +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="go(\'splash\')">あとで確認する</button>'
     +'</div></div>';
+}
+
+// LINE連携画面を開いている間、数秒おきに連携できたか自動で確認する
+// 「自動で移らなければ」ボタン用：その場で1回だけ確認する
+async function checkLineLinkNow(){
+  var res=await DB.from('profiles').select('line_user_id').eq('user_id',S.user.id).single();
+  if(res.data&&res.data.line_user_id){
+    if(S._lineLinkTimer){clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;}
+    if(S.profile)S.profile.line_user_id=res.data.line_user_id;
+    go('splash');
+  }else{
+    alert('まだ連携が確認できていません。LINEで番号を送ってから、もう一度お試しください。');
+  }
+}
+
+function startLineLinkPolling(){
+  if(S._lineLinkTimer)clearInterval(S._lineLinkTimer);
+  S._lineLinkTimer=setInterval(async function(){
+    if(S.screen!=='line_connect'){clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;return;}
+    var res=await DB.from('profiles').select('line_user_id').eq('user_id',S.user.id).single();
+    if(res.data&&res.data.line_user_id){
+      clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;
+      if(S.profile)S.profile.line_user_id=res.data.line_user_id;
+      go('splash');
+    }
+  },3000);
 }
 
 function goProfileEdit(){
