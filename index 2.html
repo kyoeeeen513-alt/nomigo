@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nomi Go｜今、一緒に飲める人が見つかる。</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wine-deep:#3A0E14;
+    --wine:#6B1A24;
+    --wine-dark:#5A1620;
+    --night:#150A0C;
+    --gold:#C9A063;
+    --gold-soft:#E4C68A;
+    --gold-bright:#F3D9A4;
+    --cream:#F4E9DC;
+    --cream-dim:#C4B2A1;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--night);color:var(--cream);
+    font-family:'Noto Sans JP',sans-serif;line-height:1.85;overflow-x:hidden;
+    font-weight:400;
+  }
+  .mincho{font-family:'Shippori Mincho',serif;}
+  h1,h2{font-family:'Shippori Mincho',serif;}
+  h3,h4{font-family:'Zen Kaku Gothic New',sans-serif;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px;}
+
+  /* ===== 背景演出：光 + 泡 ===== */
+  .bg-glow{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 600px 400px at 15% 8%, rgba(201,160,99,0.12), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 85% 25%, rgba(107,26,36,0.4), transparent 60%),
+      radial-gradient(ellipse 500px 400px at 50% 95%, rgba(201,160,99,0.07), transparent 60%);
+  }
+  .bubbles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .bubble{
+    position:absolute;bottom:-30px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(228,198,138,0.35), rgba(228,198,138,0.05));
+    animation:rise linear infinite;opacity:0;
+  }
+  @keyframes rise{
+    0%{transform:translateY(0) translateX(0);opacity:0;}
+    10%{opacity:0.7;}
+    90%{opacity:0.4;}
+    100%{transform:translateY(-110vh) translateX(30px);opacity:0;}
+  }
+
+  /* ===== ヘッダー ===== */
+  header{position:fixed;top:0;left:0;right:0;z-index:50;
+    background:rgba(21,10,12,0.85);backdrop-filter:blur(12px);
+    border-bottom:1px solid rgba(201,160,99,0.15);}
+  .header-in{display:flex;justify-content:space-between;align-items:center;
+    padding:14px 24px;max-width:960px;margin:0 auto;}
+  .logo{font-family:'Zen Kaku Gothic New';font-size:20px;font-weight:900;letter-spacing:0.04em;color:var(--gold-soft);}
+  .logo span{color:var(--cream-dim);font-size:10px;display:block;font-weight:500;letter-spacing:0.25em;margin-top:1px;}
+  .header-cta{font-size:13px;font-weight:700;padding:9px 20px;border:1px solid var(--gold);
+    border-radius:999px;color:var(--gold-soft);white-space:nowrap;transition:all .25s;}
+  .header-cta:hover{background:rgba(201,160,99,0.15);transform:scale(1.03);}
+
+  /* ===== ボタン ===== */
+  .btn-primary{
+    display:inline-block;position:relative;overflow:hidden;
+    background:linear-gradient(135deg, var(--gold-bright), var(--gold));
+    color:var(--wine-deep);font-weight:900;font-size:16px;
+    font-family:'Zen Kaku Gothic New';letter-spacing:0.05em;
+    padding:18px 46px;border-radius:999px;
+    box-shadow:0 8px 32px rgba(201,160,99,0.3);
+    transition:transform .25s, box-shadow .25s;
+  }
+  .btn-primary::after{
+    content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;
+    background:linear-gradient(105deg, transparent, rgba(255,255,255,0.5), transparent);
+    animation:shine 3.2s infinite;
+  }
+  @keyframes shine{0%{left:-80%;}40%{left:130%;}100%{left:130%;}}
+  .btn-primary:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 14px 40px rgba(201,160,99,0.45);}
+
+  /* ===== 出現アニメーション ===== */
+  .reveal{opacity:0;transform:translateY(34px);transition:opacity .8s ease, transform .8s ease;}
+  .reveal.show{opacity:1;transform:translateY(0);}
+  .reveal-d1{transition-delay:.1s;} .reveal-d2{transition-delay:.22s;}
+  .reveal-d3{transition-delay:.34s;} .reveal-d4{transition-delay:.46s;}
+  @media(prefers-reduced-motion:reduce){
+    .reveal{opacity:1;transform:none;transition:none;}
+    .btn-primary::after,.bubble,.dot-live{animation:none !important;}
+  }
+
+  /* ===== HERO ===== */
+  .hero{position:relative;z-index:1;min-height:100svh;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:120px 24px 70px;text-align:center;}
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;justify-content:center;
+    font-size:12px;font-weight:500;letter-spacing:0.2em;color:var(--gold-soft);margin-bottom:34px;
+    opacity:0;animation:fadeUp .9s .2s forwards;}
+  .dot-live{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,160,99,0.55);}70%{box-shadow:0 0 0 10px rgba(201,160,99,0);}100%{box-shadow:0 0 0 0 rgba(201,160,99,0);}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+
+  .hero h1{
+    font-size:clamp(32px,7vw,64px);font-weight:800;line-height:1.42;margin-bottom:24px;
+  }
+  .hero h1 .line{display:block;overflow:hidden;}
+  .hero h1 .line span{display:inline-block;transform:translateY(110%);animation:lineUp .9s cubic-bezier(.2,.8,.2,1) forwards;}
+  .hero h1 .line:nth-child(1) span{animation-delay:.35s;}
+  .hero h1 .line:nth-child(2) span{animation-delay:.55s;}
+  @keyframes lineUp{to{transform:translateY(0);}}
+  .hero h1 em{font-style:normal;
+    background:linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+
+  .hero .sub{
+    font-family:'Shippori Mincho',serif;font-weight:500;
+    font-size:clamp(15px,2.8vw,21px);color:var(--cream);
+    letter-spacing:0.08em;margin-bottom:42px;
+    opacity:0;animation:fadeUp .9s .85s forwards;}
+  .hero .cta-area{opacity:0;animation:fadeUp .9s 1.05s forwards;}
+  .hero-note{font-size:12.5px;font-weight:300;color:var(--cream-dim);margin-top:20px;}
+
+  .now-panel{max-width:600px;margin:46px auto 0;
+    background:linear-gradient(180deg, rgba(90,22,32,0.5), rgba(58,14,20,0.5));
+    border:1px solid rgba(201,160,99,0.28);border-radius:22px;padding:26px 22px;
+    backdrop-filter:blur(6px);
+    opacity:0;animation:fadeUp .9s 1.3s forwards;}
+  .now-title{font-size:11px;font-weight:700;letter-spacing:0.22em;color:var(--gold-soft);margin-bottom:18px;}
+  .now-big{display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:22px;border-radius:16px;
+    background:linear-gradient(160deg, rgba(201,160,99,0.25), rgba(201,160,99,0.06));
+    border:1px solid rgba(201,160,99,0.5);
+    box-shadow:0 0 36px rgba(201,160,99,0.22);margin-bottom:14px;
+    animation:glow 3s ease-in-out infinite;}
+  @keyframes glow{0%,100%{box-shadow:0 0 26px rgba(201,160,99,0.18);}50%{box-shadow:0 0 46px rgba(201,160,99,0.34);}}
+  .now-big .n{font-size:11px;font-weight:700;letter-spacing:0.2em;color:var(--gold-soft);}
+  .now-big .big{font-family:'Shippori Mincho',serif;font-weight:800;font-size:34px;color:var(--cream);}
+  .other-slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  .slot{padding:8px 15px;border-radius:999px;background:rgba(244,233,220,0.04);
+    border:1px solid rgba(244,233,220,0.15);font-size:12.5px;font-weight:300;color:var(--cream-dim);}
+  .slot .n{color:var(--gold-soft);font-weight:700;margin-right:4px;}
+
+  /* ===== セクション共通 ===== */
+  section{position:relative;z-index:1;padding:96px 24px;}
+  .section-head{text-align:center;max-width:640px;margin:0 auto 56px;}
+  .eyebrow-line{font-family:'Zen Kaku Gothic New';font-size:11px;font-weight:700;
+    letter-spacing:0.3em;color:var(--gold);margin-bottom:16px;}
+  .section-head h2{font-size:clamp(25px,4.2vw,38px);font-weight:800;line-height:1.5;}
+  .section-head p{color:var(--cream-dim);font-size:14px;font-weight:300;margin-top:16px;}
+
+  /* ===== 共感 ===== */
+  .empathy{background:linear-gradient(180deg, transparent, rgba(58,14,20,0.35), transparent);}
+  .empathy-list{max-width:560px;margin:0 auto;}
+  .empathy-row{display:flex;align-items:center;gap:18px;padding:19px 24px;margin-bottom:12px;
+    background:rgba(244,233,220,0.03);border:1px solid rgba(244,233,220,0.08);
+    border-radius:16px;font-size:15px;font-weight:500;
+    transition:border-color .3s, transform .3s;}
+  .empathy-row:hover{border-color:rgba(201,160,99,0.35);transform:translateX(6px);}
+  .empathy-row .q{color:var(--gold-soft);font-family:'Shippori Mincho',serif;font-weight:700;font-size:19px;flex:none;}
+  .empathy-answer{text-align:center;margin-top:40px;}
+  .empathy-answer .arrow{font-size:26px;color:var(--gold);opacity:0.6;animation:bounce 2s infinite;}
+  @keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(8px);}}
+  .empathy-answer h3{font-family:'Shippori Mincho',serif;font-weight:800;font-size:clamp(21px,3.8vw,30px);margin-top:16px;}
+  .empathy-answer h3 em{font-style:normal;color:var(--gold-bright);}
+
+  /* ===== ストーリー ===== */
+  .story{background:
+    linear-gradient(160deg, rgba(107,26,36,0.4), rgba(21,10,12,0.92)),
+    radial-gradient(ellipse at 70% 20%, rgba(201,160,99,0.14), transparent 60%);}
+  .story-inner{max-width:600px;margin:0 auto;text-align:center;}
+  .story-time{font-family:'Zen Kaku Gothic New';font-weight:700;font-size:13px;letter-spacing:0.3em;
+    color:var(--gold-soft);margin-bottom:40px;}
+  .story-line{font-family:'Shippori Mincho',serif;font-weight:500;font-size:clamp(18px,3.7vw,27px);
+    line-height:2;color:var(--cream);}
+  .story-line .quiet{color:var(--cream-dim);font-size:0.78em;font-weight:400;}
+  .story-line .accent{color:var(--gold-bright);font-weight:800;font-size:1.08em;}
+  .story-cheers{margin-top:38px;font-size:clamp(24px,4.6vw,36px);font-weight:800;
+    font-family:'Shippori Mincho',serif;color:var(--gold-bright);
+    letter-spacing:0.14em;}
+
+  /* ===== 比較 ===== */
+  .compare{max-width:640px;margin:0 auto;
+    border:1px solid rgba(201,160,99,0.15);border-radius:20px;overflow:hidden;}
+  .compare-row{display:grid;grid-template-columns:160px 1fr;border-top:1px solid rgba(244,233,220,0.07);}
+  .compare-row:first-child{border-top:none;}
+  .compare-row .name{padding:19px 22px;font-family:'Zen Kaku Gothic New';font-size:14px;font-weight:700;
+    background:rgba(244,233,220,0.02);display:flex;align-items:center;color:var(--cream-dim);}
+  .compare-row .desc{padding:19px 22px;font-size:13.5px;font-weight:300;color:var(--cream-dim);display:flex;align-items:center;}
+  .compare-row.nomigo{background:linear-gradient(90deg, rgba(107,26,36,0.45), rgba(58,14,20,0.45));}
+  .compare-row.nomigo .name{color:var(--gold-bright);background:transparent;font-family:'Shippori Mincho',serif;font-weight:800;font-size:17px;}
+  .compare-row.nomigo .desc{color:var(--cream);font-weight:700;}
+
+  /* ===== 3step ===== */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:1px;background:rgba(201,160,99,0.15);
+    border:1px solid rgba(201,160,99,0.15);border-radius:22px;overflow:hidden;}
+  .step{background:rgba(58,14,20,0.38);padding:36px 26px;text-align:center;
+    transition:background .3s;}
+  .step:hover{background:rgba(90,22,32,0.5);}
+  .step-num{font-family:'Shippori Mincho',serif;font-weight:800;font-size:34px;color:var(--gold);opacity:0.75;margin-bottom:14px;}
+  .step h3{font-size:19px;font-weight:900;margin-bottom:10px;}
+  .step p{font-size:13px;font-weight:300;color:var(--cream-dim);}
+
+  /* ===== シーン ===== */
+  .scenes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
+  .scene{background:rgba(244,233,220,0.03);border:1px solid rgba(244,233,220,0.08);
+    border-radius:18px;padding:28px 22px;transition:border-color .3s, transform .3s, box-shadow .3s;}
+  .scene:hover{border-color:rgba(201,160,99,0.45);transform:translateY(-6px);
+    box-shadow:0 14px 30px rgba(0,0,0,0.3);}
+  .scene .emoji{font-size:30px;margin-bottom:12px;}
+  .scene h3{font-size:15px;font-weight:900;margin-bottom:6px;}
+  .scene p{font-size:12.5px;font-weight:300;color:var(--cream-dim);}
+
+  /* ===== 安心 ===== */
+  .safety-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;max-width:720px;margin:0 auto;}
+  .safety-item{display:flex;gap:14px;align-items:flex-start;padding:20px;
+    background:rgba(244,233,220,0.02);border-radius:16px;border:1px solid rgba(244,233,220,0.06);
+    transition:border-color .3s;}
+  .safety-item:hover{border-color:rgba(201,160,99,0.3);}
+  .safety-mark{width:34px;height:34px;flex:none;border-radius:50%;
+    border:1px solid var(--gold);color:var(--gold-soft);display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .safety-item h4{font-size:14px;font-weight:900;margin-bottom:3px;}
+  .safety-item p{font-size:12.5px;font-weight:300;color:var(--cream-dim);}
+
+  /* ===== 特徴 ===== */
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;}
+  .feature-card{background:rgba(244,233,220,0.03);border:1px solid rgba(244,233,220,0.08);
+    border-radius:18px;padding:28px;transition:border-color .3s, background .3s, transform .3s;}
+  .feature-card:hover{border-color:rgba(201,160,99,0.45);background:rgba(201,160,99,0.05);transform:translateY(-4px);}
+  .feature-icon{width:42px;height:42px;border-radius:12px;background:rgba(201,160,99,0.14);
+    display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:19px;}
+  .feature-card h3{font-size:15.5px;font-weight:900;margin-bottom:8px;}
+  .feature-card p{font-size:13px;font-weight:300;color:var(--cream-dim);}
+
+  /* ===== エリア ===== */
+  .areas-band{position:relative;z-index:1;background:linear-gradient(90deg, var(--wine-deep), var(--wine-dark) 50%, var(--wine-deep));padding:60px 24px;}
+  .areas-grid{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;max-width:700px;margin:0 auto;}
+  .area-chip{padding:14px 30px;border:1px solid rgba(228,198,138,0.35);border-radius:999px;
+    font-size:15px;color:var(--gold-soft);font-family:'Shippori Mincho',serif;font-weight:700;letter-spacing:0.08em;
+    transition:background .3s, transform .3s;}
+  .area-chip:hover{background:rgba(228,198,138,0.1);transform:scale(1.05);}
+  .area-note{text-align:center;margin-top:22px;font-size:12px;font-weight:300;color:var(--cream-dim);}
+
+  /* ===== 料金 ===== */
+  .pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:720px;margin:0 auto;}
+  .price-card{border-radius:22px;padding:34px 30px;border:1px solid rgba(244,233,220,0.1);
+    transition:transform .3s, box-shadow .3s;}
+  .price-card:hover{transform:translateY(-4px);box-shadow:0 16px 34px rgba(0,0,0,0.3);}
+  .price-card.female{background:rgba(244,233,220,0.03);}
+  .price-card.male{background:linear-gradient(160deg, rgba(107,26,36,0.55), rgba(58,14,20,0.55));border-color:rgba(201,160,99,0.3);}
+  .price-tag{font-family:'Zen Kaku Gothic New';font-size:12px;font-weight:900;letter-spacing:0.2em;color:var(--gold-soft);margin-bottom:12px;}
+  .price-num{font-family:'Shippori Mincho',serif;font-weight:800;font-size:40px;margin-bottom:6px;}
+  .price-num span{font-size:14px;font-weight:400;color:var(--cream-dim);}
+  .price-note{font-size:13px;font-weight:300;color:var(--cream-dim);}
+
+  /* ===== FAQ ===== */
+  .faq{max-width:680px;margin:0 auto;}
+  .faq-item{border-bottom:1px solid rgba(244,233,220,0.1);}
+  .faq-q{width:100%;text-align:left;background:none;border:none;color:var(--cream);
+    font-family:'Noto Sans JP';font-size:15px;font-weight:700;padding:22px 40px 22px 0;
+    cursor:pointer;position:relative;display:flex;gap:12px;align-items:flex-start;line-height:1.7;}
+  .faq-q .mark{color:var(--gold-soft);font-family:'Shippori Mincho',serif;font-weight:800;flex:none;}
+  .faq-q .plus{position:absolute;right:4px;top:22px;color:var(--gold);font-size:20px;transition:transform .3s;}
+  .faq-item.open .faq-q .plus{transform:rotate(45deg);}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease;
+    color:var(--cream-dim);font-size:13.5px;font-weight:300;padding-left:28px;}
+  .faq-item.open .faq-a{max-height:260px;padding-bottom:22px;}
+
+  /* ===== 最終CTA ===== */
+  .final-cta{text-align:center;background:radial-gradient(ellipse at center, rgba(201,160,99,0.12), transparent 70%);}
+  .final-cta h2{font-size:clamp(26px,5vw,44px);font-weight:800;margin-bottom:18px;line-height:1.5;}
+  .final-cta h2 em{font-style:normal;color:var(--gold-bright);}
+  .final-cta p{color:var(--cream-dim);font-size:14px;font-weight:300;margin-bottom:36px;}
+
+  footer{position:relative;z-index:1;border-top:1px solid rgba(244,233,220,0.08);padding:40px 24px;text-align:center;}
+  footer .flogo{font-family:'Zen Kaku Gothic New';font-weight:900;color:var(--gold-soft);font-size:17px;}
+  footer p{font-size:12px;font-weight:300;color:rgba(196,178,161,0.5);margin-top:6px;}
+
+  @media(max-width:640px){
+    section{padding:68px 20px;}
+    .compare-row{grid-template-columns:112px 1fr;}
+    .compare-row .name{padding:15px;font-size:13px;}
+    .compare-row .desc{padding:15px;font-size:12.5px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div class="bubbles" id="bubbles"></div>
+
+<header>
+  <div class="header-in">
+    <div class="logo">Nomi Go<span>ノミゴー</span></div>
+    <a href="https://nomigo-final-5.vercel.app" class="header-cta">今すぐ始める</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow"><span class="dot-live"></span>今、飲みたい人が集まっています</div>
+  <h1>
+    <span class="line"><span>今、<em>一緒に飲める人</em>が</span></span>
+    <span class="line"><span>見つかる。</span></span>
+  </h1>
+  <p class="sub">「今日飲みたい」が、すぐ叶う。</p>
+  <div class="cta-area">
+    <a href="https://nomigo-final-5.vercel.app" class="btn-primary">今すぐ始める</a>
+    <p class="hero-note">女性は完全無料／男性はマッチ成立ごとに¥3,000（不成立なら¥0）</p>
+  </div>
+
+  <div class="now-panel">
+    <div class="now-title">〇 今夜のマッチング状況</div>
+    <div class="now-big">
+      <div class="n">LIVE ・ すぐに会える</div>
+      <div class="big">今すぐ</div>
+    </div>
+    <div class="other-slots">
+      <div class="slot"><span class="n">19:00</span>から</div>
+      <div class="slot"><span class="n">20:00</span>から</div>
+      <div class="slot"><span class="n">21:00</span>から</div>
+      <div class="slot"><span class="n">22:00</span>から</div>
+    </div>
+  </div>
+</section>
+
+<!-- 共感 -->
+<section class="empathy">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">ABOUT YOU</div>
+      <h2>こんな経験、ありませんか？</h2>
+    </div>
+    <div class="empathy-list">
+      <div class="empathy-row reveal reveal-d1"><span class="q">01</span>飲みに行きたいけど、誘える人がいない</div>
+      <div class="empathy-row reveal reveal-d2"><span class="q">02</span>友達に連絡しても、予定が合わない</div>
+      <div class="empathy-row reveal reveal-d3"><span class="q">03</span>一人飲みも悪くないけど、少し寂しい</div>
+      <div class="empathy-row reveal reveal-d4"><span class="q">04</span>急に予定が空いて、時間を持て余している</div>
+    </div>
+    <div class="empathy-answer reveal">
+      <div class="arrow">↓</div>
+      <h3>そんな時のための、<em>Nomi Go</em>です。</h3>
+    </div>
+  </div>
+</section>
+
+<!-- ストーリー -->
+<section class="story">
+  <div class="story-inner">
+    <div class="story-time reveal">――今日、19:30。</div>
+    <p class="story-line">
+      <span class="reveal" style="display:block;">仕事が終わった。</span>
+      <span class="accent reveal reveal-d1" style="display:block;">「誰かと、飲みたいな。」</span>
+      <span class="quiet reveal reveal-d2" style="display:block;">でも、友達はみんな予定がある。</span>
+      <span class="reveal reveal-d3" style="display:block;margin-top:22px;">そんな時に開くのが、Nomi Go。</span>
+      <span class="reveal reveal-d4" style="display:block;">募集を見て、その日のうちに。</span>
+    </p>
+    <div class="story-cheers reveal reveal-d4">― 乾杯。 ―</div>
+  </div>
+</section>
+
+<!-- 比較 -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">WHY NOMI GO</div>
+      <h2>飲み相手を探すなら</h2>
+      <p>「今日、時間がある人」だけが集まる。それがNomi Goです。</p>
+    </div>
+    <div class="compare reveal reveal-d1">
+      <div class="compare-row">
+        <div class="name">Instagram</div>
+        <div class="desc">相手を一から探すのが大変</div>
+      </div>
+      <div class="compare-row">
+        <div class="name">LINE</div>
+        <div class="desc">誘える人が限られてしまう</div>
+      </div>
+      <div class="compare-row">
+        <div class="name">マッチングアプリ</div>
+        <div class="desc">恋愛目的が多く、気軽に誘いにくい</div>
+      </div>
+      <div class="compare-row nomigo">
+        <div class="name">Nomi Go</div>
+        <div class="desc">今日、時間がある人だけ。だからすぐ会える。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3ステップ -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">HOW IT WORKS</div>
+      <h2>使い方は、3ステップ</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal reveal-d1">
+        <div class="step-num">01</div>
+        <h3>募集する</h3>
+        <p>時間帯・人数（1対1／2対2）・スタイルを選んで募集。むずかしい設定はいりません。</p>
+      </div>
+      <div class="step reveal reveal-d2">
+        <div class="step-num">02</div>
+        <h3>マッチする</h3>
+        <p>条件の合う相手が見つかると、LINE通知ですぐお知らせ。写真はマッチ前はぼかし表示です。</p>
+      </div>
+      <div class="step reveal reveal-d3">
+        <div class="step-num">03</div>
+        <h3>飲みに行く</h3>
+        <p>待ち合わせ場所を確認して、あとは会うだけ。その日のうちに乾杯できます。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- シーン -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">SCENE</div>
+      <h2>こんな使い方ができます</h2>
+      <p>お酒が飲めなくても、ご飯だけでも大歓迎です。</p>
+    </div>
+    <div class="scenes">
+      <div class="scene reveal reveal-d1"><div class="emoji">🍺</div><h3>仕事終わりに軽く一杯</h3><p>今日はまっすぐ帰りたくない、そんな夜に。</p></div>
+      <div class="scene reveal reveal-d2"><div class="emoji">🍣</div><h3>ご飯だけでもOK</h3><p>お酒は飲めなくても大丈夫。食事メインの人も。</p></div>
+      <div class="scene reveal reveal-d3"><div class="emoji">🍷</div><h3>旅行先で飲み友達探し</h3><p>出張・旅先の夜も、地元の相手と過ごせる。</p></div>
+      <div class="scene reveal reveal-d1"><div class="emoji">🎉</div><h3>二次会メンバー募集</h3><p>もう少し飲みたい、という夜のもう一軒に。</p></div>
+      <div class="scene reveal reveal-d2"><div class="emoji">👥</div><h3>2対2で気軽に</h3><p>友達と一緒だから安心。2対2でも募集できます。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 安心 -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">SAFETY</div>
+      <h2>初対面だからこそ、<br>安心して使える設計。</h2>
+    </div>
+    <div class="safety-list">
+      <div class="safety-item reveal reveal-d1"><div class="safety-mark">◐</div><div><h4>マッチ前は写真をぼかし表示</h4><p>成立するまで顔写真は公開されません。</p></div></div>
+      <div class="safety-item reveal reveal-d2"><div class="safety-mark">◇</div><div><h4>年齢の許容範囲を設定できる</h4><p>「何歳から何歳まで」を自分で決められます。</p></div></div>
+      <div class="safety-item reveal reveal-d3"><div class="safety-mark">◎</div><div><h4>20歳以上・身分確認あり</h4><p>年齢確認をしっかり行っています。</p></div></div>
+      <div class="safety-item reveal reveal-d4"><div class="safety-mark">✕</div><div><h4>ドタキャン抑止の仕組み</h4><p>キャンセルペナルティ制度で無断キャンセルを防止。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 特徴 -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">FEATURES</div>
+      <h2>Nomi Goならではの特徴</h2>
+    </div>
+    <div class="features">
+      <div class="feature-card reveal reveal-d1"><div class="feature-icon">☾</div><h3>“今すぐ”に強い</h3><p>今日・今すぐ会いたい人だけが集まるので、スピーディーにマッチします。</p></div>
+      <div class="feature-card reveal reveal-d2"><div class="feature-icon">▽</div><h3>飲みスタイルで相性マッチ</h3><p>ガッツリ／ゆっくり／ご飯メインなど、スタイルを合わせられます。</p></div>
+      <div class="feature-card reveal reveal-d3"><div class="feature-icon">◐</div><h3>プライバシー配慮</h3><p>マッチ前は写真をぼかし表示。安心して募集できます。</p></div>
+      <div class="feature-card reveal reveal-d1"><div class="feature-icon">👥</div><h3>1人でも2人でも</h3><p>1対1でも、2対2でも。その日の気分で選べます。</p></div>
+      <div class="feature-card reveal reveal-d2"><div class="feature-icon">🔔</div><h3>LINEですぐ通知</h3><p>マッチ成立をLINE通知でお知らせ。見逃しません。</p></div>
+      <div class="feature-card reveal reveal-d3"><div class="feature-icon">🍚</div><h3>お酒なしでもOK</h3><p>飲めない人・ご飯だけの人も気軽に使えます。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- エリア -->
+<div class="areas-band">
+  <div class="section-head reveal" style="margin-bottom:32px;">
+    <div class="eyebrow-line">AREA</div>
+    <h2 style="color:var(--cream);">対応エリア</h2>
+  </div>
+  <div class="areas-grid">
+    <div class="area-chip reveal reveal-d1">すすきの</div>
+    <div class="area-chip reveal reveal-d2">上野</div>
+    <div class="area-chip reveal reveal-d3">新宿</div>
+    <div class="area-chip reveal reveal-d4">梅田</div>
+  </div>
+  <p class="area-note reveal reveal-d4">対応エリアは今後拡大予定です</p>
+</div>
+
+<!-- 料金 -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">PRICE</div>
+      <h2>料金について</h2>
+      <p>マッチが成立しなければ、料金は一切かかりません。</p>
+    </div>
+    <div class="pricing">
+      <div class="price-card female reveal reveal-d1">
+        <div class="price-tag">女性</div>
+        <div class="price-num">¥0<span>／完全無料</span></div>
+        <div class="price-note">何回使っても、料金はかかりません。</div>
+      </div>
+      <div class="price-card male reveal reveal-d2">
+        <div class="price-tag">男性</div>
+        <div class="price-num">¥3,000<span>／マッチ成立ごと</span></div>
+        <div class="price-note">マッチが成立しなければ、料金は発生しません。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow-line">FAQ</div>
+      <h2>よくある質問</h2>
+    </div>
+    <div class="faq reveal reveal-d1">
+      <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>お酒が飲めなくても使えますか？<span class="plus">＋</span></button>
+        <div class="faq-a">はい。ご飯メインの人も多く利用しています。飲みスタイルで「ご飯メイン」を選べるので、お酒なしの相手ともマッチできます。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>料金はいつ発生しますか？<span class="plus">＋</span></button>
+        <div class="faq-a">女性は完全無料です。男性はマッチが成立したときのみ¥3,000。マッチが成立しなければ料金は一切かかりません。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>写真はいつ相手に見られますか？<span class="plus">＋</span></button>
+        <div class="faq-a">マッチが成立するまで、プロフィール写真はぼかし表示です。成立後にはじめてお互いに写真が見えます。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>本当にその日のうちに会えますか？<span class="plus">＋</span></button>
+        <div class="faq-a">Nomi Goは「今日・今すぐ会いたい人」が集まるサービスです。今すぐ・19時〜22時など時間帯を選んで、その日のうちにマッチを目指せます。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>誰でも登録できますか？<span class="plus">＋</span></button>
+        <div class="faq-a">20歳以上の方限定です。安心してご利用いただくため、身分確認を行っています。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 最終CTA -->
+<section class="final-cta">
+  <div class="wrap">
+    <div class="eyebrow-line reveal">START TONIGHT</div>
+    <h2 class="reveal reveal-d1">今夜、<em>一緒に飲む人</em>を<br>見つけよう。</h2>
+    <p class="reveal reveal-d2">登録は数分で完了。女性は無料、男性はマッチ成立ごと¥3,000。</p>
+    <div class="reveal reveal-d3">
+      <a href="https://nomigo-final-5.vercel.app" class="btn-primary">Nomi Goを始める</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="flogo">Nomi Go</div>
+  <p>Nomi Go運営事務局</p>
+  <p>対応エリア：すすきの／上野／新宿／梅田（今後拡大予定）　｜　ご利用は20歳以上に限ります</p>
+</footer>
+
+<script>
+  // スクロールで要素をふわっと表示
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ e.target.classList.add('show'); obs.unobserve(e.target); }
+    });
+  }, {threshold:0.15});
+  document.querySelectorAll('.reveal').forEach(function(el){ obs.observe(el); });
+
+  // FAQ開閉
+  document.querySelectorAll('.faq-q').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btn.parentElement.classList.toggle('open');
+    });
+  });
+
+  // 背景の泡（シャンパンの泡イメージ）
+  var box = document.getElementById('bubbles');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduced){
+    for(var i=0;i<14;i++){
+      var b = document.createElement('div');
+      b.className = 'bubble';
+      var size = 4 + Math.random()*10;
+      b.style.width = size + 'px';
+      b.style.height = size + 'px';
+      b.style.left = (Math.random()*100) + '%';
+      b.style.animationDuration = (9 + Math.random()*10) + 's';
+      b.style.animationDelay = (Math.random()*10) + 's';
+      box.appendChild(b);
+    }
+  }
+</script>
+
+</body>
+</html>
