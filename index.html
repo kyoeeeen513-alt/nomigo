@@ -484,10 +484,13 @@ async function submitIdVerify(){
   if(!S._idPhotoFile){S.error='身分証の写真を選んでください';re('id_verify');return;}
   _idVerifySubmitting=true;
   go('loading');
+  // アップロード直前に、今ちゃんとログインできているか確認する
+  var sessionCheck=await DB.auth.getSession();
+  var hasSession=!!(sessionCheck.data&&sessionCheck.data.session);
   var result=await uploadIdPhoto(S.user.id,S._idPhotoFile);
   if(!result.path){
     _idVerifySubmitting=false;
-    S.error='アップロードに失敗しました: '+(result.error||'不明なエラー');
+    S.error='アップロード失敗: '+(result.error||'不明')+' / ログイン状態:'+(hasSession?'あり':'なし');
     re('id_verify');
     return;
   }
