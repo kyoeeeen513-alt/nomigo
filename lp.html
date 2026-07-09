@@ -275,6 +275,19 @@
   .final-cta h2 em{font-style:normal;color:var(--gold-bright);}
   .final-cta p{color:var(--cream-dim);font-size:14px;font-weight:300;margin-bottom:36px;}
 
+  .line-cta{text-align:center;background:linear-gradient(180deg, rgba(90,22,32,0.4), rgba(21,10,12,0.95));border-top:1px solid rgba(201,160,99,0.15);}
+  .line-cta-box{max-width:520px;margin:0 auto;background:rgba(244,233,220,0.03);border:1px solid rgba(201,160,99,0.25);border-radius:24px;padding:44px 32px;}
+  .line-cta-icon{width:56px;height:56px;border-radius:16px;background:#06C755;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-weight:900;font-size:22px;color:#fff;font-family:'Zen Kaku Gothic New';}
+  .line-cta h2{font-size:clamp(21px,3.8vw,28px);font-weight:800;margin-bottom:12px;line-height:1.5;}
+  .line-cta p{color:var(--cream-dim);font-size:13.5px;font-weight:300;line-height:1.8;margin-bottom:26px;}
+  .btn-line{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:#06C755;color:#fff;font-weight:900;font-size:16px;
+    font-family:'Zen Kaku Gothic New';letter-spacing:0.03em;
+    padding:17px 44px;border-radius:999px;text-decoration:none;
+    box-shadow:0 8px 26px rgba(6,199,85,0.3);transition:transform .25s, box-shadow .25s;}
+  .btn-line:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(6,199,85,0.4);}
+  .line-cta-note{margin-top:18px;font-size:11.5px;color:var(--cream-dim);font-weight:300;}
+
   footer{position:relative;z-index:1;border-top:1px solid rgba(244,233,220,0.08);padding:40px 24px;text-align:center;}
   footer .flogo{font-family:'Zen Kaku Gothic New';font-weight:900;color:var(--gold-soft);font-size:17px;}
   footer p{font-size:12px;font-weight:300;color:rgba(196,178,161,0.5);margin-top:6px;}
@@ -548,6 +561,19 @@
     <p class="reveal reveal-d2">登録は数分で完了。女性は無料、男性はマッチ成立ごと¥3,000。</p>
     <div class="reveal reveal-d3">
       <a href="https://nomigo-final-5.vercel.app" class="btn-primary">Nomi Goを始める</a>
+    </div>
+  </div>
+</section>
+
+<!-- LINE事前登録 -->
+<section class="line-cta">
+  <div class="wrap">
+    <div class="line-cta-box reveal">
+      <div class="line-cta-icon">LINE</div>
+      <h2>先行案内を受け取る</h2>
+      <p>エリア拡大情報や、お得なキャンペーンをいち早くお届けします。<br>公式LINEを友だち追加するだけ、30秒で完了。</p>
+      <a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn-line">友だち追加する</a>
+      <div class="line-cta-note">通知はいつでもオフにできます</div>
     </div>
   </div>
 </section>
