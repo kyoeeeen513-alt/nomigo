@@ -187,7 +187,7 @@ var S={
 };
 
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
   document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
 }
 
@@ -212,6 +212,9 @@ function go(sc){
     startLineLinkPolling();
   }else if(S._lineLinkTimer){
     clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;
+  }
+  if(sc!=='id_verify_pending'&&S._idVerifyTimer){
+    clearInterval(S._idVerifyTimer);S._idVerifyTimer=null;
   }
 }
 
@@ -445,10 +448,120 @@ async function saveProfile(){
   if(parseInt(p.age)<20){S.error='Nomi Goは20歳以上の方がご利用いただけます';re('profile_new');return;}
   go('loading');
   var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
-  await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,verified_level:1,email_verified:!!S._emailVerified,updated_at:new Date().toISOString()});
+  await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,verified_level:1,email_verified:!!S._emailVerified,id_verify_status:'pending',updated_at:new Date().toISOString()});
   await DB.from('user_stats').upsert({user_id:S.user.id});
-  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,email_verified:!!S._emailVerified};
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,email_verified:!!S._emailVerified,id_verify_status:'pending'};
   go('cardregister');
+}
+
+// 身分証の写真が選ばれた時：画面にプレビュー表示し、ファイルを保持しておく
+function handleIdPhotoSelect(inputEl){
+  var file=inputEl.files&&inputEl.files[0];
+  if(!file)return;
+  S._idPhotoFile=file;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    S._idPhotoPreview=e.target.result;
+    re('id_verify');
+  };
+  reader.readAsDataURL(file);
+}
+
+// 身分証の写真を非公開のid_photosバケットにアップロードする
+async function uploadIdPhoto(userId,file){
+  if(!file)return null;
+  var ext=(file.name&&file.name.split('.').pop())||'jpg';
+  var path=userId+'/'+Date.now()+'.'+ext;
+  var up=await DB.storage.from('id_photos').upload(path,file,{upsert:true});
+  if(up.error)return null;
+  return path; // 非公開バケットなので、公開URLではなく保存パスをそのまま記録する
+}
+
+// 身分証アップロードを送信する
+var _idVerifySubmitting=false;
+async function submitIdVerify(){
+  if(_idVerifySubmitting)return;
+  if(!S._idPhotoFile){S.error='身分証の写真を選んでください';re('id_verify');return;}
+  _idVerifySubmitting=true;
+  go('loading');
+  var path=await uploadIdPhoto(S.user.id,S._idPhotoFile);
+  if(!path){
+    _idVerifySubmitting=false;
+    S.error='アップロードに失敗しました。もう一度お試しください。';
+    re('id_verify');
+    return;
+  }
+  var upd=await DB.from('profiles').update({id_photo_url:path,id_verify_status:'pending'}).eq('user_id',S.user.id).select().single();
+  _idVerifySubmitting=false;
+  if(upd.error){S.error='保存に失敗しました: '+upd.error.message;re('id_verify');return;}
+  S.profile.id_photo_url=path;
+  S.profile.id_verify_status='pending';
+  S._idPhotoFile=null;S._idPhotoPreview=null;
+  go('id_verify_pending');
+  startIdVerifyPolling();
+}
+
+// 承認待ち画面：数秒おきにDBのid_verify_statusを確認する
+function startIdVerifyPolling(){
+  if(S._idVerifyTimer)clearInterval(S._idVerifyTimer);
+  S._idVerifyTimer=setInterval(async function(){
+    if(S.screen!=='id_verify_pending'){clearInterval(S._idVerifyTimer);S._idVerifyTimer=null;return;}
+    var res=await DB.from('profiles').select('id_verify_status').eq('user_id',S.user.id).single();
+    if(res.data&&res.data.id_verify_status==='approved'){
+      clearInterval(S._idVerifyTimer);S._idVerifyTimer=null;
+      S.profile.id_verify_status='approved';
+      go('splash');
+    }else if(res.data&&res.data.id_verify_status==='rejected'){
+      clearInterval(S._idVerifyTimer);S._idVerifyTimer=null;
+      S.profile.id_verify_status='rejected';
+      re('id_verify_pending');
+    }
+  },5000);
+}
+
+// 「今すぐ確認する」ボタン用：その場で1回だけ確認する
+async function checkIdVerifyNow(){
+  var res=await DB.from('profiles').select('id_verify_status').eq('user_id',S.user.id).single();
+  if(res.data&&res.data.id_verify_status==='approved'){
+    if(S._idVerifyTimer){clearInterval(S._idVerifyTimer);S._idVerifyTimer=null;}
+    S.profile.id_verify_status='approved';
+    go('splash');
+  }else{
+    alert('まだ確認中です。もうしばらくお待ちください。');
+  }
+}
+
+// 却下された場合、もう一度アップロードし直す
+function retryIdVerify(){
+  S._idPhotoFile=null;S._idPhotoPreview=null;
+  go('id_verify');
+}
+
+function idVerifyH(){
+  var preview=S._idPhotoPreview?'<img src="'+S._idPhotoPreview+'" style="width:100%;border-radius:12px;display:block;object-fit:cover">':'<div style="width:100%;aspect-ratio:1.6;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">身分証の写真がここに表示されます</div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集するには</div><div class="hdr-title">本人確認（年齢確認）</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+    +'<div style="font-size:14px;color:var(--cream);line-height:1.8">募集を始めるには、年齢確認が必要です。Nomi Goは20歳以上限定のサービスです。運転免許証・マイナンバーカード・パスポートなど、生年月日が確認できる身分証の写真を1枚アップロードしてください。</div>'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.7">※アップロードされた写真は年齢確認の目的のみに使用し、運営以外には公開されません。</div>'
+    +preview
+    +'<label style="padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center">'+(S._idPhotoPreview?'別の写真を選び直す':'身分証の写真を選ぶ')+'<input type="file" accept="image/*" style="display:none" onchange="handleIdPhotoSelect(this)"></label>'
+    +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
+    +'</div><div class="ftr"><button class="btn btn-wine" '+(S._idPhotoFile&&!_idVerifySubmitting?'':'disabled ')+'onclick="submitIdVerify()">'+(_idVerifySubmitting?'送信中...':'アップロードして確認を依頼する →')+'</button></div></div>';
+}
+
+function idVerifyPendingH(){
+  var rejected=S.profile&&S.profile.id_verify_status==='rejected';
+  if(rejected){
+    return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集するには</div><div class="hdr-title">本人確認</div></div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">'
+      +'<div style="font-size:40px">⚠️</div>'
+      +'<div style="font-size:16px;font-weight:800;color:var(--cream)">確認できませんでした</div>'
+      +'<div style="font-size:13px;color:var(--muted);line-height:1.7">写真がぼやけていたり、生年月日が読み取れなかった可能性があります。<br>もう一度、はっきり写った写真でお試しください。</div>'
+      +'</div><div class="ftr"><button class="btn btn-wine" onclick="retryIdVerify()">もう一度アップロードする →</button></div></div>';
+  }
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集するには</div><div class="hdr-title">確認中です</div></div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">'
+    +'<div class="spinner" style="margin:0 auto"></div>'
+    +'<div style="font-size:16px;font-weight:800;color:var(--cream)">運営が確認しています</div>'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.7">身分証の確認には、しばらくお時間をいただく場合があります。<br>確認が完了すると、自動で次の画面に進みます。</div>'
+    +'</div><div class="ftr"><button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="checkIdVerifyNow()">今すぐ確認する</button></div></div>';
 }
 
 async function loadStats(){
@@ -480,7 +593,22 @@ async function goRecruit(){
   }
   var registered=await isCardRegistered();
   if(!registered){go('cardregister');return;}
+  var idStatus=await getIdVerifyStatus();
+  if(idStatus!=='approved'){
+    if(!idStatus||idStatus==='none'){go('id_verify');}else{go('id_verify_pending');}
+    return;
+  }
   go('area_select');
+}
+
+// id_verify_statusと写真の有無をDBから取得する（フロントstateには依存しない）
+async function getIdVerifyStatus(){
+  if(!S.user)return 'none';
+  var res=await DB.from('profiles').select('id_photo_url,id_verify_status').eq('user_id',S.user.id).single();
+  if(res.error||!res.data)return 'none';
+  if(S.profile){S.profile.id_photo_url=res.data.id_photo_url;S.profile.id_verify_status=res.data.id_verify_status;}
+  if(!res.data.id_photo_url)return 'none';
+  return res.data.id_verify_status||'pending';
 }
 
 // エリアを選ぶ画面（選んだら人数選択画面へ進む）
