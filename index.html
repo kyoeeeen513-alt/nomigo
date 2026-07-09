@@ -469,12 +469,12 @@ function handleIdPhotoSelect(inputEl){
 
 // 身分証の写真を非公開のid_photosバケットにアップロードする
 async function uploadIdPhoto(userId,file){
-  if(!file)return null;
+  if(!file)return {path:null,error:null};
   var ext=(file.name&&file.name.split('.').pop())||'jpg';
   var path=userId+'/'+Date.now()+'.'+ext;
   var up=await DB.storage.from('id_photos').upload(path,file,{upsert:true});
-  if(up.error)return null;
-  return path; // 非公開バケットなので、公開URLではなく保存パスをそのまま記録する
+  if(up.error)return {path:null,error:up.error.message||JSON.stringify(up.error)};
+  return {path:path,error:null}; // 非公開バケットなので、公開URLではなく保存パスをそのまま記録する
 }
 
 // 身分証アップロードを送信する
@@ -484,13 +484,14 @@ async function submitIdVerify(){
   if(!S._idPhotoFile){S.error='身分証の写真を選んでください';re('id_verify');return;}
   _idVerifySubmitting=true;
   go('loading');
-  var path=await uploadIdPhoto(S.user.id,S._idPhotoFile);
-  if(!path){
+  var result=await uploadIdPhoto(S.user.id,S._idPhotoFile);
+  if(!result.path){
     _idVerifySubmitting=false;
-    S.error='アップロードに失敗しました。もう一度お試しください。';
+    S.error='アップロードに失敗しました: '+(result.error||'不明なエラー');
     re('id_verify');
     return;
   }
+  var path=result.path;
   var upd=await DB.from('profiles').update({id_photo_url:path,id_verify_status:'pending'}).eq('user_id',S.user.id).select().single();
   _idVerifySubmitting=false;
   if(upd.error){S.error='保存に失敗しました: '+upd.error.message;re('id_verify');return;}
