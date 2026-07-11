@@ -759,6 +759,21 @@ async function loadStats(){
   }catch(e){console.error('[loadStats] exception:',e);}
 }
 
+// エリアごとの現在募集中の人数を取得する（エリア選択画面で「今このエリアで◯人が募集中」を出すため）
+async function loadAreaStats(){
+  try{
+    var res=await DB.from('registrations').select('area_id').eq('status','waiting');
+    var counts={};
+    AREAS.forEach(function(a){counts[a.id]=0;});
+    if(res.data){
+      res.data.forEach(function(r){
+        if(counts[r.area_id]!=null)counts[r.area_id]++;
+      });
+    }
+    S.areaStats=counts;
+  }catch(e){S.areaStats=S.areaStats||{};}
+}
+
 async function goRecruit(){
   if(!S.user){go('email');return;}
   if(!S.profile){S.pf={nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null};go('profile_new');return;}
@@ -778,6 +793,7 @@ async function goRecruit(){
     if(!idStatus||idStatus==='none'){go('id_verify');}else{go('id_verify_pending');}
     return;
   }
+  await loadAreaStats();
   go('area_select');
 }
 
@@ -800,10 +816,15 @@ function selectArea(areaId,el){
 }
 
 function areaSelectH(){
+  var stats=S.areaStats||{};
   var cardsHtml=AREAS.map(function(a){
-    return '<div class="mode-card area-card" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'"><div class="area-card-tint"></div><div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
+    var n=stats[a.id]||0;
+    var badge=n>0
+      ?'<div style="position:absolute;top:12px;right:12px;background:rgba(123,224,144,.92);color:#0A0507;font-size:12px;font-weight:800;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#0A0507;display:inline-block"></span>'+n+'人が募集中</div>'
+      :'<div style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.55);color:rgba(255,255,255,.75);font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px">準備中</div>';
+    return '<div class="mode-card area-card" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'"><div class="area-card-tint"></div>'+badge+'<div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
   }).join('');
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'</div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">「準備中」のエリアも募集は可能ですが、マッチまで時間がかかる場合があります。</div></div></div>';
 }
 
 function selectMode(m,el){
@@ -1443,7 +1464,7 @@ function splashH(){
   var profileMenuBackdrop=profileMenuOpen?'<div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998" onclick="S._showProfileMenu=false;re(\'splash\')"></div>':'';
   var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.25);border-radius:10px;padding:14px 16px;margin-bottom:20px"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div><button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button></div>':'';
   var introAnim='<div style="width:calc(100% + 40px);margin:-20px -20px 12px -20px;overflow:hidden"><img src="intro_temp.jpg" alt="Nomi Go" style="width:100%;height:180px;object-fit:cover;display:block"></div>';
-  return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div><div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div><div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,000円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">今日の成立</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+S.stats.todayMatches+'</div></div></div>'+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted)"><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
+  return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div><div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div><div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,000円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">今日の成立</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+S.stats.todayMatches+'</div></div></div>'+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 全ユーザー、身分証と顔写真による本人確認済み</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted)"><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
 }
 
 function emailH(){
@@ -1720,18 +1741,20 @@ function matchedH(){
     var smoke=u.profiles?u.profiles.smoke:null;
     var alcoholIdx=u.profiles&&u.profiles.alcohol!=null?u.profiles.alcohol:null;
     var alcoholLabel=alcoholIdx!=null?ALCOHOL_LEVELS[alcoholIdx]:null;
+    var verified=u.profiles&&u.profiles.id_verify_status==='approved';
     var tags=[];
     if(smoke==='no')tags.push('🚭 非喫煙');
     if(smoke==='yes')tags.push('🚬 喫煙する');
     if(alcoholLabel)tags.push('🍺 お酒：'+alcoholLabel);
     var tagsHtml=tags.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+tags.map(function(t){return '<span style="font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:3px 8px">'+t+'</span>';}).join('')+'</div>':'';
+    var verifiedBadge=verified?'<span style="font-size:10px;background:rgba(123,224,144,.15);color:#7BE090;border:1px solid rgba(123,224,144,.4);padding:2px 7px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px">✓ 本人確認済み</span>':'';
     var photoUrl=u.profiles?u.profiles.photo_url:null;
     var avatarHtml=photoUrl
       ?'<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="'+photoUrl+'" style="width:100%;height:100%;object-fit:cover;filter:blur(2.5px) saturate(1.1);transform:scale(1.15)"></div>'
       :'<div style="width:40px;height:40px;border-radius:50%;background:'+(gn==='male'?'rgba(50,80,160,.35)':'rgba(160,50,100,.35)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(gn==='male'?'♂':'♀')+'</div>';
     return '<div class="member-row" style="align-items:flex-start">'
       +avatarHtml
-      +'<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:15px;font-weight:800">'+nick+'</span>'+(age?'<span style="font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:1px 8px">'+age+'歳</span>':'')+(isMe?'<span style="font-size:10px;background:var(--wine-bg);color:var(--wine);padding:2px 7px;border-radius:4px;font-weight:700">あなた</span>':'')+'</div>'
+      +'<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:15px;font-weight:800">'+nick+'</span>'+(age?'<span style="font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:1px 8px">'+age+'歳</span>':'')+(isMe?'<span style="font-size:10px;background:var(--wine-bg);color:var(--wine);padding:2px 7px;border-radius:4px;font-weight:700">あなた</span>':'')+verifiedBadge+'</div>'
       +(job?'<div style="font-size:12px;color:var(--muted);margin-top:3px">'+job+'</div>':'')
       +tagsHtml
       +'</div></div>';
