@@ -469,12 +469,16 @@ var _faceStream=null;
 var _faceDetectTimer=null;
 var _faceStableCount=0;
 var _faceCaptured=false;
+var _faceCountdownTimer=null;
+var _faceCountdownValue=0;
 
 async function openFaceCamera(){
   S._faceCameraError='';
   S._faceCameraStatus='searching';
   _faceStableCount=0;
   _faceCaptured=false;
+  _faceCountdownValue=0;
+  if(_faceCountdownTimer){clearInterval(_faceCountdownTimer);_faceCountdownTimer=null;}
   re('id_verify');
   try{
     _faceStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
@@ -522,43 +526,66 @@ function startFaceDetectLoop(video){
 
       if(looksLikeFace){
         _faceStableCount++;
-        S._faceCameraStatus=_faceStableCount>=1?'holding':'searching';
       }else{
         _faceStableCount=0;
+        // 顔が外れたらカウントダウンを中断してやり直し
+        if(_faceCountdownTimer){clearInterval(_faceCountdownTimer);_faceCountdownTimer=null;}
         S._faceCameraStatus='searching';
-      }
-      updateFaceCameraStatusUI();
-
-      // 目安：判定間隔150msで6回連続安定 = 約0.9秒キープしたら自動撮影
-      if(_faceStableCount>=6&&!_faceCaptured){
-        _faceCaptured=true;
-        S._faceCameraStatus='captured';
         updateFaceCameraStatusUI();
-        setTimeout(function(){captureFacePhoto();},250);
+      }
+
+      // 目安：判定間隔150msで4回連続安定 = 約0.6秒キープしたらカウントダウン開始
+      if(_faceStableCount>=4&&!_faceCaptured&&!_faceCountdownTimer){
+        startFaceCountdown();
       }
     }catch(e){}
   },150);
 }
 
-// 画面全体を再描画せず、状態テキストとガイド枠の色だけを直接書き換える（カメラ映像の再マウントを防ぐ）
+// 3→2→1のカウントダウンを表示し、0になったら撮影する
+function startFaceCountdown(){
+  _faceCountdownValue=3;
+  S._faceCameraStatus='counting';
+  updateFaceCameraStatusUI();
+  _faceCountdownTimer=setInterval(function(){
+    _faceCountdownValue--;
+    if(_faceCountdownValue<=0){
+      clearInterval(_faceCountdownTimer);_faceCountdownTimer=null;
+      if(_faceCaptured)return;
+      _faceCaptured=true;
+      S._faceCameraStatus='captured';
+      updateFaceCameraStatusUI();
+      setTimeout(function(){captureFacePhoto();},200);
+      return;
+    }
+    updateFaceCameraStatusUI();
+  },800);
+}
+
+// 画面全体を再描画せず、状態テキスト・カウントダウン数字・ガイド枠の色だけを直接書き換える（カメラ映像の再マウントを防ぐ）
 function updateFaceCameraStatusUI(){
   var label=document.getElementById('face-status-label');
   var ring=document.getElementById('face-guide-ring');
+  var countEl=document.getElementById('face-countdown-num');
   if(!label||!ring)return;
-  if(S._faceCameraStatus==='holding'){
-    label.textContent='その調子です…そのまま動かないでください';
+  if(S._faceCameraStatus==='counting'){
+    label.textContent='そのまま動かないでください';
     ring.style.borderColor='rgba(123,224,144,.95)';
+    if(countEl){countEl.textContent=_faceCountdownValue>0?_faceCountdownValue:'';countEl.style.display='flex';}
   }else if(S._faceCameraStatus==='captured'){
     label.textContent='撮影しました！';
     ring.style.borderColor='rgba(123,224,144,.95)';
+    if(countEl)countEl.style.display='none';
   }else{
     label.textContent='枠の中に顔を合わせてください';
     ring.style.borderColor='rgba(255,255,255,.85)';
+    if(countEl)countEl.style.display='none';
   }
 }
 
 function closeFaceCamera(){
   if(_faceDetectTimer){clearInterval(_faceDetectTimer);_faceDetectTimer=null;}
+  if(_faceCountdownTimer){clearInterval(_faceCountdownTimer);_faceCountdownTimer=null;}
   if(_faceStream){
     _faceStream.getTracks().forEach(function(t){t.stop();});
     _faceStream=null;
@@ -571,6 +598,7 @@ function captureFacePhoto(){
   var video=document.getElementById('face-camera-video');
   if(!video)return;
   if(_faceDetectTimer){clearInterval(_faceDetectTimer);_faceDetectTimer=null;}
+  if(_faceCountdownTimer){clearInterval(_faceCountdownTimer);_faceCountdownTimer=null;}
   var canvas=document.createElement('canvas');
   canvas.width=video.videoWidth;
   canvas.height=video.videoHeight;
@@ -674,6 +702,7 @@ function idVerifyH(){
       +'<video id="face-camera-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;transform:scaleX(-1)"></video>'
       +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'
         +'<div id="face-guide-ring" style="width:62%;aspect-ratio:0.75;border:3px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 0 2000px rgba(0,0,0,.45);transition:border-color .2s"></div>'
+        +'<div id="face-countdown-num" style="display:none;position:absolute;width:96px;height:96px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:44px;font-weight:900;align-items:center;justify-content:center;font-family:-apple-system,sans-serif"></div>'
       +'</div>'
       +'<div style="position:absolute;top:20px;left:0;right:0;text-align:center;padding:0 24px"><div id="face-status-label" style="display:inline-block;background:rgba(0,0,0,.5);color:#fff;font-size:13px;font-weight:700;padding:8px 16px;border-radius:20px">枠の中に顔を合わせてください</div></div>'
       +'<div style="position:absolute;bottom:0;left:0;right:0;padding:28px 24px 36px;display:flex;align-items:center;justify-content:center;gap:24px;background:linear-gradient(transparent,rgba(0,0,0,.6))">'
