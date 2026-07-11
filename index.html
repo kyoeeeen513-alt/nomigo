@@ -154,6 +154,70 @@ const WAIT_MESSAGES=[
   '引き続き探しています…'
 ];
 
+// ===== 今日の運勢（待機画面の演出用・追加） =====
+const ZODIAC_SIGNS=['おひつじ座','おうし座','ふたご座','かに座','しし座','おとめ座','てんびん座','さそり座','いて座','やぎ座','みずがめ座','うお座'];
+const FORTUNE_CATEGORIES=[
+  {key:'love',label:'恋愛運',templates:[
+    '{sign}は今日、話しかけられる予感',
+    '{sign}は素直な気持ちが伝わりやすい日',
+    '{sign}は聞き上手になれそうな日',
+    '{sign}は第一印象が良くなる日'
+  ]},
+  {key:'money',label:'金運',templates:[
+    '{sign}は今日、ちょっと良い出会いがあるかも',
+    '{sign}は奢られ上手になれる日',
+    '{sign}は今日の出費が後で活きてきそう',
+    '{sign}は思わぬラッキーがある日'
+  ]},
+  {key:'work',label:'仕事運',templates:[
+    '{sign}は今日、頭の回転が良さそうな日',
+    '{sign}は場を盛り上げるのが得意な日',
+    '{sign}は今日、判断力が冴えている日',
+    '{sign}は周りから頼られやすい日'
+  ]},
+  {key:'health',label:'健康運',templates:[
+    '{sign}は今日、お酒がいつもより美味しく感じそう',
+    '{sign}は気分爽快で過ごせる日',
+    '{sign}は今夜、ぐっすり眠れそうな日',
+    '{sign}は体調が安定している日'
+  ]}
+];
+
+// 日付をシードにした簡易乱数（同じ日は同じ結果、日が変われば自動で変わる）
+function seededRandom(seed){
+  var x=Math.sin(seed)*10000;
+  return x-Math.floor(x);
+}
+function getTodaySeed(){
+  var d=new Date();
+  return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+}
+
+// 今日の運勢メッセージを数件生成する（待機画面のローテーションに混ぜ込む用）
+function generateTodayFortunes(count){
+  var seed=getTodaySeed();
+  var results=[];
+  var used={};
+  var tries=0;
+  while(results.length<count&&tries<50){
+    tries++;
+    var r1=seededRandom(seed+results.length*7+tries);
+    var r2=seededRandom(seed+results.length*13+tries+1);
+    var r3=seededRandom(seed+results.length*19+tries+2);
+    var signIdx=Math.floor(r1*ZODIAC_SIGNS.length);
+    var catIdx=Math.floor(r2*FORTUNE_CATEGORIES.length);
+    var key=signIdx+'-'+catIdx;
+    if(used[key])continue;
+    used[key]=true;
+    var cat=FORTUNE_CATEGORIES[catIdx];
+    var tplIdx=Math.floor(r3*cat.templates.length);
+    var text=cat.templates[tplIdx].replace('{sign}',ZODIAC_SIGNS[signIdx]);
+    results.push('🔮 '+text+'（'+cat.label+'）');
+  }
+  return results;
+}
+// ===== 今日の運勢（ここまで追加） =====
+
 function areaName(id){var a=AREAS.find(function(x){return x.id===id;});return a?a.name:id||'';}
 
 function clampAgeMin(val,defaultMin){
@@ -204,13 +268,30 @@ function render(){
 }
 
 // ===== 待機画面の演出用タイマー（追加） =====
+// 進行感メッセージと「今日の運勢」を交互に混ぜたリストを作る
+function buildWaitRotationList(){
+  var fortunes=generateTodayFortunes(4);
+  var list=[];
+  var fi=0;
+  for(var i=0;i<WAIT_MESSAGES.length;i++){
+    list.push(WAIT_MESSAGES[i]);
+    if(fi<fortunes.length){
+      list.push(fortunes[fi]);
+      fi++;
+    }
+  }
+  while(fi<fortunes.length){list.push(fortunes[fi]);fi++;}
+  return list;
+}
+
 function startWaitMessageRotation(){
   if(S._waitMsgTimer)clearInterval(S._waitMsgTimer);
+  S._waitMsgList=buildWaitRotationList();
   S._waitMsgIdx=0;
   S._waitMsgTimer=setInterval(function(){
-    S._waitMsgIdx=(S._waitMsgIdx+1)%WAIT_MESSAGES.length;
+    S._waitMsgIdx=(S._waitMsgIdx+1)%S._waitMsgList.length;
     var el=document.getElementById('wait-msg-text');
-    if(el)el.textContent=WAIT_MESSAGES[S._waitMsgIdx];
+    if(el)el.textContent=S._waitMsgList[S._waitMsgIdx];
   },4000);
 }
 
@@ -1757,7 +1838,7 @@ function waitH(){
     +'<div style="background:var(--hero);padding:28px 20px 24px;text-align:center">'
       +'<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,.1);margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:rgba(237,229,224,.8)">マッチング中</span></div>'
       +'<div style="font-size:24px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px">今夜の相手を探しています</div>'
-      +'<div id="wait-msg-text" style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.6;min-height:20px">'+WAIT_MESSAGES[0]+'</div>'
+      +'<div id="wait-msg-text" style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.6;min-height:20px">'+((S._waitMsgList&&S._waitMsgList[S._waitMsgIdx])||WAIT_MESSAGES[0])+'</div>'
     +'</div>'
     +'<div style="padding:16px 20px 0">'+lineCtaHtml+'</div>'
     +'<div style="background:var(--surface);margin:16px 0 0;padding:4px 0"><div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+areaName(S.form.area)+'</span></div><div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+(S.form.slot||'')+(S.form.slot==='今すぐ'?'':'〜')+(S.form.slot==='今すぐ'&&S.form.duration_pref?'（'+S.form.duration_pref+'）':'')+'</span></div><div class="drow"><span class="drow-k">飲みスタイル</span><span class="drow-v">'+(S.form.drink_style||'')+'</span></div><div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(S.form.mode==='2v2'?'2対2':'1対1')+'</span></div></div>'
