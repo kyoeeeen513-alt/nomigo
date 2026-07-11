@@ -1,0 +1,24 @@
+{
+  "name": "Nomi Go",
+  "short_name": "Nomi Go",
+  "description": "今、一緒に飲める人が見つかる。同日利用型の飲み友マッチングアプリ。",
+  "start_url": "/lp.html",
+  "display": "standalone",
+  "background_color": "#150A0C",
+  "theme_color": "#3A0E14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
