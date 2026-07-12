@@ -154,33 +154,17 @@ const WAIT_MESSAGES=[
   '引き続き探しています…'
 ];
 
-// ===== 今日の運勢（待機画面の演出用・追加） =====
-const ZODIAC_SIGNS=['おひつじ座','おうし座','ふたご座','かに座','しし座','おとめ座','てんびん座','さそり座','いて座','やぎ座','みずがめ座','うお座'];
+// ===== 今日の運勢（待機画面の演出用） =====
+const ZODIAC_SIGNS=[
+  {name:'おひつじ座',emoji:'♈'},{name:'おうし座',emoji:'♉'},{name:'ふたご座',emoji:'♊'},{name:'かに座',emoji:'♋'},
+  {name:'しし座',emoji:'♌'},{name:'おとめ座',emoji:'♍'},{name:'てんびん座',emoji:'♎'},{name:'さそり座',emoji:'♏'},
+  {name:'いて座',emoji:'♐'},{name:'やぎ座',emoji:'♑'},{name:'みずがめ座',emoji:'♒'},{name:'うお座',emoji:'♓'}
+];
 const FORTUNE_CATEGORIES=[
-  {key:'love',label:'恋愛運',templates:[
-    '{sign}は今日、話しかけられる予感',
-    '{sign}は素直な気持ちが伝わりやすい日',
-    '{sign}は聞き上手になれそうな日',
-    '{sign}は第一印象が良くなる日'
-  ]},
-  {key:'money',label:'金運',templates:[
-    '{sign}は今日、ちょっと良い出会いがあるかも',
-    '{sign}は奢られ上手になれる日',
-    '{sign}は今日の出費が後で活きてきそう',
-    '{sign}は思わぬラッキーがある日'
-  ]},
-  {key:'work',label:'仕事運',templates:[
-    '{sign}は今日、頭の回転が良さそうな日',
-    '{sign}は場を盛り上げるのが得意な日',
-    '{sign}は今日、判断力が冴えている日',
-    '{sign}は周りから頼られやすい日'
-  ]},
-  {key:'health',label:'健康運',templates:[
-    '{sign}は今日、お酒がいつもより美味しく感じそう',
-    '{sign}は気分爽快で過ごせる日',
-    '{sign}は今夜、ぐっすり眠れそうな日',
-    '{sign}は体調が安定している日'
-  ]}
+  {key:'love',label:'恋愛運',icon:'💗',templates:['話しかけられる予感','素直な気持ちが伝わりやすい','聞き上手になれそう','第一印象が良くなる日','初対面の相手と話が弾みそう','自然体でいるのが吉']},
+  {key:'money',label:'金運',icon:'💰',templates:['ちょっと良い出会いがあるかも','奢られ上手になれる日','今日の出費が後で活きてきそう','思わぬラッキーがある日','使い方次第で運気アップ','小さな幸運が舞い込む日']},
+  {key:'work',label:'仕事運',icon:'💼',templates:['頭の回転が良さそうな日','場を盛り上げるのが得意な日','判断力が冴えている日','周りから頼られやすい日','会話のテンポが良い日','聞き役に回ると好印象']},
+  {key:'health',label:'健康運',icon:'🌿',templates:['お酒がいつもより美味しく感じそう','気分爽快で過ごせる日','今夜ぐっすり眠れそうな日','体調が安定している日','リラックスできる一日','食事が楽しめる日']}
 ];
 
 // 日付をシードにした簡易乱数（同じ日は同じ結果、日が変われば自動で変わる）
@@ -193,30 +177,32 @@ function getTodaySeed(){
   return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
 }
 
-// 今日の運勢メッセージを数件生成する（待機画面のローテーションに混ぜ込む用）
-function generateTodayFortunes(count){
+// 12星座×4項目ぶんの「今日の運勢」を1回だけ生成してキャッシュする
+var _todayFortuneCache=null;
+function getTodayFortunes(){
+  if(_todayFortuneCache&&_todayFortuneCache._seed===getTodaySeed())return _todayFortuneCache;
   var seed=getTodaySeed();
-  var results=[];
-  var used={};
-  var tries=0;
-  while(results.length<count&&tries<50){
-    tries++;
-    var r1=seededRandom(seed+results.length*7+tries);
-    var r2=seededRandom(seed+results.length*13+tries+1);
-    var r3=seededRandom(seed+results.length*19+tries+2);
-    var signIdx=Math.floor(r1*ZODIAC_SIGNS.length);
-    var catIdx=Math.floor(r2*FORTUNE_CATEGORIES.length);
-    var key=signIdx+'-'+catIdx;
-    if(used[key])continue;
-    used[key]=true;
-    var cat=FORTUNE_CATEGORIES[catIdx];
-    var tplIdx=Math.floor(r3*cat.templates.length);
-    var text=cat.templates[tplIdx].replace('{sign}',ZODIAC_SIGNS[signIdx]);
-    results.push('🔮 '+text+'（'+cat.label+'）');
-  }
-  return results;
+  var result={_seed:seed,signs:[]};
+  ZODIAC_SIGNS.forEach(function(sign,si){
+    var cats=FORTUNE_CATEGORIES.map(function(cat,ci){
+      var r1=seededRandom(seed+si*31+ci*7+1);
+      var r2=seededRandom(seed+si*31+ci*7+2);
+      var stars=1+Math.floor(r1*5); // 1〜5
+      var tpl=cat.templates[Math.floor(r2*cat.templates.length)];
+      return {label:cat.label,icon:cat.icon,stars:stars,text:tpl};
+    });
+    result.signs.push({name:sign.name,emoji:sign.emoji,cats:cats});
+  });
+  _todayFortuneCache=result;
+  return result;
 }
-// ===== 今日の運勢（ここまで追加） =====
+
+function starsHtmlSmall(n){
+  var s='';
+  for(var i=1;i<=5;i++){s+=(i<=n?'★':'☆');}
+  return s;
+}
+// ===== 今日の運勢（ここまで） =====
 
 function areaName(id){var a=AREAS.find(function(x){return x.id===id;});return a?a.name:id||'';}
 
@@ -267,32 +253,50 @@ function render(){
   document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
 }
 
-// ===== 待機画面の演出用タイマー（追加） =====
-// 進行感メッセージと「今日の運勢」を交互に混ぜたリストを作る
-function buildWaitRotationList(){
-  var fortunes=generateTodayFortunes(4);
-  var list=[];
-  var fi=0;
-  for(var i=0;i<WAIT_MESSAGES.length;i++){
-    list.push(WAIT_MESSAGES[i]);
-    if(fi<fortunes.length){
-      list.push(fortunes[fi]);
-      fi++;
-    }
-  }
-  while(fi<fortunes.length){list.push(fortunes[fi]);fi++;}
-  return list;
-}
-
+// ===== 待機画面の演出用タイマー（星座運勢カードのローテーション） =====
 function startWaitMessageRotation(){
   if(S._waitMsgTimer)clearInterval(S._waitMsgTimer);
-  S._waitMsgList=buildWaitRotationList();
-  S._waitMsgIdx=0;
+  S._waitSignIdx=Math.floor(seededRandom(Date.now())*12); // 開始星座はランダム
+  renderZodiacCard(false);
   S._waitMsgTimer=setInterval(function(){
-    S._waitMsgIdx=(S._waitMsgIdx+1)%S._waitMsgList.length;
-    var el=document.getElementById('wait-msg-text');
-    if(el)el.textContent=S._waitMsgList[S._waitMsgIdx];
-  },4000);
+    rotateZodiacCard();
+  },7500);
+}
+
+function rotateZodiacCard(){
+  var cardEl=document.getElementById('zodiac-card');
+  if(!cardEl)return;
+  cardEl.style.opacity='0';
+  setTimeout(function(){
+    S._waitSignIdx=(S._waitSignIdx+1)%12;
+    renderZodiacCard(true);
+  },500);
+}
+
+function renderZodiacCard(fadeIn){
+  var cardEl=document.getElementById('zodiac-card');
+  if(!cardEl)return;
+  var data=getTodayFortunes();
+  var sign=data.signs[S._waitSignIdx];
+  cardEl.innerHTML=zodiacCardInnerHtml(sign);
+  if(fadeIn){
+    setTimeout(function(){cardEl.style.opacity='1';},30);
+  }else{
+    cardEl.style.opacity='1';
+  }
+}
+
+function zodiacCardInnerHtml(sign){
+  var rows=sign.cats.map(function(c){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0">'
+      +'<span style="font-size:14px;width:20px;text-align:center">'+c.icon+'</span>'
+      +'<span style="font-size:11.5px;color:var(--muted);width:52px;flex-shrink:0">'+c.label+'</span>'
+      +'<span style="font-size:12px;color:var(--gold);letter-spacing:1px;width:78px;flex-shrink:0">'+starsHtmlSmall(c.stars)+'</span>'
+      +'<span style="font-size:12px;color:var(--cream);line-height:1.5;flex:1">'+c.text+'</span>'
+      +'</div>';
+  }).join('');
+  return '<div style="text-align:center;margin-bottom:10px"><span style="font-size:26px">'+sign.emoji+'</span><div style="font-size:16px;font-weight:800;color:var(--cream);margin-top:2px">'+sign.name+'</div></div>'
+    +'<div style="border-top:1px solid var(--border2);padding-top:4px">'+rows+'</div>';
 }
 
 function stopWaitMessageRotation(){
@@ -324,12 +328,12 @@ function go(sc){
     clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;
   }
   if(sc==='waiting'){
-    startWaitMessageRotation();
+    setTimeout(function(){startWaitMessageRotation();},30);
     if(S._waitLineTimer)clearTimeout(S._waitLineTimer);
     S._waitShowLineCta=false;
     S._waitLineTimer=setTimeout(function(){
       S._waitShowLineCta=true;
-      if(S.screen==='waiting')render();
+      if(S.screen==='waiting'){render();renderZodiacCard(false);}
     },3*60*1000);
   }else{
     stopWaitMessageRotation();
@@ -1819,29 +1823,49 @@ function cardRegisterH(){
   return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">カード登録</div><div class="hdr-title">決済カードを登録</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+freeBox+'<div style="font-size:15px;font-weight:800;color:var(--cream);line-height:1.6;text-align:center;padding:4px 0">'+heading+'</div>'+noChargeBox+firstTimeOnlyBox+(isMale?maleNote:penaltyNote)+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'<div style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:10px;padding:16px"><div id="payjp-card-el" style="min-height:44px"></div></div>'+securityNote+'<div id="cardreg-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="cardreg-btn" onclick="confirmCardRegister()">カードを登録して続ける →</button></div></div>';
 }
 
+function toggleWaitDetails(){
+  S._waitDetailsOpen=!S._waitDetailsOpen;
+  var panel=document.getElementById('wait-details-panel');
+  var arrow=document.getElementById('wait-details-arrow');
+  if(panel)panel.style.display=S._waitDetailsOpen?'block':'none';
+  if(arrow)arrow.textContent=S._waitDetailsOpen?'▲':'▼';
+}
+
 function waitH(){
   var lineConnected=!!(S.profile&&S.profile.line_user_id);
   var showLineCta=!!S._waitShowLineCta&&!lineConnected;
 
   var lineCtaHtml='';
   if(lineConnected){
-    lineCtaHtml='<div style="margin:0 20px 0;padding:14px 16px;background:rgba(123,224,144,.12);border:1px solid rgba(123,224,144,.35);border-radius:10px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">✓</span><span style="font-size:12.5px;color:var(--cream);line-height:1.6">マッチしたらLINEにも通知が届きます。アプリを閉じても大丈夫です。</span></div>';
+    lineCtaHtml='<div style="margin:14px 20px 0;padding:12px 14px;background:rgba(123,224,144,.1);border:1px solid rgba(123,224,144,.3);border-radius:10px;display:flex;align-items:center;gap:8px"><span style="font-size:14px">✓</span><span style="font-size:12px;color:var(--cream);line-height:1.6">マッチしたらLINEにも通知が届きます。アプリを閉じても大丈夫です。</span></div>';
   }else if(showLineCta){
-    lineCtaHtml='<div style="margin:0 20px 0;padding:16px;background:var(--card);border:1.5px solid var(--wine);border-radius:12px;display:flex;flex-direction:column;gap:10px">'
+    lineCtaHtml='<div style="margin:14px 20px 0;padding:16px;background:var(--card);border:1.5px solid var(--wine);border-radius:12px;display:flex;flex-direction:column;gap:10px">'
       +'<div style="font-size:13px;color:var(--cream);font-weight:700;line-height:1.6">マッチしたらLINEでお知らせします</div>'
       +'<div style="font-size:11.5px;color:var(--muted);line-height:1.6">アプリを開いたままでなくても大丈夫。連携しておけば見つかり次第すぐ通知が届きます。</div>'
       +'<button class="btn btn-wine" style="padding:12px" onclick="goLineConnect()">LINEで通知を受け取る →</button>'
       +'</div>';
   }
 
+  var detailsOpen=!!S._waitDetailsOpen;
+
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← トップに戻る</button><div class="hdr-info"><div class="hdr-step">マッチング中</div><div class="hdr-title">募集中</div></div></div><div class="body">'
-    +'<div style="background:var(--hero);padding:28px 20px 24px;text-align:center">'
-      +'<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,.1);margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:rgba(237,229,224,.8)">マッチング中</span></div>'
-      +'<div style="font-size:24px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px">今夜の相手を探しています</div>'
-      +'<div id="wait-msg-text" style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.6;min-height:20px">'+((S._waitMsgList&&S._waitMsgList[S._waitMsgIdx])||WAIT_MESSAGES[0])+'</div>'
+    +'<div style="padding:22px 20px 8px;text-align:center">'
+      +'<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;background:var(--wine-bg);margin-bottom:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--wine);display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:11.5px;font-weight:700;color:var(--cream)">今、あなたに会う人を探しています</span></div>'
+      +'<div style="font-size:14px;color:var(--muted);line-height:1.6">待っている間に、今日の星座であなたの運命を確認</div>'
     +'</div>'
-    +'<div style="padding:16px 20px 0">'+lineCtaHtml+'</div>'
-    +'<div style="background:var(--surface);margin:16px 0 0;padding:4px 0"><div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+areaName(S.form.area)+'</span></div><div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+(S.form.slot||'')+(S.form.slot==='今すぐ'?'':'〜')+(S.form.slot==='今すぐ'&&S.form.duration_pref?'（'+S.form.duration_pref+'）':'')+'</span></div><div class="drow"><span class="drow-k">飲みスタイル</span><span class="drow-v">'+(S.form.drink_style||'')+'</span></div><div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(S.form.mode==='2v2'?'2対2':'1対1')+'</span></div></div>'
+    +'<div style="padding:14px 20px 0">'
+      +'<div id="zodiac-card" style="background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:20px 18px;opacity:0;transition:opacity .5s ease"></div>'
+    +'</div>'
+    +lineCtaHtml
+    +'<div style="margin:20px 20px 0;border:1px solid var(--border2);border-radius:12px;overflow:hidden">'
+      +'<button style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer" onclick="toggleWaitDetails()"><span>募集内容を確認</span><span id="wait-details-arrow">'+(detailsOpen?'▲':'▼')+'</span></button>'
+      +'<div id="wait-details-panel" style="display:'+(detailsOpen?'block':'none')+';border-top:1px solid var(--border2)">'
+        +'<div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+areaName(S.form.area)+'</span></div>'
+        +'<div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+(S.form.slot||'')+(S.form.slot==='今すぐ'?'':'〜')+(S.form.slot==='今すぐ'&&S.form.duration_pref?'（'+S.form.duration_pref+'）':'')+'</span></div>'
+        +'<div class="drow"><span class="drow-k">飲みスタイル</span><span class="drow-v">'+(S.form.drink_style||'')+'</span></div>'
+        +'<div class="drow" style="border-bottom:none"><span class="drow-k">人数</span><span class="drow-v">'+(S.form.mode==='2v2'?'2対2':'1対1')+'</span></div>'
+      +'</div>'
+    +'</div>'
     +'<div style="padding:28px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">募集をキャンセルする</button><div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">成立後のキャンセルは3,000円のペナルティが発生します</div></div></div></div>';
 }
 
