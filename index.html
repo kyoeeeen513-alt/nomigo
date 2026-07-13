@@ -473,9 +473,11 @@ async function saveProfile(){
   if(parseInt(p.age)<20){S.error='Nomi Goは20歳以上の方がご利用いただけます';re('profile_new');return;}
   go('loading');
   var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
-  await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,verified_level:1,email_verified:!!S._emailVerified,id_verify_status:'pending',updated_at:new Date().toISOString()});
+  var freeTicket=(p.gender==='male')?1:0;
+  await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,verified_level:1,email_verified:!!S._emailVerified,id_verify_status:'pending',ticket_count:freeTicket,updated_at:new Date().toISOString()});
   await DB.from('user_stats').upsert({user_id:S.user.id});
-  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,email_verified:!!S._emailVerified,id_verify_status:'pending'};
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,email_verified:!!S._emailVerified,id_verify_status:'pending',ticket_count:freeTicket};
+  if(p.gender==='male'){S._freeTicketGranted=true;}
   go('cardregister');
 }
 
@@ -1738,13 +1740,14 @@ function cardRegisterH(){
   var backBtn='<button class="hdr-back" onclick="go(\''+(hasReg?'recruit':'splash')+'\')">← 戻る</button>';
   var isMale=S.profile&&S.profile.gender==='male';
   var freeBox=isMale?'':'<div style="background:rgba(123,224,144,.15);border:1.5px solid rgba(123,224,144,.5);border-radius:12px;padding:18px;text-align:center"><div style="font-size:24px;font-weight:900;color:#7BE090;letter-spacing:.02em;margin-bottom:8px">女性は無料です</div><div style="font-size:13px;color:var(--cream);line-height:1.6">女性は利用料金無料でご利用いただけます。</div></div>';
-  var heading=isMale?'チケット購入のため、<br>カード登録をお願いしています。':'安心してご利用いただくため、<br>カード登録をお願いしています。';
+  var giftBox=(isMale&&S.profile&&S.profile.ticket_count>0)?'<div style="background:linear-gradient(135deg,rgba(224,176,96,.22),rgba(224,176,96,.10));border:1.5px solid rgba(224,176,96,.55);border-radius:14px;padding:20px 18px;text-align:center"><div style="font-size:30px;margin-bottom:6px">🎁</div><div style="font-size:19px;font-weight:900;color:var(--gold);letter-spacing:.01em;margin-bottom:6px">無料チケットを1枚プレゼント</div><div style="font-size:12.5px;color:var(--cream);line-height:1.7">はじめての1回は無料でマッチできます。<br>まずは気軽に、飲み相手を探してみてください。</div></div>':'';
+  var heading=isMale?'無料チケットのご利用には、<br>カード登録をお願いしています。':'安心してご利用いただくため、<br>カード登録をお願いしています。';
   var noChargeBox='<div style="background:rgba(123,224,144,.12);border:1.5px solid rgba(123,224,144,.4);border-radius:10px;padding:16px;text-align:center"><div style="font-size:16px;font-weight:900;color:#7BE090">● この時点では決済は発生しません</div></div>';
   var firstTimeOnlyBox='<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;display:flex;align-items:center;gap:10px"><span style="font-size:18px;color:var(--gold)">●</span><span style="font-size:14px;color:var(--cream);font-weight:700">カード登録は初回のみです。<br><span style="font-size:12px;color:var(--muted);font-weight:400">以後、再入力は必要ありません。</span></span></div>';
   var penaltyNote=isMale?'':'<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:10px"><span style="font-size:18px;color:var(--gold)">●</span><span style="font-size:13px;color:var(--muted);line-height:1.7">双方が安心して利用できるよう、マッチ成立後の無断キャンセル・当日不参加が確認された場合のみ、<span style="color:var(--cream)">3,000円</span>をご請求する場合があります。</span></div>';
   var maleNote='<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:10px"><span style="font-size:18px;color:var(--gold)">●</span><span style="font-size:13px;color:var(--muted);line-height:1.7">登録したカードは、次回以降のチケット購入時にそのままご利用いただけます。</span></div>';
   var securityNote='<div style="font-size:11px;color:var(--muted);line-height:1.7;text-align:center;padding:0 8px">※カード情報はPAY.JPの安全な決済システムで管理されます。<br>Nomi Goがカード番号を保持することはありません。</div>';
-  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">カード登録</div><div class="hdr-title">決済カードを登録</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+freeBox+'<div style="font-size:15px;font-weight:800;color:var(--cream);line-height:1.6;text-align:center;padding:4px 0">'+heading+'</div>'+noChargeBox+firstTimeOnlyBox+(isMale?maleNote:penaltyNote)+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'<div style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:10px;padding:16px"><div id="payjp-card-el" style="min-height:44px"></div></div>'+securityNote+'<div id="cardreg-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="cardreg-btn" onclick="confirmCardRegister()">カードを登録して続ける →</button></div></div>';
+  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">カード登録</div><div class="hdr-title">決済カードを登録</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+freeBox+giftBox+'<div style="font-size:15px;font-weight:800;color:var(--cream);line-height:1.6;text-align:center;padding:4px 0">'+heading+'</div>'+noChargeBox+firstTimeOnlyBox+(isMale?maleNote:penaltyNote)+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'<div style="background:#FFFFFF;border:1.5px solid var(--border);border-radius:10px;padding:16px"><div id="payjp-card-el" style="min-height:44px"></div></div>'+securityNote+'<div id="cardreg-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="cardreg-btn" onclick="confirmCardRegister()">カードを登録して続ける →</button></div></div>';
 }
 
 function waitH(){
