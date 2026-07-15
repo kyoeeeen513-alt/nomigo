@@ -4,102 +4,226 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Nomi Go</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.pay.jp/v2/pay.js"></script>
 <style>
-:root{--hero:#5A1620;--bg:#4A121A;--surface:#3D0F16;--card:#45151E;--border:#682630;--border2:#521F28;--wine:#D14848;--wine-bg:rgba(209,72,72,.2);--cream:#F7ECE8;--muted:#D0A0A8;--lgray:#9A5A64;--gold:#E0B060;--gold-bg:rgba(224,176,96,.16);--green:#5AAA70;--red:#FF7A5C;--red-bg:rgba(255,122,92,.13);}
+/* ===== デザイントークン（LPと完全統一） =====
+   既存コードが参照している変数名はそのまま残し、
+   値だけをLPの夜×ワイン×金に差し替え。これで全画面が一括更新される */
+:root{
+  --night:#150A0C;
+  --hero:#3A0E14;            /* 旧:hero → LPのwine-deep */
+  --bg:#1D0D10;              /* 画面地。LPのnightより一段だけ明るく */
+  --surface:#2A1014;
+  --card:#31131A;
+  --border:#5A2A32;
+  --border2:#3A181E;
+  --wine:#C9A063;            /* ★主役アクセントを赤→金へ。既存の.on等が全て金になる */
+  --wine-bg:rgba(201,160,99,.14);
+  --wine-true:#6B1A24;       /* 本来のワイン色（面で使う） */
+  --cream:#F4E9DC;
+  --muted:#C4B2A1;
+  --lgray:#8A6E60;
+  --gold:#C9A063;
+  --gold-bright:#F3D9A4;
+  --gold-bg:rgba(201,160,99,.16);
+  --green:#7BC98F;
+  --red:#FF8A6C;
+  --red-bg:rgba(255,138,108,.12);
+}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:#0A0507;font-family:-apple-system,'Hiragino Sans','Yu Gothic UI',sans-serif;color:var(--cream)}
-#app{min-height:100%;max-width:430px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+html,body{height:100%;background:var(--bg);color:var(--cream);
+  font-family:'Noto Sans JP',-apple-system,'Hiragino Sans',sans-serif}
+#app{min-height:100%;max-width:430px;margin:0 auto;background:transparent;
+  display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ===== 背景の空気感：ネオンの残光＋シャンパンの泡 ===== */
+#ngo-fx{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;pointer-events:none;z-index:0;overflow:hidden}
+#ngo-fx::before{content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 320px 240px at 12% 4%, rgba(201,160,99,.10), transparent 60%),
+    radial-gradient(ellipse 380px 300px at 90% 20%, rgba(107,26,36,.45), transparent 60%),
+    radial-gradient(ellipse 300px 260px at 50% 100%, rgba(201,160,99,.06), transparent 60%);}
+.ngo-bubble{position:absolute;bottom:-24px;border-radius:50%;pointer-events:none;z-index:0;opacity:0;
+  background:radial-gradient(circle at 35% 30%, rgba(243,217,164,.35), rgba(243,217,164,.04));
+  animation:bubbleRise linear infinite}
+@keyframes bubbleRise{
+  0%{transform:translateY(0);opacity:0}
+  10%{opacity:.6}
+  90%{opacity:.3}
+  100%{transform:translateY(-105vh) translateX(24px);opacity:0}}
+.screen,.match-wrap,.loading{position:relative;z-index:1}
+
+/* ===== 基本アニメーション ===== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes pop{0%{transform:scale(.88);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
-@keyframes pieceInL{from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:translateX(0)}}
-@keyframes pieceInR{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:translateX(0)}}
-@keyframes pieceOut{to{opacity:0;transform:scale(.7)}}
-@keyframes beerIn{from{opacity:0;transform:scale(.4) rotate(-10deg)}to{opacity:1;transform:scale(1) rotate(0)}}
-@keyframes sparkleFade{0%{opacity:0;transform:scale(.5)}40%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(1.4)}}
-.intro-anim{position:relative;height:64px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
-.intro-piece{position:absolute;font-size:34px;animation-fill-mode:forwards;opacity:0}
-.intro-piece-l{animation:pieceInL .5s ease forwards,pieceOut .35s ease forwards;animation-delay:0s,.85s;transform:translateX(-8px)}
-.intro-piece-r{animation:pieceInR .5s ease forwards,pieceOut .35s ease forwards;animation-delay:0s,.85s;transform:translateX(8px)}
-.intro-beer{position:absolute;font-size:38px;opacity:0;animation:beerIn .45s ease forwards;animation-delay:1.05s}
-.intro-sparkle{position:absolute;font-size:20px;opacity:0;animation:sparkleFade 1s ease forwards;animation-delay:1.2s}
+@keyframes pop{0%{transform:scale(.88);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+@keyframes shine{0%{left:-80%}45%{left:130%}100%{left:130%}}
+@keyframes glowSoft{0%,100%{box-shadow:0 8px 30px rgba(201,160,99,.22)}50%{box-shadow:0 10px 42px rgba(201,160,99,.4)}}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01s !important;transition-duration:.01s !important}}
+
+/* ===== 本人確認 待機演出（既存クラス維持） ===== */
 .verify-waiting{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
-.verify-waiting-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--wine);opacity:0;animation:verifyPulse 2.6s ease-out infinite}
+.verify-waiting-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--gold);opacity:0;animation:verifyPulse 2.6s ease-out infinite}
 .verify-waiting-ring2{animation-delay:1.3s}
 @keyframes verifyPulse{0%{transform:scale(.55);opacity:.7}70%{opacity:0}100%{transform:scale(1);opacity:0}}
-.verify-waiting-core{width:56px;height:56px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;animation:verifyBreathe 2.6s ease-in-out infinite}
-@keyframes verifyBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.verify-waiting-core{width:56px;height:56px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:22px;animation:breathe 2.6s ease-in-out infinite}
 .verify-dots span{opacity:0;animation:verifyDot 1.4s infinite}
 .verify-dots span:nth-child(1){animation-delay:0s}
 .verify-dots span:nth-child(2){animation-delay:.2s}
 .verify-dots span:nth-child(3){animation-delay:.4s}
 @keyframes verifyDot{0%,80%,100%{opacity:0}40%{opacity:1}}
-.screen{flex:1;display:flex;flex-direction:column;animation:fadeUp .28s ease both}
-.hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:var(--bg);display:flex;align-items:center;gap:12px}
-.hdr-back{background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:13px;color:var(--muted);padding:4px 0;font-weight:600;flex-shrink:0}
+
+/* ===== 画面共通 ===== */
+.screen{flex:1;display:flex;flex-direction:column;animation:fadeUp .32s cubic-bezier(.2,.8,.2,1) both}
+.hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;
+  background:rgba(29,13,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+.hdr-back{background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:13px;color:var(--muted);padding:4px 0;font-weight:600;flex-shrink:0;transition:color .2s}
+.hdr-back:active{color:var(--gold-bright)}
 .hdr-info{flex:1}
-.hdr-step{font-size:10px;font-weight:700;color:var(--wine);letter-spacing:.12em;margin-bottom:2px}
-.hdr-title{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.hdr-step{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.24em;margin-bottom:3px;font-family:'Zen Kaku Gothic New',sans-serif}
+.hdr-title{font-size:20px;font-weight:800;letter-spacing:.01em;font-family:'Shippori Mincho',serif}
 .body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 .body::-webkit-scrollbar{width:0}
-.ftr{padding:14px 20px 28px;flex-shrink:0;border-top:1px solid var(--border2);background:var(--bg)}
-.btn{display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:inherit;font-weight:800;border-radius:10px;transition:all .15s;font-size:16px;padding:15px 20px;width:100%;letter-spacing:.01em}
-.btn-wine{background:var(--wine);color:#fff}
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.inp{width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-family:inherit;font-size:16px;outline:none;transition:border-color .15s,background-color .15s}
-.inp::placeholder{color:#B08E8E}
-.inp:focus{border-color:var(--wine)}
-.inp.filled{border-color:var(--wine);background:#FBE9E9}
-.sel-btn{flex:1;padding:14px 8px;border-radius:12px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .18s;font-size:13px;font-weight:700}
-.sel-btn.on{border-color:var(--wine);background:var(--wine-bg);color:var(--cream)}
-.choice-btn{width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-family:inherit;cursor:pointer;text-align:left;font-size:14px;font-weight:600;transition:all .18s;display:flex;align-items:center;justify-content:space-between}
-.choice-btn.on{border-color:var(--wine);background:var(--wine-bg);color:var(--cream)}
-.sec-label{font-size:10px;font-weight:700;color:var(--wine);letter-spacing:.14em;padding:16px 20px 8px}
+.ftr{padding:14px 20px 30px;flex-shrink:0;border-top:1px solid var(--border2);
+  background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+
+/* ===== ボタン：LPの金グラデ＋光の流れ ===== */
+.btn{display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;
+  font-weight:900;border-radius:999px;transition:transform .18s,box-shadow .25s,opacity .2s;
+  font-size:16px;padding:16px 20px;width:100%;letter-spacing:.04em}
+.btn-wine{position:relative;overflow:hidden;color:var(--night);
+  background:linear-gradient(135deg,var(--gold-bright),var(--gold));
+  box-shadow:0 8px 30px rgba(201,160,99,.28);animation:glowSoft 3.2s ease-in-out infinite}
+.btn-wine::after{content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 3.4s infinite}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.45;cursor:not-allowed;animation:none;box-shadow:none}
+.btn:disabled::after{display:none}
+
+/* ===== 入力 ===== */
+.inp{width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--border);
+  background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:16px;outline:none;
+  transition:border-color .2s,box-shadow .2s,background-color .2s}
+.inp::placeholder{color:rgba(196,178,161,.5)}
+.inp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,160,99,.14);background:rgba(244,233,220,.09)}
+.inp.filled{border-color:rgba(201,160,99,.6);background:rgba(201,160,99,.08)}
+select.inp option{color:#3A2020}
+input[type=date].inp{color-scheme:dark}
+
+/* ===== 選択系：金の選択状態 ===== */
+.sel-btn{flex:1;padding:14px 8px;border-radius:14px;border:1.5px solid var(--border);
+  background:rgba(244,233,220,.04);color:var(--muted);font-family:inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .18s;font-size:13px;font-weight:700}
+.sel-btn:active{transform:scale(.97)}
+.sel-btn.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold-bright);
+  box-shadow:0 0 16px rgba(201,160,99,.18)}
+.choice-btn{width:100%;padding:15px 16px;border-radius:14px;border:1.5px solid var(--border);
+  background:rgba(244,233,220,.04);color:var(--muted);font-family:inherit;cursor:pointer;text-align:left;
+  font-size:14px;font-weight:600;transition:all .18s;display:flex;align-items:center;justify-content:space-between}
+.choice-btn:active{transform:scale(.98)}
+.choice-btn.on{border-color:var(--gold);background:var(--gold-bg);color:var(--cream)}
+.range-row{display:flex;gap:6px;padding:0 20px}
+.range-btn{flex:1;padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);
+  background:rgba(244,233,220,.04);color:var(--muted);font-family:inherit;cursor:pointer;
+  font-size:11px;font-weight:700;text-align:center;transition:all .18s}
+.range-btn.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold-bright)}
+.check-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;
+  background:var(--card);border:1.5px solid var(--border);cursor:pointer;transition:all .15s;width:100%;font-family:inherit;text-align:left}
+.check-item.on{border-color:var(--gold);background:var(--gold-bg)}
+.tag-chip{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;
+  background:rgba(244,233,220,.04);border:1.5px solid var(--border);cursor:pointer;transition:all .18s;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--muted)}
+.tag-chip:active{transform:scale(.95)}
+.tag-chip.on{border-color:var(--gold);background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night)}
+.tab-btn{flex:1;padding:12px;border:none;font-family:'Zen Kaku Gothic New',sans-serif;font-size:14px;font-weight:900;cursor:pointer;transition:all .2s;letter-spacing:.04em}
+
+/* ===== ラベル・小物 ===== */
+.sec-label{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.28em;padding:18px 20px 8px;
+  font-family:'Zen Kaku Gothic New',sans-serif}
 .err-msg{font-size:12px;color:var(--red);padding:4px 0;text-align:center}
 .loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--wine);border-radius:50%;animation:spin 1s linear infinite}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
 .drow{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-bottom:1px solid var(--border2)}
 .drow-k{font-size:13px;color:var(--muted)}
 .drow-v{font-size:14px;font-weight:700}
 .match-wrap{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:0 0 40px}
-.member-row{display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border2)}
+.member-row{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border2)}
+
+/* ===== チャット ===== */
 .chat-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .chat-msgs{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
 .chat-msgs::-webkit-scrollbar{width:0}
-.msg-system{text-align:center;font-size:11px;color:var(--muted);padding:7px 14px;background:var(--surface);border-radius:20px;align-self:center}
-.msg-row{display:flex;gap:10px;align-items:flex-end}
+.msg-system{text-align:center;font-size:11px;color:var(--muted);padding:7px 16px;
+  background:rgba(244,233,220,.05);border:1px solid var(--border2);border-radius:20px;align-self:center}
+.msg-row{display:flex;gap:10px;align-items:flex-end;animation:fadeUp .25s ease both}
 .msg-row.mine{flex-direction:row-reverse}
 .msg-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-.msg-bubble{padding:10px 13px;border-radius:14px;font-size:14px;max-width:200px;line-height:1.5}
-.chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;background:var(--bg);flex-shrink:0}
-.chat-inp{flex:1;padding:11px 14px;border-radius:24px;border:1.5px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:15px;outline:none}
-.chat-inp:focus{border-color:var(--wine)}
-.chat-send{width:42px;height:42px;border-radius:50%;background:var(--wine);border:none;cursor:pointer;color:#fff;font-size:18px;flex-shrink:0}
-.star-btn{cursor:pointer;background:none;border:none;padding:4px;outline:none;-webkit-appearance:none;appearance:none;box-shadow:none;display:inline-flex}
-.star-btn:focus,.star-btn:active,.star-btn:focus-visible{outline:2px solid var(--gold) !important;outline-offset:2px;border-radius:6px;box-shadow:none !important}
-.check-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);cursor:pointer;transition:all .15s;width:100%;font-family:inherit;text-align:left}
-.check-item.on{border-color:var(--wine);background:var(--wine-bg)}
-.tag-chip{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;background:var(--card);border:1.5px solid var(--border);cursor:pointer;transition:all .15s;font-family:inherit;font-size:13px;font-weight:700;color:var(--muted)}
-.tag-chip.on{border-color:var(--wine);background:var(--wine);color:#fff}
-.tab-btn{flex:1;padding:11px;border:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
-.range-row{display:flex;gap:6px;padding:0 20px}
-.range-btn{flex:1;padding:10px 4px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-family:inherit;cursor:pointer;font-size:11px;font-weight:700;text-align:center;transition:all .18s}
-.range-btn.on{border-color:var(--wine);background:var(--wine-bg);color:var(--cream)}
-.mode-card{position:relative;border-radius:16px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .18s}
+.msg-bubble{padding:11px 14px;border-radius:18px;font-size:14px;max-width:210px;line-height:1.6}
+.msg-row.mine .msg-bubble{background:linear-gradient(135deg,#7A2230,var(--wine-true)) !important;
+  color:#fff !important;border-bottom-right-radius:6px;box-shadow:0 3px 12px rgba(107,26,36,.4)}
+.msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px;border:1px solid var(--border2)}
+.chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;
+  background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0}
+.chat-inp{flex:1;padding:12px 16px;border-radius:24px;border:1.5px solid var(--border);
+  background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
+.chat-inp:focus{border-color:var(--gold)}
+.chat-send{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;font-size:18px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night);font-weight:900;
+  box-shadow:0 4px 14px rgba(201,160,99,.35);transition:transform .15s}
+.chat-send:active{transform:scale(.88)}
+
+/* ===== 星評価 ===== */
+.star-btn{cursor:pointer;background:none;border:none;padding:4px;outline:none;-webkit-appearance:none;appearance:none;display:inline-flex;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+.star-btn:active{transform:scale(1.25)}
+.star-btn:focus-visible{outline:2px solid var(--gold) !important;outline-offset:2px;border-radius:6px}
+
+/* ===== モード/エリアカード：奥行きと光 ===== */
+.mode-card{position:relative;border-radius:20px;overflow:hidden;cursor:pointer;border:1.5px solid rgba(228,198,138,.2);
+  transition:transform .3s,box-shadow .3s;box-shadow:0 10px 26px rgba(0,0,0,.35)}
 .mode-card:active{transform:scale(.98)}
 .mode-card img{width:100%;height:180px;object-fit:cover;object-position:center;display:block}
 .mode-card-square img{object-position:center 25%}
-.mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:18px 16px 14px}
-.mode-card-title{font-size:17px;font-weight:900;color:#fff}
-.card-selected{border-color:var(--gold) !important;box-shadow:0 0 0 3px var(--gold-bg),0 0 20px 4px rgba(224,176,96,.7);transition:box-shadow .15s,border-color .15s}
-.area-card img{filter:saturate(.65) contrast(1.08) brightness(.85)}
-.area-card-tint{position:absolute;inset:0;background:linear-gradient(180deg,rgba(74,18,26,.35),rgba(74,18,26,.15) 40%,rgba(0,0,0,.65));pointer-events:none}
+.mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(10,5,7,.9));padding:22px 16px 14px}
+.mode-card-title{font-size:18px;font-weight:800;color:#fff;font-family:'Shippori Mincho',serif;letter-spacing:.03em;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.card-selected{border-color:var(--gold-bright) !important;
+  box-shadow:0 0 0 3px rgba(243,217,164,.15),0 0 34px rgba(243,217,164,.45) !important;
+  transition:box-shadow .15s,border-color .15s}
+.area-card img{filter:saturate(.75) contrast(1.06) brightness(.85)}
+.area-card-tint{position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,10,12,.2),rgba(21,10,12,.1) 40%,rgba(10,5,7,.75));pointer-events:none}
 .area-card-label{position:absolute;bottom:0;left:0;right:0;padding:16px}
-.area-card-title{font-size:22px;font-weight:900;color:#fff;letter-spacing:.02em;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.area-card-title{font-size:22px;font-weight:800;color:var(--cream);letter-spacing:.05em;
+  font-family:'Shippori Mincho',serif;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+
+/* ===== マッチ成立：乾杯演出 ===== */
+.cheers-burst{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;pointer-events:none;z-index:60;
+  display:flex;align-items:center;justify-content:center}
+.cheers-burst .glass{font-size:64px;animation:cheersPop 1.4s cubic-bezier(.2,.8,.2,1) forwards;
+  filter:drop-shadow(0 0 24px rgba(243,217,164,.7))}
+@keyframes cheersPop{
+  0%{transform:scale(.3) rotate(-12deg);opacity:0}
+  30%{transform:scale(1.25) rotate(4deg);opacity:1}
+  50%{transform:scale(1)}
+  80%{opacity:1}
+  100%{transform:scale(1.1);opacity:0}}
+.cheers-burst .spark{position:absolute;width:6px;height:6px;border-radius:50%;
+  background:var(--gold-bright);animation:sparkFly 1.2s ease-out forwards}
+@keyframes sparkFly{
+  0%{transform:translate(0,0) scale(1);opacity:1}
+  100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+
+/* 旧クラス互換（既存HTMLが参照していても崩れないよう残す） */
+.intro-anim{display:none}
 </style>
 </head>
 <body>
@@ -2069,6 +2193,49 @@ document.addEventListener('visibilitychange',function(){
 window.addEventListener('pagehide',function(){
   sessionStorage.setItem('ngo_last_active',String(Date.now()));
 });
+
+// ===== 背景に上品な泡を漂わせる（LPと同じ演出） =====
+(function(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var layer=document.createElement('div');
+  layer.id='ngo-fx';
+  document.body.appendChild(layer);
+  for(var i=0;i<7;i++){
+    var b=document.createElement('div');
+    b.className='ngo-bubble';
+    var size=4+Math.random()*9;
+    b.style.width=size+'px';b.style.height=size+'px';
+    b.style.left=(5+Math.random()*90)+'%';
+    b.style.animationDuration=(10+Math.random()*10)+'s';
+    b.style.animationDelay=(Math.random()*10)+'s';
+    layer.appendChild(b);
+  }
+})();
+
+// ===== マッチ成立の瞬間に乾杯エフェクトを一度だけ出す =====
+var _lastScreenForFx='';
+var _origRender=render;
+render=function(){
+  _origRender();
+  if(S.screen==='matched'&&_lastScreenForFx!=='matched'&&_lastScreenForFx!=='chat'&&_lastScreenForFx!=='review'&&_lastScreenForFx!=='report'){
+    showCheersFx();
+  }
+  _lastScreenForFx=S.screen;
+};
+function showCheersFx(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var wrap=document.createElement('div');
+  wrap.className='cheers-burst';
+  var html='<div class="glass">🥂</div>';
+  for(var i=0;i<10;i++){
+    var ang=(Math.PI*2/10)*i;
+    var dist=70+Math.random()*60;
+    html+='<div class="spark" style="--dx:'+Math.round(Math.cos(ang)*dist)+'px;--dy:'+Math.round(Math.sin(ang)*dist)+'px"></div>';
+  }
+  wrap.innerHTML=html;
+  document.body.appendChild(wrap);
+  setTimeout(function(){if(wrap.parentNode)wrap.parentNode.removeChild(wrap);},1500);
+}
 
 init();
 setInterval(loadStats,30000);
