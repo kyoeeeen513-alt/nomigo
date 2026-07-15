@@ -261,15 +261,54 @@
 
   /* ===== エリア ===== */
   .areas-band{position:relative;z-index:1;background:linear-gradient(90deg, var(--wine-deep), var(--wine-dark) 50%, var(--wine-deep));padding:60px 24px;}
-  .areas-grid{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;max-width:700px;margin:0 auto;}
-  .area-chip{padding:14px 30px;border:1px solid rgba(228,198,138,0.35);border-radius:999px;
-    font-size:15px;color:var(--gold-soft);font-family:'Shippori Mincho',serif;font-weight:700;letter-spacing:0.08em;
-    transition:background .3s, transform .3s;}
-  .area-chip:hover{background:rgba(228,198,138,0.1);transform:scale(1.05);}
-  .area-chip.soon{opacity:.5;border-style:dashed;}
-  .area-chip.soon:hover{transform:none;background:none;}
-  .area-chip .soon-label{font-size:10px;letter-spacing:0.1em;margin-left:6px;color:var(--cream-dim);}
-  .area-note{text-align:center;margin-top:22px;font-size:12px;font-weight:300;color:var(--cream-dim);}
+  .areas-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;max-width:640px;margin:0 auto;}
+  @media(max-width:640px){.areas-grid{grid-template-columns:repeat(2,1fr);gap:12px;}}
+
+  .area-card{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:1.2;
+    border:1.5px solid rgba(228,198,138,0.2);transition:transform .3s;}
+  .area-card img{width:100%;height:100%;object-fit:cover;display:block;
+    filter:saturate(.7) contrast(1.05) brightness(.8);}
+  .area-card-shade{position:absolute;inset:0;
+    background:linear-gradient(180deg, rgba(21,10,12,0.15), rgba(21,10,12,0.25) 45%, rgba(10,5,7,0.82));}
+  .area-card-body{position:absolute;bottom:0;left:0;right:0;padding:14px 16px;}
+  .area-card-name{font-family:'Shippori Mincho',serif;font-weight:800;font-size:19px;color:var(--cream);
+    letter-spacing:0.04em;text-shadow:0 2px 6px rgba(0,0,0,.5);}
+
+  /* 対応中エリア（すすきの・新宿）：光らせる */
+  .area-card.live{border:2px solid var(--gold-bright);
+    box-shadow:0 0 0 3px rgba(243,217,164,0.12), 0 10px 34px rgba(201,160,99,0.35), 0 0 40px rgba(243,217,164,0.25);
+    animation:areaGlow 2.8s ease-in-out infinite;}
+  @keyframes areaGlow{
+    0%,100%{box-shadow:0 0 0 3px rgba(243,217,164,0.12), 0 10px 34px rgba(201,160,99,0.3), 0 0 30px rgba(243,217,164,0.18);}
+    50%{box-shadow:0 0 0 3px rgba(243,217,164,0.22), 0 12px 40px rgba(201,160,99,0.5), 0 0 54px rgba(243,217,164,0.4);}
+  }
+  .area-card.live:hover{transform:translateY(-4px) scale(1.015);}
+  .area-card.live img{filter:saturate(1.05) contrast(1.08) brightness(.92);}
+  .area-card.live .area-card-shade{background:linear-gradient(180deg, rgba(21,10,12,0.05), rgba(21,10,12,0.15) 40%, rgba(10,5,7,0.78));}
+  .area-card.live .area-card-name{font-size:21px;color:var(--gold-bright);}
+  .area-live-badge{position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:5px;
+    background:linear-gradient(135deg, var(--gold-bright), var(--gold));color:var(--wine-deep);
+    font-family:'Zen Kaku Gothic New';font-size:10.5px;font-weight:900;letter-spacing:0.06em;
+    padding:5px 11px;border-radius:999px;box-shadow:0 3px 10px rgba(201,160,99,0.4);}
+  .area-live-badge .dot{width:5px;height:5px;border-radius:50%;background:var(--wine-deep);animation:pulse 1.6s infinite;}
+  .area-card-sparkle{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 140px 90px at 50% 0%, rgba(243,217,164,0.35), transparent 70%);}
+
+  /* 準備中エリア（上野・梅田）：斜めリボンでCOMING SOON */
+  .area-card.soon{opacity:.7;filter:grayscale(.35);overflow:visible;}
+  .area-card.soon img{filter:saturate(.35) contrast(1) brightness(.5);border-radius:18px;}
+  .area-card.soon .area-card-shade{border-radius:18px;}
+  .area-card.soon .area-card-name{font-size:16px;color:rgba(244,233,220,0.55);}
+  .area-soon-ribbon-wrap{position:absolute;inset:0;overflow:hidden;border-radius:18px;pointer-events:none;}
+  .area-soon-ribbon{position:absolute;top:16px;right:-42px;width:160px;
+    transform:rotate(40deg);text-align:center;
+    background:linear-gradient(135deg, rgba(228,198,138,0.95), rgba(196,163,90,0.95));
+    color:var(--wine-deep);font-family:'Zen Kaku Gothic New';font-size:11px;font-weight:900;
+    letter-spacing:0.12em;padding:5px 0;
+    box-shadow:0 3px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+    border-top:1px solid rgba(255,255,255,0.25);border-bottom:1px solid rgba(0,0,0,0.15);}
+
+  .area-note{text-align:center;margin-top:26px;font-size:12px;font-weight:300;color:var(--cream-dim);}
 
   /* ===== 料金 ===== */
   .pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:720px;margin:0 auto;}
@@ -518,10 +557,32 @@
     <h2 style="color:var(--cream);">対応エリア</h2>
   </div>
   <div class="areas-grid">
-    <div class="area-chip reveal reveal-d1">すすきの</div>
-    <div class="area-chip reveal reveal-d2">新宿</div>
-    <div class="area-chip soon reveal reveal-d3">上野<span class="soon-label">Coming Soon</span></div>
-    <div class="area-chip soon reveal reveal-d4">梅田<span class="soon-label">Coming Soon</span></div>
+    <div class="area-card live reveal reveal-d1">
+      <img src="area_susukino.jpg" alt="すすきの">
+      <div class="area-card-sparkle"></div>
+      <div class="area-card-shade"></div>
+      <div class="area-live-badge"><span class="dot"></span>対応中</div>
+      <div class="area-card-body"><span class="area-card-name">すすきの</span></div>
+    </div>
+    <div class="area-card live reveal reveal-d2">
+      <img src="area_shinjuku.jpg" alt="新宿">
+      <div class="area-card-sparkle"></div>
+      <div class="area-card-shade"></div>
+      <div class="area-live-badge"><span class="dot"></span>対応中</div>
+      <div class="area-card-body"><span class="area-card-name">新宿</span></div>
+    </div>
+    <div class="area-card soon reveal reveal-d3">
+      <img src="area_ueno.jpg" alt="上野">
+      <div class="area-card-shade"></div>
+      <div class="area-soon-ribbon-wrap"><div class="area-soon-ribbon">COMING SOON</div></div>
+      <div class="area-card-body"><span class="area-card-name">上野</span></div>
+    </div>
+    <div class="area-card soon reveal reveal-d4">
+      <img src="area_umeda.jpg" alt="梅田">
+      <div class="area-card-shade"></div>
+      <div class="area-soon-ribbon-wrap"><div class="area-soon-ribbon">COMING SOON</div></div>
+      <div class="area-card-body"><span class="area-card-name">梅田</span></div>
+    </div>
   </div>
   <p class="area-note reveal reveal-d4">現在は「すすきの」「新宿」でご利用いただけます。上野・梅田は近日公開予定です</p>
 </div>
