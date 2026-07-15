@@ -266,6 +266,9 @@
     font-size:15px;color:var(--gold-soft);font-family:'Shippori Mincho',serif;font-weight:700;letter-spacing:0.08em;
     transition:background .3s, transform .3s;}
   .area-chip:hover{background:rgba(228,198,138,0.1);transform:scale(1.05);}
+  .area-chip.soon{opacity:.5;border-style:dashed;}
+  .area-chip.soon:hover{transform:none;background:none;}
+  .area-chip .soon-label{font-size:10px;letter-spacing:0.1em;margin-left:6px;color:var(--cream-dim);}
   .area-note{text-align:center;margin-top:22px;font-size:12px;font-weight:300;color:var(--cream-dim);}
 
   /* ===== 料金 ===== */
@@ -516,11 +519,11 @@
   </div>
   <div class="areas-grid">
     <div class="area-chip reveal reveal-d1">すすきの</div>
-    <div class="area-chip reveal reveal-d2">上野</div>
-    <div class="area-chip reveal reveal-d3">新宿</div>
-    <div class="area-chip reveal reveal-d4">梅田</div>
+    <div class="area-chip reveal reveal-d2">新宿</div>
+    <div class="area-chip soon reveal reveal-d3">上野<span class="soon-label">Coming Soon</span></div>
+    <div class="area-chip soon reveal reveal-d4">梅田<span class="soon-label">Coming Soon</span></div>
   </div>
-  <p class="area-note reveal reveal-d4">対応エリアは今後拡大予定です</p>
+  <p class="area-note reveal reveal-d4">現在は「すすきの」「新宿」でご利用いただけます。上野・梅田は近日公開予定です</p>
 </div>
 
 <!-- 料金 -->
@@ -574,6 +577,10 @@
         <button class="faq-q"><span class="mark">Q</span>誰でも登録できますか？<span class="plus">＋</span></button>
         <div class="faq-a">20歳以上の方限定です。安心してご利用いただくため、身分確認を行っています。</div>
       </div>
+      <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>上野・梅田では使えませんか？<span class="plus">＋</span></button>
+        <div class="faq-a">現在は「すすきの」「新宿」の2エリアでサービスを提供しています。上野・梅田は近日公開予定ですので、公式LINEで先行案内をお待ちください。</div>
+      </div>
     </div>
   </div>
 </section>
@@ -606,7 +613,7 @@
 <footer>
   <div class="flogo">Nomi Go</div>
   <p>Nomi Go運営事務局</p>
-  <p>対応エリア：すすきの／上野／新宿／梅田（今後拡大予定）　｜　ご利用は20歳以上に限ります</p>
+  <p>対応エリア：すすきの／新宿　｜　上野・梅田は近日公開予定　｜　ご利用は20歳以上に限ります</p>
   <p class="legal-line" style="margin-top:10px;">運営：TRP　｜　お問い合わせ：info@nomi-go.jp　｜　<a href="/tokushoho.html">特定商取引法に基づく表記</a>　｜　<a href="https://nomigo-final-5.vercel.app">プライバシーポリシー・利用規約</a></p>
 </footer>
 
