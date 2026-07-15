@@ -110,10 +110,10 @@ var _sbReady=false;
 var DB;
 
 const AREAS=[
-  {id:'susukino',name:'すすきの',img:'area_susukino.jpg'},
-  {id:'ueno',name:'上野',img:'area_ueno.jpg'},
-  {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg'},
-  {id:'umeda',name:'梅田',img:'area_umeda.jpg'}
+  {id:'susukino',name:'すすきの',img:'area_susukino.jpg',open:true},
+  {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg',open:true},
+  {id:'ueno',name:'上野',img:'area_ueno.jpg',open:false},
+  {id:'umeda',name:'梅田',img:'area_umeda.jpg',open:false}
 ];
 const JOBS=['会社員','自営業・フリーランス','学生','公務員','医療・福祉','IT・エンジニア','クリエイター','サービス業','その他'];
 const DRINK_STYLES=['ガッツリ飲みたい','ゆっくり飲みたい','ご飯メイン'];
@@ -127,7 +127,7 @@ const FAQ_QA=[
   {keywords:['チケット','購入'],answer:'チケットはトップ画面の「チケット購入」ボタンから購入できます。1枚3,000円で、マッチが成立すると1枚消費されます。'},
   {keywords:['キャンセル','取り消し'],answer:'マッチ成立前のキャンセルは無料です。マッチ成立後にキャンセルすると、3,000円のペナルティが発生する場合があります。'},
   {keywords:['ペナルティ','違約金'],answer:'マッチ成立後に無断キャンセル・当日不参加があった場合、3,000円をご請求する場合があります。'},
-  {keywords:['エリア','場所','地域'],answer:'現在対応しているエリアは、梅田・新宿・渋谷・上野の4か所です。'},
+  {keywords:['エリア','場所','地域'],answer:'現在対応しているエリアは、すすきの・新宿の2か所です。上野・梅田は近日公開予定です。'},
   {keywords:['時間','何時','営業時間'],answer:'募集できる時間は「今すぐ」「19:00」「20:00」「21:00」「22:00」から選べます。'},
   {keywords:['2対2','2:2','2v2','友達'],answer:'2対2は、友達と一緒に参加して、同じく2人組の相手とマッチする仕組みです。1対1と2対2は別々にマッチングされます。'},
   {keywords:['1対1','1:1','1v1'],answer:'1対1は、あなた1人と、お相手1人とのマッチです。'},
@@ -864,6 +864,11 @@ async function getIdVerifyStatus(){
 }
 
 function selectArea(areaId,el){
+  var a=AREAS.find(function(x){return x.id===areaId;});
+  if(a&&a.open===false){
+    alert('このエリアは近日公開予定です。現在は「新宿」「すすきの」でご利用いただけます。');
+    return;
+  }
   if(el){
     el.classList.add('card-selected');
     setTimeout(function(){S.form.area=areaId;go('mode_select');},220);
@@ -876,12 +881,20 @@ function areaSelectH(){
   var stats=S.areaStats||{};
   var cardsHtml=AREAS.map(function(a){
     var n=stats[a.id]||0;
-    var badge=n>0
-      ?'<div style="position:absolute;top:12px;right:12px;background:rgba(123,224,144,.92);color:#0A0507;font-size:12px;font-weight:800;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#0A0507;display:inline-block"></span>'+n+'人が募集中</div>'
-      :'<div style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.55);color:rgba(255,255,255,.75);font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px">準備中</div>';
-    return '<div class="mode-card area-card" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'"><div class="area-card-tint"></div>'+badge+'<div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
+    var isComingSoon=(a.open===false);
+    var badge;
+    if(isComingSoon){
+      badge='<div style="position:absolute;top:12px;right:12px;background:rgba(224,176,96,.92);color:#3D0F16;font-size:12px;font-weight:800;padding:5px 12px;border-radius:20px">Coming Soon</div>';
+    }else if(n>0){
+      badge='<div style="position:absolute;top:12px;right:12px;background:rgba(123,224,144,.92);color:#0A0507;font-size:12px;font-weight:800;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#0A0507;display:inline-block"></span>'+n+'人が募集中</div>';
+    }else{
+      badge='<div style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.55);color:rgba(255,255,255,.75);font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px">準備中</div>';
+    }
+    var cardStyle=isComingSoon?' style="opacity:.55"':'';
+    var overlay=isComingSoon?'<div class="area-card-tint" style="background:rgba(10,5,7,.5)"></div>':'<div class="area-card-tint"></div>';
+    return '<div class="mode-card area-card"'+cardStyle+' onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'">'+overlay+badge+'<div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
   }).join('');
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">「準備中」のエリアも募集は可能ですが、マッチまで時間がかかる場合があります。</div></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">現在は「新宿」「すすきの」でご利用いただけます。その他のエリアは近日公開予定です。</div></div></div>';
 }
 
 function selectMode(m,el){
