@@ -10,55 +10,27 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.pay.jp/v2/pay.js"></script>
 <style>
-/* ===== デザイントークン（LPと完全統一） =====
-   既存コードが参照している変数名はそのまま残し、
-   値だけをLPの夜×ワイン×金に差し替え。これで全画面が一括更新される */
+/* ===== デザイントークン（LPと統一） ===== */
 :root{
-  --night:#150A0C;
-  --hero:#3A0E14;            /* 旧:hero → LPのwine-deep */
-  --bg:#1D0D10;              /* 画面地。LPのnightより一段だけ明るく */
-  --surface:#2A1014;
-  --card:#31131A;
-  --border:#5A2A32;
-  --border2:#3A181E;
-  --wine:#C9A063;            /* ★主役アクセントを赤→金へ。既存の.on等が全て金になる */
-  --wine-bg:rgba(201,160,99,.14);
-  --wine-true:#6B1A24;       /* 本来のワイン色（面で使う） */
-  --cream:#F4E9DC;
-  --muted:#C4B2A1;
-  --lgray:#8A6E60;
-  --gold:#C9A063;
-  --gold-bright:#F3D9A4;
-  --gold-bg:rgba(201,160,99,.16);
-  --green:#7BC98F;
-  --red:#FF8A6C;
-  --red-bg:rgba(255,138,108,.12);
+  --night:#150A0C;--hero:#3A0E14;--bg:#1D0D10;--surface:#2A1014;--card:#31131A;
+  --border:#5A2A32;--border2:#3A181E;
+  --wine:#C9A063;--wine-bg:rgba(201,160,99,.14);--wine-true:#6B1A24;
+  --cream:#F4E9DC;--muted:#C4B2A1;--lgray:#8A6E60;
+  --gold:#C9A063;--gold-bright:#F3D9A4;--gold-bg:rgba(201,160,99,.16);
+  --green:#7BC98F;--red:#FF8A6C;--red-bg:rgba(255,138,108,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--cream);
-  font-family:'Noto Sans JP',-apple-system,'Hiragino Sans',sans-serif}
-#app{min-height:100%;max-width:430px;margin:0 auto;background:transparent;
-  display:flex;flex-direction:column;position:relative;z-index:1}
-
-/* ===== 背景の空気感：ネオンの残光＋シャンパンの泡 ===== */
-#ngo-fx{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:430px;pointer-events:none;z-index:0;overflow:hidden}
-#ngo-fx::before{content:"";position:absolute;inset:0;
-  background:
-    radial-gradient(ellipse 320px 240px at 12% 4%, rgba(201,160,99,.10), transparent 60%),
-    radial-gradient(ellipse 380px 300px at 90% 20%, rgba(107,26,36,.45), transparent 60%),
-    radial-gradient(ellipse 300px 260px at 50% 100%, rgba(201,160,99,.06), transparent 60%);}
-.ngo-bubble{position:absolute;bottom:-24px;border-radius:50%;pointer-events:none;z-index:0;opacity:0;
-  background:radial-gradient(circle at 35% 30%, rgba(243,217,164,.35), rgba(243,217,164,.04));
-  animation:bubbleRise linear infinite}
-@keyframes bubbleRise{
-  0%{transform:translateY(0);opacity:0}
-  10%{opacity:.6}
-  90%{opacity:.3}
-  100%{transform:translateY(-105vh) translateX(24px);opacity:0}}
+html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',-apple-system,'Hiragino Sans',sans-serif}
+#app{min-height:100%;max-width:430px;margin:0 auto;background:transparent;display:flex;flex-direction:column;position:relative;z-index:1}
+#ngo-fx{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;pointer-events:none;z-index:0;overflow:hidden}
+#ngo-fx::before{content:"";position:absolute;inset:0;background:
+  radial-gradient(ellipse 320px 240px at 12% 4%,rgba(201,160,99,.10),transparent 60%),
+  radial-gradient(ellipse 380px 300px at 90% 20%,rgba(107,26,36,.45),transparent 60%),
+  radial-gradient(ellipse 300px 260px at 50% 100%,rgba(201,160,99,.06),transparent 60%);}
+.ngo-bubble{position:absolute;bottom:-24px;border-radius:50%;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at 35% 30%,rgba(243,217,164,.35),rgba(243,217,164,.04));animation:bubbleRise linear infinite}
+@keyframes bubbleRise{0%{transform:translateY(0);opacity:0}10%{opacity:.6}90%{opacity:.3}100%{transform:translateY(-105vh) translateX(24px);opacity:0}}
 .screen,.match-wrap,.loading{position:relative;z-index:1}
-
-/* ===== 基本アニメーション ===== */
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes pop{0%{transform:scale(.88);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
@@ -66,27 +38,20 @@ html,body{height:100%;background:var(--bg);color:var(--cream);
 @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
 @keyframes shine{0%{left:-80%}45%{left:130%}100%{left:130%}}
 @keyframes glowSoft{0%,100%{box-shadow:0 8px 30px rgba(201,160,99,.22)}50%{box-shadow:0 10px 42px rgba(201,160,99,.4)}}
-@media(prefers-reduced-motion:reduce){
-  *{animation-duration:.01s !important;transition-duration:.01s !important}}
-
-/* ===== 本人確認 待機演出（既存クラス維持） ===== */
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
 .verify-waiting{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
 .verify-waiting-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--gold);opacity:0;animation:verifyPulse 2.6s ease-out infinite}
 .verify-waiting-ring2{animation-delay:1.3s}
 @keyframes verifyPulse{0%{transform:scale(.55);opacity:.7}70%{opacity:0}100%{transform:scale(1);opacity:0}}
-.verify-waiting-core{width:56px;height:56px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:22px;animation:breathe 2.6s ease-in-out infinite}
+.verify-waiting-core{width:56px;height:56px;border-radius:50%;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;animation:breathe 2.6s ease-in-out infinite}
 .verify-dots span{opacity:0;animation:verifyDot 1.4s infinite}
 .verify-dots span:nth-child(1){animation-delay:0s}
 .verify-dots span:nth-child(2){animation-delay:.2s}
 .verify-dots span:nth-child(3){animation-delay:.4s}
 @keyframes verifyDot{0%,80%,100%{opacity:0}40%{opacity:1}}
-
-/* ===== 画面共通 ===== */
 .screen{flex:1;display:flex;flex-direction:column;animation:fadeUp .32s cubic-bezier(.2,.8,.2,1) both}
-.hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;
-  background:rgba(29,13,16,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+.hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:rgba(29,13,16,.85);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 .hdr-back{background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:13px;color:var(--muted);padding:4px 0;font-weight:600;flex-shrink:0;transition:color .2s}
 .hdr-back:active{color:var(--gold-bright)}
 .hdr-info{flex:1}
@@ -94,62 +59,45 @@ html,body{height:100%;background:var(--bg);color:var(--cream);
 .hdr-title{font-size:20px;font-weight:800;letter-spacing:.01em;font-family:'Shippori Mincho',serif}
 .body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 .body::-webkit-scrollbar{width:0}
-.ftr{padding:14px 20px 30px;flex-shrink:0;border-top:1px solid var(--border2);
-  background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-
-/* ===== ボタン：LPの金グラデ＋光の流れ ===== */
+.ftr{padding:14px 20px 30px;flex-shrink:0;border-top:1px solid var(--border2);background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .btn{display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;
-  font-weight:900;border-radius:999px;transition:transform .18s,box-shadow .25s,opacity .2s;
-  font-size:16px;padding:16px 20px;width:100%;letter-spacing:.04em}
-.btn-wine{position:relative;overflow:hidden;color:var(--night);
-  background:linear-gradient(135deg,var(--gold-bright),var(--gold));
+  font-weight:900;border-radius:999px;transition:transform .18s,box-shadow .25s,opacity .2s;font-size:16px;padding:16px 20px;width:100%;letter-spacing:.04em}
+.btn-wine{position:relative;overflow:hidden;color:var(--night);background:linear-gradient(135deg,var(--gold-bright),var(--gold));
   box-shadow:0 8px 30px rgba(201,160,99,.28);animation:glowSoft 3.2s ease-in-out infinite}
 .btn-wine::after{content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;
   background:linear-gradient(105deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 3.4s infinite}
 .btn:active{transform:scale(.96)}
 .btn:disabled{opacity:.45;cursor:not-allowed;animation:none;box-shadow:none}
 .btn:disabled::after{display:none}
-
-/* ===== 入力 ===== */
-.inp{width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--border);
-  background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:16px;outline:none;
-  transition:border-color .2s,box-shadow .2s,background-color .2s}
+.inp{width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--border);background:rgba(244,233,220,.06);
+  color:var(--cream);font-family:inherit;font-size:16px;outline:none;transition:border-color .2s,box-shadow .2s,background-color .2s}
 .inp::placeholder{color:rgba(196,178,161,.5)}
 .inp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,160,99,.14);background:rgba(244,233,220,.09)}
 .inp.filled{border-color:rgba(201,160,99,.6);background:rgba(201,160,99,.08)}
-select.inp option{color:#3A2020}
+select.inp{-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--gold) 50%),linear-gradient(135deg,var(--gold) 50%,transparent 50%);
+  background-position:calc(100% - 18px) calc(50% + 2px),calc(100% - 13px) calc(50% + 2px);background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:40px}
+select.inp option{color:#3A2020;background:#fff}
 input[type=date].inp{color-scheme:dark}
-
-/* ===== 選択系：金の選択状態 ===== */
-.sel-btn{flex:1;padding:14px 8px;border-radius:14px;border:1.5px solid var(--border);
-  background:rgba(244,233,220,.04);color:var(--muted);font-family:inherit;cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .18s;font-size:13px;font-weight:700}
+.sel-btn{flex:1;padding:14px 8px;border-radius:14px;border:1.5px solid var(--border);background:rgba(244,233,220,.04);
+  color:var(--muted);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .18s;font-size:13px;font-weight:700}
 .sel-btn:active{transform:scale(.97)}
-.sel-btn.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold-bright);
-  box-shadow:0 0 16px rgba(201,160,99,.18)}
-.choice-btn{width:100%;padding:15px 16px;border-radius:14px;border:1.5px solid var(--border);
-  background:rgba(244,233,220,.04);color:var(--muted);font-family:inherit;cursor:pointer;text-align:left;
-  font-size:14px;font-weight:600;transition:all .18s;display:flex;align-items:center;justify-content:space-between}
+.sel-btn.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold-bright);box-shadow:0 0 16px rgba(201,160,99,.18)}
+.choice-btn{width:100%;padding:15px 16px;border-radius:14px;border:1.5px solid var(--border);background:rgba(244,233,220,.04);
+  color:var(--muted);font-family:inherit;cursor:pointer;text-align:left;font-size:14px;font-weight:600;transition:all .18s;display:flex;align-items:center;justify-content:space-between}
 .choice-btn:active{transform:scale(.98)}
 .choice-btn.on{border-color:var(--gold);background:var(--gold-bg);color:var(--cream)}
 .range-row{display:flex;gap:6px;padding:0 20px}
-.range-btn{flex:1;padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);
-  background:rgba(244,233,220,.04);color:var(--muted);font-family:inherit;cursor:pointer;
-  font-size:11px;font-weight:700;text-align:center;transition:all .18s}
+.range-btn{flex:1;padding:10px 4px;border-radius:10px;border:1.5px solid var(--border);background:rgba(244,233,220,.04);
+  color:var(--muted);font-family:inherit;cursor:pointer;font-size:11px;font-weight:700;text-align:center;transition:all .18s}
 .range-btn.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold-bright)}
-.check-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;
-  background:var(--card);border:1.5px solid var(--border);cursor:pointer;transition:all .15s;width:100%;font-family:inherit;text-align:left}
+.check-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:var(--card);border:1.5px solid var(--border);cursor:pointer;transition:all .15s;width:100%;font-family:inherit;text-align:left}
 .check-item.on{border-color:var(--gold);background:var(--gold-bg)}
-.tag-chip{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;
-  background:rgba(244,233,220,.04);border:1.5px solid var(--border);cursor:pointer;transition:all .18s;
-  font-family:inherit;font-size:13px;font-weight:700;color:var(--muted)}
+.tag-chip{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;background:rgba(244,233,220,.04);
+  border:1.5px solid var(--border);cursor:pointer;transition:all .18s;font-family:inherit;font-size:13px;font-weight:700;color:var(--muted)}
 .tag-chip:active{transform:scale(.95)}
 .tag-chip.on{border-color:var(--gold);background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night)}
 .tab-btn{flex:1;padding:12px;border:none;font-family:'Zen Kaku Gothic New',sans-serif;font-size:14px;font-weight:900;cursor:pointer;transition:all .2s;letter-spacing:.04em}
-
-/* ===== ラベル・小物 ===== */
-.sec-label{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.28em;padding:18px 20px 8px;
-  font-family:'Zen Kaku Gothic New',sans-serif}
+.sec-label{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.28em;padding:18px 20px 8px;font-family:'Zen Kaku Gothic New',sans-serif}
 .err-msg{font-size:12px;color:var(--red);padding:4px 0;text-align:center}
 .loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
@@ -158,109 +106,70 @@ input[type=date].inp{color-scheme:dark}
 .drow-v{font-size:14px;font-weight:700}
 .match-wrap{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:0 0 40px}
 .member-row{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border2)}
-
-/* ===== チャット ===== */
 .chat-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .chat-msgs{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
 .chat-msgs::-webkit-scrollbar{width:0}
-.msg-system{text-align:center;font-size:11px;color:var(--muted);padding:7px 16px;
-  background:rgba(244,233,220,.05);border:1px solid var(--border2);border-radius:20px;align-self:center}
+.msg-system{text-align:center;font-size:11px;color:var(--muted);padding:7px 16px;background:rgba(244,233,220,.05);border:1px solid var(--border2);border-radius:20px;align-self:center}
 .msg-row{display:flex;gap:10px;align-items:flex-end;animation:fadeUp .25s ease both}
 .msg-row.mine{flex-direction:row-reverse}
 .msg-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
 .msg-bubble{padding:11px 14px;border-radius:18px;font-size:14px;max-width:210px;line-height:1.6}
-.msg-row.mine .msg-bubble{background:linear-gradient(135deg,#7A2230,var(--wine-true)) !important;
-  color:#fff !important;border-bottom-right-radius:6px;box-shadow:0 3px 12px rgba(107,26,36,.4)}
+.msg-row.mine .msg-bubble{background:linear-gradient(135deg,#7A2230,var(--wine-true)) !important;color:#fff !important;border-bottom-right-radius:6px;box-shadow:0 3px 12px rgba(107,26,36,.4)}
 .msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px;border:1px solid var(--border2)}
-.chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;
-  background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0}
-.chat-inp{flex:1;padding:12px 16px;border-radius:24px;border:1.5px solid var(--border);
-  background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
+.chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0}
+.chat-inp{flex:1;padding:12px 16px;border-radius:24px;border:1.5px solid var(--border);background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
 .chat-inp:focus{border-color:var(--gold)}
 .chat-send{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;font-size:18px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night);font-weight:900;
-  box-shadow:0 4px 14px rgba(201,160,99,.35);transition:transform .15s}
+  background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night);font-weight:900;box-shadow:0 4px 14px rgba(201,160,99,.35);transition:transform .15s}
 .chat-send:active{transform:scale(.88)}
-
-/* ===== 星評価 ===== */
 .star-btn{cursor:pointer;background:none;border:none;padding:4px;outline:none;-webkit-appearance:none;appearance:none;display:inline-flex;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
 .star-btn:active{transform:scale(1.25)}
 .star-btn:focus-visible{outline:2px solid var(--gold) !important;outline-offset:2px;border-radius:6px}
-
-/* ===== モード/エリアカード：奥行きと光 ===== */
-.mode-card{position:relative;border-radius:20px;overflow:hidden;cursor:pointer;border:1.5px solid rgba(228,198,138,.2);
-  transition:transform .3s,box-shadow .3s;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.mode-card{position:relative;border-radius:20px;overflow:hidden;cursor:pointer;border:1.5px solid rgba(228,198,138,.2);transition:transform .3s,box-shadow .3s;box-shadow:0 10px 26px rgba(0,0,0,.35)}
 .mode-card:active{transform:scale(.98)}
 .mode-card img{width:100%;height:180px;object-fit:cover;object-position:center;display:block}
 .mode-card-square img{object-position:center 25%}
 .mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(10,5,7,.9));padding:22px 16px 14px}
 .mode-card-title{font-size:18px;font-weight:800;color:#fff;font-family:'Shippori Mincho',serif;letter-spacing:.03em;text-shadow:0 2px 8px rgba(0,0,0,.6)}
-.card-selected{border-color:var(--gold-bright) !important;
-  box-shadow:0 0 0 3px rgba(243,217,164,.15),0 0 34px rgba(243,217,164,.45) !important;
-  transition:box-shadow .15s,border-color .15s}
+.card-selected{border-color:var(--gold-bright) !important;box-shadow:0 0 0 3px rgba(243,217,164,.15),0 0 34px rgba(243,217,164,.45) !important;transition:box-shadow .15s,border-color .15s}
 .area-card img{filter:saturate(.75) contrast(1.06) brightness(.85)}
 .area-card-tint{position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,10,12,.2),rgba(21,10,12,.1) 40%,rgba(10,5,7,.75));pointer-events:none}
 .area-card-label{position:absolute;bottom:0;left:0;right:0;padding:16px}
-.area-card-title{font-size:22px;font-weight:800;color:var(--cream);letter-spacing:.05em;
-  font-family:'Shippori Mincho',serif;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+.area-card-title{font-size:22px;font-weight:800;color:var(--cream);letter-spacing:.05em;font-family:'Shippori Mincho',serif;text-shadow:0 2px 10px rgba(0,0,0,.7)}
 /* 準備中エリア：LPと同じ斜めリボン */
 .area-soon{opacity:.72;filter:grayscale(.3)}
 .area-soon img{filter:saturate(.35) contrast(1) brightness(.5)}
 .area-soon .area-card-title{font-size:17px;color:rgba(244,233,220,.55)}
-/* ===== カード登録画面：主役1枚 → 入力 → 補足 の3段に整理 ===== */
-.cardreg-hero{border-radius:18px;padding:22px 18px;text-align:center;
-  background:linear-gradient(160deg,rgba(201,160,99,.20),rgba(201,160,99,.06));
-  border:1.5px solid rgba(201,160,99,.45);box-shadow:0 8px 28px rgba(0,0,0,.28)}
-.cardreg-hero-icon{font-size:30px;margin-bottom:8px;line-height:1}
-.cardreg-hero-title{font-family:'Shippori Mincho',serif;font-size:20px;font-weight:800;
-  color:var(--gold-bright);letter-spacing:.02em;margin-bottom:6px}
-.cardreg-hero-sub{font-size:12.5px;color:var(--muted);line-height:1.6}
-.cardreg-field-label{font-family:'Zen Kaku Gothic New',sans-serif;font-size:10px;font-weight:700;
-  color:var(--gold);letter-spacing:.28em;margin-bottom:8px}
-.cardreg-input{background:rgba(244,233,220,.96);border:1.5px solid var(--border);
-  border-radius:14px;padding:16px;transition:border-color .2s,box-shadow .2s}
-.cardreg-input:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,160,99,.16)}
-.cardreg-notes{list-style:none;display:flex;flex-direction:column;gap:10px;
-  padding:16px;border-radius:14px;background:rgba(244,233,220,.04);border:1px solid var(--border2)}
-.cardreg-notes li{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--muted);line-height:1.7}
-.cardreg-notes-mark{color:var(--gold);flex-shrink:0;font-weight:900;font-size:12px;margin-top:1px}
-.cardreg-secure{font-size:11px;color:var(--lgray);line-height:1.7;text-align:center;padding:0 6px}
 .area-soon-ribbon-wrap{position:absolute;inset:0;overflow:hidden;border-radius:20px;pointer-events:none;z-index:3}
 .area-soon-ribbon{position:absolute;top:16px;right:-42px;width:160px;transform:rotate(40deg);text-align:center;
-  background:linear-gradient(135deg,rgba(228,198,138,.95),rgba(196,163,90,.95));
-  color:var(--night);font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:900;
-  letter-spacing:.12em;padding:5px 0;
-  box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.3);
-  border-top:1px solid rgba(255,255,255,.25);border-bottom:1px solid rgba(0,0,0,.15)}
-/* 募集中バッジ */
+  background:linear-gradient(135deg,rgba(228,198,138,.95),rgba(196,163,90,.95));color:var(--night);
+  font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:900;letter-spacing:.12em;padding:5px 0;
+  box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.3);border-top:1px solid rgba(255,255,255,.25);border-bottom:1px solid rgba(0,0,0,.15)}
 .area-live-badge{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:5px;z-index:3;
-  background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night);
-  font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:900;letter-spacing:.04em;
-  padding:5px 11px;border-radius:999px;box-shadow:0 3px 10px rgba(201,160,99,.4)}
+  background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night);font-family:'Zen Kaku Gothic New',sans-serif;
+  font-size:11px;font-weight:900;letter-spacing:.04em;padding:5px 11px;border-radius:999px;box-shadow:0 3px 10px rgba(201,160,99,.4)}
 .area-live-badge .dot{width:5px;height:5px;border-radius:50%;background:var(--night);animation:pulse 1.6s infinite}
-.area-quiet-badge{position:absolute;top:12px;right:12px;z-index:3;background:rgba(10,5,7,.6);
-  color:rgba(244,233,220,.7);font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;
-  border:1px solid rgba(244,233,220,.15)}
-
-/* ===== マッチ成立：乾杯演出 ===== */
-.cheers-burst{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:430px;pointer-events:none;z-index:60;
-  display:flex;align-items:center;justify-content:center}
-.cheers-burst .glass{font-size:64px;animation:cheersPop 1.4s cubic-bezier(.2,.8,.2,1) forwards;
-  filter:drop-shadow(0 0 24px rgba(243,217,164,.7))}
-@keyframes cheersPop{
-  0%{transform:scale(.3) rotate(-12deg);opacity:0}
-  30%{transform:scale(1.25) rotate(4deg);opacity:1}
-  50%{transform:scale(1)}
-  80%{opacity:1}
-  100%{transform:scale(1.1);opacity:0}}
-.cheers-burst .spark{position:absolute;width:6px;height:6px;border-radius:50%;
-  background:var(--gold-bright);animation:sparkFly 1.2s ease-out forwards}
-@keyframes sparkFly{
-  0%{transform:translate(0,0) scale(1);opacity:1}
-  100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
-
-/* 旧クラス互換（既存HTMLが参照していても崩れないよう残す） */
+.area-quiet-badge{position:absolute;top:12px;right:12px;z-index:3;background:rgba(10,5,7,.6);color:rgba(244,233,220,.7);
+  font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid rgba(244,233,220,.15)}
+/* カード登録：主役1枚＋同一書式の補足 */
+.cardreg-hero{border-radius:18px;padding:22px 18px;text-align:center;background:linear-gradient(160deg,rgba(201,160,99,.20),rgba(201,160,99,.06));
+  border:1.5px solid rgba(201,160,99,.45);box-shadow:0 8px 28px rgba(0,0,0,.28)}
+.cardreg-hero-icon{font-size:30px;margin-bottom:8px;line-height:1}
+.cardreg-hero-title{font-family:'Shippori Mincho',serif;font-size:21px;font-weight:800;color:var(--gold-bright);letter-spacing:.02em;margin-bottom:6px}
+.cardreg-hero-sub{font-size:13px;color:var(--muted);line-height:1.7}
+.cardreg-field-label{font-family:'Zen Kaku Gothic New',sans-serif;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.24em;margin-bottom:8px}
+.cardreg-input{background:#FFFFFF;border:1.5px solid var(--border);border-radius:14px;padding:16px;transition:border-color .2s,box-shadow .2s}
+.cardreg-input:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,160,99,.16)}
+.cardreg-notes{list-style:none;display:flex;flex-direction:column;gap:11px;background:rgba(244,233,220,.035);border:1px solid var(--border2);border-radius:14px;padding:16px}
+.cardreg-notes li{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.7;color:var(--muted)}
+.cardreg-notes-mark{color:var(--gold);flex:none;font-size:12px;line-height:1.7;font-weight:900}
+.cardreg-secure{font-size:11px;color:var(--lgray);line-height:1.7;text-align:center;padding:0 8px}
+/* 乾杯演出 */
+.cheers-burst{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;pointer-events:none;z-index:60;display:flex;align-items:center;justify-content:center}
+.cheers-burst .glass{font-size:64px;animation:cheersPop 1.4s cubic-bezier(.2,.8,.2,1) forwards;filter:drop-shadow(0 0 24px rgba(243,217,164,.7))}
+@keyframes cheersPop{0%{transform:scale(.3) rotate(-12deg);opacity:0}30%{transform:scale(1.25) rotate(4deg);opacity:1}50%{transform:scale(1)}80%{opacity:1}100%{transform:scale(1.1);opacity:0}}
+.cheers-burst .spark{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--gold-bright);animation:sparkFly 1.2s ease-out forwards}
+@keyframes sparkFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
 .intro-anim{display:none}
 </style>
 </head>
@@ -277,7 +186,7 @@ const AREAS=[
   {id:'ueno',name:'上野',img:'area_ueno.jpg',open:false},
   {id:'umeda',name:'梅田',img:'area_umeda.jpg',open:false}
 ];
-const JOBS=['会社員（事務・管理）','会社員（営業）','会社員（企画・マーケティング）','経営者・役員','自営業・フリーランス','公務員','医療・看護','福祉・介護','保育・教育','IT・エンジニア','クリエイター・デザイナー','メディア・広告','金融・保険','不動産・建設','メーカー・技術職','商社・貿易','コンサルタント','士業（弁護士・会計士など）','販売・小売','飲食・フード','美容・理容','アパレル・ファッション','ホテル・ブライダル','旅行・観光','運輸・物流','製造・工場','農林水産','スポーツ・フィットネス','エンタメ・芸能','公務（警察・消防・自衛官）','学生','その他'];
+const JOBS=['会社員（事務・管理）','会社員（営業）','会社員（企画・マーケティング）','会社員（技術・研究）','経営者・役員','自営業・フリーランス','公務員','士業（弁護士・会計士など）','コンサルタント','IT・エンジニア','クリエイター・デザイナー','メディア・広告','金融・保険','不動産・建設','メーカー・技術職','商社・貿易','医療・看護','福祉・介護','保育・教育','販売・小売','飲食・フード','美容・理容','アパレル・ファッション','ホテル・ブライダル','旅行・観光','ブライダル・イベント','運輸・物流','製造・工場','農林水産','スポーツ・フィットネス','エンタメ・芸能','公務（警察・消防・自衛官）','学生','その他'];
 const DRINK_STYLES=['ガッツリ飲みたい','ゆっくり飲みたい','ご飯メイン'];
 const TIMINGS=['一次会','二次会','どちらでもOK'];
 const AGE_PREFS=['年下','近い年齢','年上','年齢問わない','おまかせ'];
@@ -643,6 +552,7 @@ async function saveProfile(){
   var mdiff=today.getMonth()-bd.getMonth();
   if(mdiff<0||(mdiff===0&&today.getDate()<bd.getDate()))calcAge--;
   if(calcAge<20){S.error='生年月日から20歳未満と判定されました。Nomi Goは20歳以上限定です';re('profile_new');return;}
+  if(parseInt(p.age)!==calcAge){S.error='年齢と生年月日が一致しません（生年月日からは'+calcAge+'歳です）。どちらかをご確認ください';re('profile_new');return;}
   go('loading');
   var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
   var freeTicket=(p.gender==='male')?1:0;
@@ -1108,14 +1018,10 @@ async function goBuyTicket(){
   }
 }
 
-// 本人確認が承認された後の共通の行き先。
-// LINE未連携なら連携画面へ寄り道し、連携済みならトップへ。
+// 本人確認 承認後の共通の行き先。LINE未連携なら必ず連携画面へ
 async function goAfterIdApproved(){
-  if(S.profile&&!S.profile.line_user_id){
-    await goLineConnect();
-  }else{
-    go('splash');
-  }
+  if(S.profile&&!S.profile.line_user_id){ await goLineConnect(); }
+  else{ go('splash'); }
 }
 
 async function goAfterCardRegister(){
@@ -1451,6 +1357,51 @@ async function noShowMatch(){
   go('splash');
 }
 
+
+// ===== 飲み終わりリマインド =====
+// マッチから3時間経っても「飲み終わった」アクションが無い人に、アプリ内バナーとLINEで通知
+var REMIND_AFTER_MS=3*60*60*1000;
+function shouldRemindFinish(){
+  if(!S.match||!S.registration)return false;
+  if(S.registration.status!=='matched')return false;
+  if(S.match.status!=='confirmed')return false;
+  if(!S.match.created_at)return false;
+  return (Date.now()-new Date(S.match.created_at).getTime())>=REMIND_AFTER_MS;
+}
+function finishReminderBanner(){
+  if(!shouldRemindFinish())return '';
+  return '<div style="margin:0 20px 12px;padding:14px 16px;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);border-radius:12px">'
+    +'<div style="font-size:13px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">飲み会は終わりましたか？</div>'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px">「飲み終わった」を押して評価すると、次の募集ができるようになります。</div>'
+    +'<button class="btn btn-wine" style="padding:11px;font-size:13px" onclick="go(\'review\')">飲み終わった →</button></div>';
+}
+// LINE通知は1マッチにつき1回だけ。reminder_sent を排他更新して二重送信を防ぐ
+async function sendFinishReminderOnce(){
+  if(!shouldRemindFinish())return;
+  var lock=await DB.from('matches').update({reminder_sent:true}).eq('id',S.match.id).eq('reminder_sent',false).select().single();
+  if(lock.error||!lock.data)return;
+  S.match.reminder_sent=true;
+  for(var i=0;i<S.matchMembers.length;i++){
+    var pr=S.matchMembers[i].profiles;
+    if(pr&&pr.line_user_id){
+      fetch('/api/line-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({lineUserId:pr.line_user_id,message:'🍺 今夜の飲み会はいかがでしたか？\nNomi Goを開いて「飲み終わった」から評価をお願いします。'})}).catch(function(){});
+    }
+  }
+}
+function startFinishReminderTimer(){
+  if(S._remindTimer)clearInterval(S._remindTimer);
+  S._remindTimer=setInterval(function(){
+    if(!S.match||!S.registration||S.registration.status!=='matched'){
+      clearInterval(S._remindTimer);S._remindTimer=null;return;
+    }
+    if(shouldRemindFinish()){
+      sendFinishReminderOnce();
+      if(S.screen==='matched'||S.screen==='chat'||S.screen==='splash')render();
+    }
+  },60*1000);
+}
+
 async function loadMatchMembers(){
   if(!S.match)return;
   var r=await DB.from('registrations').select('*').eq('match_id',S.match.id);
@@ -1461,6 +1412,7 @@ async function loadMatchMembers(){
   }
   S.matchMembers=r.data;
   await syncReportStatus();
+  startFinishReminderTimer();
 }
 
 async function openChat(){
@@ -1685,7 +1637,7 @@ function splashH(){
   if(S.match&&S.registration&&S.registration.status==='matched'){
     var opponent=S.matchMembers.find(function(m){return m.user_id!==S.user.id;});
     var oppName=opponent&&opponent.profiles?opponent.profiles.nickname:'相手';
-    matchCard='<div style="background:rgba(0,0,0,.3);border:1.5px solid rgba(212,160,80,.4);border-radius:12px;padding:16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">🍻</span><div style="font-size:14px;font-weight:800;color:var(--gold)">マッチ中です</div></div><div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.7;margin-bottom:12px"><strong>'+oppName+'さん</strong>とマッチしています。<br>チャットで待ち合わせの相談ができます。</div><div style="display:flex;gap:8px"><button class="btn btn-wine" style="font-size:13px;padding:11px" onclick="openChat()">チャットを開く</button><button class="btn" style="font-size:13px;padding:11px;background:transparent;border:1.5px solid rgba(237,229,224,.2);color:var(--cream)" onclick="go(\'matched\')">マッチ詳細を見る</button></div></div>';
+    matchCard='<div style="background:rgba(0,0,0,.3);border:1.5px solid rgba(212,160,80,.4);border-radius:12px;padding:16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">🍻</span><div style="font-size:14px;font-weight:800;color:var(--gold)">マッチ中です</div></div><div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.7;margin-bottom:12px">'+(shouldRemindFinish()?'飲み会が終わっていたら「飲み終わった」から評価をお願いします。':'<strong>'+oppName+'さん</strong>とマッチしています。<br>チャットで待ち合わせの相談ができます。')+'</div><div style="display:flex;gap:8px"><button class="btn btn-wine" style="font-size:13px;padding:11px" onclick="openChat()">チャットを開く</button><button class="btn" style="font-size:13px;padding:11px;background:transparent;border:1.5px solid rgba(237,229,224,.2);color:var(--cream)" onclick="go(\'matched\')">マッチ詳細を見る</button></div></div>';
   }else if(S.registration&&S.registration.status==='waiting'){
     matchCard='<div style="background:rgba(0,0,0,.3);border:1.5px solid rgba(123,224,144,.4);border-radius:12px;padding:16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><div style="font-size:14px;font-weight:800;color:#7BE090">募集中です</div></div><div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.7;margin-bottom:12px">今夜のお相手を探しています。<br>見つかると自動でお知らせします。</div><button class="btn btn-wine" style="font-size:13px;padding:11px" onclick="go(\'waiting\')">募集状況を見る</button></div>';
   }
@@ -1759,12 +1711,12 @@ async function goLineConnect(){
 }
 
 function lineConnectH(){
-  // LINE連携は必須。済むまで先へ進めないため戻る導線は出さない
+  // LINE連携は必須。完了するまで先へ進めないため戻る導線は出さない
   return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">新規登録　最後のステップ</div><div class="hdr-title">LINEと連携する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
-    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチが成立したら、LINEでお知らせします。アプリを開いたままにしなくても、相手が見つかった瞬間に気づけます。</div>'
+    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
-    +'<div style="font-size:11px;color:var(--muted);line-height:1.6">公式LINEを友だち追加して、上の6桁の番号をトークに送ると、自動で次に進みます。</div>'
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、自動で次の画面に進みます。</div>'
     +'<button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="checkLineLinkNow()">自動で移らなければこちらを押してください</button>'
     +'</div></div>';
 }
@@ -1936,49 +1888,49 @@ function recruitH(){
 
 function cardRegisterH(){
   var hasReg=S.registration&&S.registration.id;
-  var backBtn='<button class="hdr-back" onclick="go(\''+(hasReg?'recruit':'splash')+'\')">← 戻る</button>';
+  var backBtn='<button class="hdr-back" onclick="go(\''+(hasReg?'recruit':'splash')+'\')">\u2190 \u623b\u308b</button>';
   var isMale=S.profile&&S.profile.gender==='male';
   var hasGift=isMale&&S.profile&&S.profile.ticket_count>0;
 
-  // ① 主役は1枚だけ。以前は箱が6つ並んで視線が散っていたため統合
-  var heroTitle,heroSub,heroIcon;
+  // 主役は1枚だけ。以前は色も文字サイズも違う箱が6つ並び、どれが大事か分からなかった
+  var heroIcon,heroTitle,heroSub;
   if(isMale){
-    heroTitle=hasGift?'無料チケットを1枚プレゼント':'カードを登録する';
-    heroSub=hasGift?'はじめての1回は無料でマッチできます':'マッチ成立ごとに3,000円';
-    heroIcon=hasGift?'🎁':'🍷';
+    heroIcon=hasGift?'\ud83c\udf81':'\ud83c\udf77';
+    heroTitle=hasGift?'\u7121\u6599\u30c1\u30b1\u30c3\u30c8\u3092\uff11\u679a\u30d7\u30ec\u30bc\u30f3\u30c8':'\u30ab\u30fc\u30c9\u3092\u767b\u9332\u3059\u308b';
+    heroSub=hasGift?'\u306f\u3058\u3081\u3066\u306e\uff11\u56de\u306f\u7121\u6599\u3067\u30de\u30c3\u30c1\u3067\u304d\u307e\u3059':'\u30de\u30c3\u30c1\u6210\u7acb\u3054\u3068\u306b3,000\u5186';
   }else{
-    heroTitle='女性は完全無料';
-    heroSub='何回使っても料金はかかりません';
-    heroIcon='🥂';
+    heroIcon='\ud83e\udd42';
+    heroTitle='\u5973\u6027\u306f\u5b8c\u5168\u7121\u6599';
+    heroSub='\u4f55\u56de\u4f7f\u3063\u3066\u3082\u6599\u91d1\u306f\u304b\u304b\u308a\u307e\u305b\u3093';
   }
   var hero='<div class="cardreg-hero"><div class="cardreg-hero-icon">'+heroIcon+'</div>'
     +'<div class="cardreg-hero-title">'+heroTitle+'</div>'
     +'<div class="cardreg-hero-sub">'+heroSub+'</div></div>';
 
-  // ② 入力欄
-  var cardField='<div><div class="cardreg-field-label">カード情報</div>'
+  var cardField='<div><div class="cardreg-field-label">\u30ab\u30fc\u30c9\u60c5\u5831</div>'
     +'<div class="cardreg-input"><div id="payjp-card-el" style="min-height:44px"></div></div></div>';
 
-  // ③ 補足は同じ書式の行に統一（文字サイズ・色を1種類に）
-  var notes=['今は請求されません。登録だけで完了します。','カード登録は初回のみ。次回から入力は不要です。'];
+  // 補足は全て同じ書式・同じ文字サイズ・同じ色に統一（バラつきの原因はここ）
+  var notes=['\u4eca\u306f\u8acb\u6c42\u3055\u308c\u307e\u305b\u3093\u3002\u767b\u9332\u3060\u3051\u3067\u5b8c\u4e86\u3057\u307e\u3059\u3002',
+             '\u30ab\u30fc\u30c9\u767b\u9332\u306f\u521d\u56de\u306e\u307f\u3002\u6b21\u56de\u304b\u3089\u5165\u529b\u306f\u4e0d\u8981\u3067\u3059\u3002'];
   if(isMale){
-    notes.push('次回以降のチケット購入にも、このカードを使えます。');
+    notes.push('\u6b21\u56de\u4ee5\u964d\u306e\u30c1\u30b1\u30c3\u30c8\u8cfc\u5165\u306b\u3082\u3001\u3053\u306e\u30ab\u30fc\u30c9\u3092\u4f7f\u3048\u307e\u3059\u3002');
   }else{
-    notes.push('マッチ成立後の無断キャンセル・当日不参加が確認された場合のみ、3,000円を請求することがあります。');
+    notes.push('\u30de\u30c3\u30c1\u6210\u7acb\u5f8c\u306e\u7121\u65ad\u30ad\u30e3\u30f3\u30bb\u30eb\u30fb\u5f53\u65e5\u4e0d\u53c2\u52a0\u304c\u78ba\u8a8d\u3055\u308c\u305f\u5834\u5408\u306e\u307f\u30013,000\u5186\u3092\u8acb\u6c42\u3059\u308b\u3053\u3068\u304c\u3042\u308a\u307e\u3059\u3002');
   }
   var notesHtml='<ul class="cardreg-notes">'+notes.map(function(t){
-    return '<li><span class="cardreg-notes-mark">✓</span><span>'+t+'</span></li>';
+    return '<li><span class="cardreg-notes-mark">\u2713</span><span>'+t+'</span></li>';
   }).join('')+'</ul>';
 
-  var securityNote='<div class="cardreg-secure">カード情報はPAY.JPが安全に管理します。Nomi Goはカード番号を保持しません。</div>';
+  var securityNote='<div class="cardreg-secure">\u30ab\u30fc\u30c9\u60c5\u5831\u306fPAY.JP\u304c\u5b89\u5168\u306b\u7ba1\u7406\u3057\u307e\u3059\u3002Nomi Go\u306f\u30ab\u30fc\u30c9\u756a\u53f7\u3092\u4fdd\u6301\u3057\u307e\u305b\u3093\u3002</div>';
 
-  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">新規登録　あと2ステップ</div><div class="hdr-title">カードを登録</div></div></div>'
+  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">\u30ab\u30fc\u30c9\u767b\u9332</div><div class="hdr-title">\u30ab\u30fc\u30c9\u3092\u767b\u9332</div></div></div>'
     +'<div class="body" style="padding:20px;display:flex;flex-direction:column;gap:16px">'
     +hero+cardField+notesHtml
     +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
     +'<div id="cardreg-err" class="err-msg"></div>'
     +securityNote
-    +'</div><div class="ftr"><button class="btn btn-wine" id="cardreg-btn" onclick="confirmCardRegister()">カードを登録する →</button></div></div>';
+    +'</div><div class="ftr"><button class="btn btn-wine" id="cardreg-btn" onclick="confirmCardRegister()">\u30ab\u30fc\u30c9\u3092\u767b\u9332\u3059\u308b \u2192</button></div></div>';
 }
 
 function waitH(){
@@ -2048,15 +2000,15 @@ function matchedH(){
     if(smoke==='no')tags.push('🚭 非喫煙');
     if(smoke==='yes')tags.push('🚬 喫煙する');
     if(alcoholLabel)tags.push('🍺 お酒：'+alcoholLabel);
-    var tagsHtml=tags.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+tags.map(function(t){return '<span style="font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:3px 8px">'+t+'</span>';}).join('')+'</div>':'';
-    var verifiedBadge=verified?'<span style="font-size:10px;background:rgba(123,224,144,.15);color:#7BE090;border:1px solid rgba(123,224,144,.4);padding:2px 7px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px">✓ 本人確認済み</span>':'';
+    var tagsHtml=tags.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+tags.map(function(t){return '<span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:6px;padding:3px 8px">'+t+'</span>';}).join('')+'</div>':'';
+    var verifiedBadge=verified?'<span style="font-size:10px;background:var(--gold-bg);color:var(--gold);border:1px solid rgba(201,160,99,.45);padding:2px 7px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px">✓ 本人確認済み</span>':'';
     var photoUrl=u.profiles?u.profiles.photo_url:null;
     var avatarHtml=photoUrl
       ?'<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="'+photoUrl+'" style="width:100%;height:100%;object-fit:cover;filter:blur(2.5px) saturate(1.1);transform:scale(1.15)"></div>'
-      :'<div style="width:40px;height:40px;border-radius:50%;background:'+(gn==='male'?'rgba(50,80,160,.35)':'rgba(160,50,100,.35)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(gn==='male'?'♂':'♀')+'</div>';
+      :'<div style="width:40px;height:40px;border-radius:50%;background:rgba(201,160,99,.14);border:1px solid rgba(201,160,99,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(gn==='male'?'♂':'♀')+'</div>';
     return '<div class="member-row" style="align-items:flex-start">'
       +avatarHtml
-      +'<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:15px;font-weight:800">'+nick+'</span>'+(age?'<span style="font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:1px 8px">'+age+'歳</span>':'')+(isMe?'<span style="font-size:10px;background:var(--wine-bg);color:var(--wine);padding:2px 7px;border-radius:4px;font-weight:700">あなた</span>':'')+verifiedBadge+'</div>'
+      +'<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:15px;font-weight:800">'+nick+'</span>'+(age?'<span style="font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:1px 8px">'+age+'歳</span>':'')+(isMe?'<span style="font-size:10px;background:rgba(107,26,36,.5);color:var(--cream);border:1px solid rgba(107,26,36,.9);padding:2px 7px;border-radius:4px;font-weight:700">あなた</span>':'')+verifiedBadge+'</div>'
       +(job?'<div style="font-size:12px;color:var(--muted);margin-top:3px">'+job+'</div>':'')
       +tagsHtml
       +'</div></div>';
@@ -2083,6 +2035,7 @@ function matchedH(){
     +'</div>'
     +'<div style="border-bottom:1px solid var(--border2)"><div class="sec-label">今夜のメンバー</div>'+membersHtml+'</div>'
     +'<div style="padding:16px 20px 0">'+reportedBadge+'</div>'
+    +finishReminderBanner()
     +'<div style="padding:4px 20px;display:flex;flex-direction:column;gap:10px">'
       +'<button class="btn btn-wine" style="padding:16px;font-size:16px" onclick="openChat()">💬 チャットを開く</button>'
       +'<div>'
@@ -2099,7 +2052,7 @@ function matchedH(){
 function chatH(){
   var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+escapeHtml(msg.content)+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=escapeHtml(msg.nickname||(msg.profiles?msg.profiles.nickname:'?'));return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+escapeHtml(msg.content)+'</div></div></div>';}).join('');
   var reportBanner=S._hasReported?'<div style="padding:8px 16px;background:rgba(204,64,64,.1);border-bottom:1px solid rgba(204,64,64,.2);font-size:11px;color:var(--red);text-align:center">通報済み：運営が内容を確認中です</div>':'';
-  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div></div><button style="background:transparent;color:var(--muted);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:600;cursor:pointer" onclick="go(\'review\')">飲み終わった</button></div>'+reportBanner+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" onclick="sendMsg()">↑</button></div></div></div>';
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div></div><button style="background:transparent;color:var(--muted);border:1px solid var(--border);font-size:12px;padding:6px 12px;border-radius:8px;font-weight:600;cursor:pointer" onclick="go(\'review\')">飲み終わった</button></div>'+reportBanner+finishReminderBanner()+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" onclick="sendMsg()">↑</button></div></div></div>';
 }
 
 function reviewH(){
@@ -2305,7 +2258,7 @@ function showCheersFx(){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   var wrap=document.createElement('div');
   wrap.className='cheers-burst';
-  var html='<div class="glass">🥂</div>';
+  var html='<div class="glass">\ud83e\udd42</div>';
   for(var i=0;i<10;i++){
     var ang=(Math.PI*2/10)*i;
     var dist=70+Math.random()*60;
