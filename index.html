@@ -540,6 +540,31 @@ function saveInputs(){
   if(rn)S.pf.realname=rn.value.trim();if(bd)S.pf.birthdate=bd.value;
 }
 
+// ===== BAN照合 =====
+// 本名+生年月日 で blacklist と突き合わせる。
+// user_id だけでBANしてもメールを変えれば再登録できてしまうため、
+// 変えにくい情報（身分証と一致する本名・生年月日）で照合する。
+async function isBlacklisted(realName,birthdate){
+  if(!realName||!birthdate)return false;
+  try{
+    var res=await DB.from('blacklist').select('id')
+      .eq('real_name',realName.trim())
+      .eq('birthdate',birthdate)
+      .limit(1);
+    if(res.error)return false; // 照合に失敗しても登録は止めない（誤ブロック防止）
+    return !!(res.data&&res.data.length>0);
+  }catch(e){return false;}
+}
+// LINE IDでの照合（連携完了後にチェック）
+async function isLineBlacklisted(lineUserId){
+  if(!lineUserId)return false;
+  try{
+    var res=await DB.from('blacklist').select('id').eq('line_user_id',lineUserId).limit(1);
+    if(res.error)return false;
+    return !!(res.data&&res.data.length>0);
+  }catch(e){return false;}
+}
+
 async function saveProfile(){
   var p=S.pf;
   if(!p.nickname||!p.age||!p.gender||!p.job||p.smoke===null||p.alcohol===null){S.error='すべての項目を入力してください';re('profile_new');return;}
@@ -553,6 +578,8 @@ async function saveProfile(){
   if(mdiff<0||(mdiff===0&&today.getDate()<bd.getDate()))calcAge--;
   if(calcAge<20){S.error='生年月日から20歳未満と判定されました。Nomi Goは20歳以上限定です';re('profile_new');return;}
   if(parseInt(p.age)!==calcAge){S.error='年齢と生年月日が一致しません（生年月日からは'+calcAge+'歳です）。どちらかをご確認ください';re('profile_new');return;}
+  var banned=await isBlacklisted(p.realname,p.birthdate);
+  if(banned){S.error='ご利用いただけません。利用規約に違反したため、アカウントの作成を制限しています。';re('profile_new');return;}
   go('loading');
   var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
   var freeTicket=(p.gender==='male')?1:0;
@@ -1768,14 +1795,27 @@ function confirmResendEmailCode(){
   if(confirm('確認コードを再送信しますか？'))goEmailVerify();
 }
 
+// LINE連携が完了した後の共通処理。BAN照合してから先へ進む
+async function afterLineLinked(lineUserId){
+  var banned=await isLineBlacklisted(lineUserId);
+  if(banned){
+    await DB.auth.signOut();
+    S.user=null;S.profile=null;S.registration=null;S.match=null;
+    alert('ご利用いただけません。利用規約に違反したため、アカウントの作成を制限しています。');
+    go('splash');
+    return;
+  }
+  go('splash');
+}
+
 async function checkLineLinkNow(){
   var res=await DB.from('profiles').select('line_user_id').eq('user_id',S.user.id).single();
   if(res.data&&res.data.line_user_id){
     if(S._lineLinkTimer){clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;}
     if(S.profile)S.profile.line_user_id=res.data.line_user_id;
-    go('splash');
+    await afterLineLinked(res.data.line_user_id);
   }else{
-    alert('まだ連携が確認できていません。LINEで番号を送ってから、もう一度お試しください。');
+    alert('まだ連携が確認できていません。\n\n番号を送っても進まない場合は、そのLINEアカウントが既に別のNomi Goアカウントで使われている可能性があります。');
   }
 }
 
@@ -1787,7 +1827,7 @@ function startLineLinkPolling(){
     if(res.data&&res.data.line_user_id){
       clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;
       if(S.profile)S.profile.line_user_id=res.data.line_user_id;
-      go('splash');
+      await afterLineLinked(res.data.line_user_id);
     }
   },3000);
 }
@@ -2109,8 +2149,8 @@ function termsH(){
   var body='<div style="font-size:13px;color:var(--cream);line-height:1.9;white-space:pre-wrap">'
 +'本利用規約（以下「本規約」といいます。）は、本サービス「Nomi Go」（以下「本サービス」といいます。）の利用条件を定めるものです。ユーザーは本規約に同意の上、本サービスを利用するものとします。\n\n'
 +'第1条（サービス概要）\n本サービスは、ユーザー同士がリアルタイムでマッチングし、飲み会等の交流機会を形成することを目的としたマッチングサービスです。本サービスは、ユーザー間のマッチング機会を提供するものであり、実際の出会いや行動について保証するものではありません。\n\n'
-+'第2条（利用資格）\nユーザーは、本サービスの利用にあたり、以下の条件を満たすものとします。\n・20歳以上であること\n・本規約に同意していること\n・反社会的勢力に該当しないこと\n\n'
-+'第3条（禁止事項）\nユーザーは、本サービスの利用にあたり、以下の行為を行ってはなりません。\n・虚偽情報の登録\n・他ユーザーへの迷惑行為、誹謗中傷\n・営業・勧誘・宣伝目的での利用\n・なりすまし行為\n・法令または公序良俗に反する行為\n・本サービスの運営を妨害する行為\n\n'
++'第2条（利用資格）\nユーザーは、本サービスの利用にあたり、以下の条件を満たすものとします。\n・20歳以上であること\n・本規約に同意していること\n・反社会的勢力に該当しないこと\n・過去に本サービスの利用停止措置を受けていないこと\n\n第2条の2（アカウント数の制限）\n本サービスの利用は、お一人につき1アカウントに限ります。同一人物が複数のアカウントを作成することは禁止します。\n\n運営は、本名・生年月日・LINEの識別情報等により同一人物と判断した場合、アカウントの作成を制限し、または既存のアカウントを停止することがあります。\n\n'
++'第3条（禁止事項）\nユーザーは、本サービスの利用にあたり、以下の行為を行ってはなりません。\n・虚偽情報の登録\n・他ユーザーへの迷惑行為、誹謗中傷\n・営業・勧誘・宣伝目的での利用\n・なりすまし行為\n・複数アカウントの作成、および利用停止措置を回避する目的での再登録\n・本人確認において虚偽の情報を申告する行為\n・法令または公序良俗に反する行為\n・本サービスの運営を妨害する行為\n\n'
 +'第4条（マッチングおよび利用）\nマッチングの成立は出会いや約束の成立を保証するものではなく、その後の行動はすべてユーザー自身の責任において行うものとします。\n\n'
 +'第5条（チケットおよび課金）\n・男性ユーザーのみチケットを消費\n・チケットはマッチ成立時に消費\n・ユーザーの都合による返金は原則行わない（運営判断を除く）\n・本サービス側のシステム不具合により、正常にチケットが利用できなかった場合は、運営にて内容を確認のうえ、チケットの再付与または返金を行います\n\n'
 +'第6条（評価・通報機能）\n評価および通報は運営が確認し、必要に応じてアカウント停止等の措置を行う場合があります。\n\n'
@@ -2146,7 +2186,7 @@ function privacyH(){
 +'第2条（利用目的）\n取得した情報は以下の目的で利用します。\n・サービス提供のため\n・マッチング機能の提供\n・不正利用防止\n・課金処理\n・ユーザーサポート\n・サービス改善\n\n'
 +'第3条（第三者提供）\n以下の場合を除き第三者提供は行いません。\n・本人同意がある場合\n・法令に基づく場合\n・安全確保のため必要な場合\n\n'
 +'第4条（業務委託）\n決済処理等を外部サービス（PAY.JP等）に委託する場合があります。\n\n'
-+'第5条（情報管理）\n適切な安全管理措置を講じますが、完全な安全性は保証しません。\n\n'
++'第5条（情報管理）\n適切な安全管理措置を講じますが、完全な安全性は保証しません。\n\n第5条の2（不正利用防止のための情報の保管）\n本サービスでは、同一人物による複数アカウントの作成、および利用停止措置を受けた方の再登録を防止するため、以下の情報を利用停止後も一定期間保管します。\n・本名および生年月日\n・LINEの識別情報\n・本人確認書類および顔写真\n\nこれらの情報は、不正利用の防止という目的のみに使用し、それ以外の目的では利用しません。保管期間は、当該目的の達成に必要な範囲内とします。\n\n'
 +'第6条（チャット・投稿内容）\n不正防止のため保存・確認される場合があります。\n\n'
 +'第7条（免責）\nユーザー間トラブルおよび損害について責任を負いません。\n\n'
 +'第8条（改定）\n本ポリシーは必要に応じて変更されます。\n\n'
