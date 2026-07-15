@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nomi Go｜今、一緒に飲める人が見つかる。</title>
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nomi-go.jp/">
+<meta property="og:title" content="Nomi Go｜今、一緒に飲める人が見つかる。">
+<meta property="og:description" content="女性は完全無料。今夜の飲み相手が、その日のうちに見つかる。">
+<meta property="og:image" content="https://nomi-go.jp/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#3A0E14">
@@ -66,6 +72,7 @@
   .header-cta{font-size:13px;font-weight:700;padding:9px 20px;border:1px solid var(--gold);
     border-radius:999px;color:var(--gold-soft);white-space:nowrap;transition:all .25s;}
   .header-cta:hover{background:rgba(201,160,99,0.15);transform:scale(1.03);}
+  .header-cta:active{transform:scale(.94);}
 
   /* ===== ボタン ===== */
   .btn-primary{
@@ -84,15 +91,17 @@
   }
   @keyframes shine{0%{left:-80%;}40%{left:130%;}100%{left:130%;}}
   .btn-primary:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 14px 40px rgba(201,160,99,0.45);}
+  .btn-primary:active{transform:scale(.96);transition:transform .1s;}
 
   /* ===== 出現アニメーション ===== */
   .reveal{opacity:0;transform:translateY(34px);transition:opacity .8s ease, transform .8s ease;}
   .reveal.show{opacity:1;transform:translateY(0);}
-  .reveal-d1{transition-delay:.1s;} .reveal-d2{transition-delay:.22s;}
-  .reveal-d3{transition-delay:.34s;} .reveal-d4{transition-delay:.46s;}
+  .reveal-d1{transition-delay:.15s;} .reveal-d2{transition-delay:.45s;}
+  .reveal-d3{transition-delay:.75s;} .reveal-d4{transition-delay:1.05s;}
   @media(prefers-reduced-motion:reduce){
     .reveal{opacity:1;transform:none;transition:none;}
     .btn-primary::after,.bubble,.dot-live{animation:none !important;}
+    .cheers-glow{transition:none;opacity:1;transform:none;}
   }
 
   /* ===== HERO ===== */
@@ -171,8 +180,10 @@
 
   /* ===== ストーリー ===== */
   .story{background:
-    linear-gradient(160deg, rgba(107,26,36,0.4), rgba(21,10,12,0.92)),
-    radial-gradient(ellipse at 70% 20%, rgba(201,160,99,0.14), transparent 60%);}
+    linear-gradient(160deg, rgba(58,14,20,0.88), rgba(21,10,12,0.94)),
+    url('story_bg.jpg') center/cover no-repeat;}
+  .story .reveal{transition-duration:1.1s;transform:translateY(20px);}
+  .story .reveal.show{transform:translateY(0);}
   .story-inner{max-width:600px;margin:0 auto;text-align:center;}
   .story-time{font-family:'Zen Kaku Gothic New';font-weight:700;font-size:13px;letter-spacing:0.3em;
     color:var(--gold-soft);margin-bottom:40px;}
@@ -182,7 +193,14 @@
   .story-line .accent{color:var(--gold-bright);font-weight:800;font-size:1.08em;}
   .story-cheers{margin-top:38px;font-size:clamp(24px,4.6vw,36px);font-weight:800;
     font-family:'Shippori Mincho',serif;color:var(--gold-bright);
-    letter-spacing:0.14em;}
+    letter-spacing:0.14em;position:relative;}
+  .cheers-glow{
+    position:absolute;inset:-60px -80px;pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(243,217,164,0.28), transparent 65%);
+    opacity:0;transform:scale(.7);
+    transition:opacity 1.4s ease .3s, transform 1.4s ease .3s;
+  }
+  .story-cheers.show .cheers-glow{opacity:1;transform:scale(1);}
 
   /* ===== 比較 ===== */
   .compare{max-width:640px;margin:0 auto;
@@ -210,10 +228,13 @@
   /* ===== シーン ===== */
   .scenes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
   .scene{background:rgba(244,233,220,0.03);border:1px solid rgba(244,233,220,0.08);
-    border-radius:18px;padding:28px 22px;transition:border-color .3s, transform .3s, box-shadow .3s;}
+    border-radius:18px;padding:0 0 22px;overflow:hidden;
+    transition:border-color .3s, transform .3s, box-shadow .3s;}
   .scene:hover{border-color:rgba(201,160,99,0.45);transform:translateY(-6px);
     box-shadow:0 14px 30px rgba(0,0,0,0.3);}
-  .scene .emoji{font-size:30px;margin-bottom:12px;}
+  .scene img{width:100%;height:130px;object-fit:cover;display:block;margin-bottom:16px;
+    filter:saturate(.92) brightness(.92);}
+  .scene h3,.scene p{padding:0 20px;}
   .scene h3{font-size:15px;font-weight:900;margin-bottom:6px;}
   .scene p{font-size:12.5px;font-weight:300;color:var(--cream-dim);}
 
@@ -289,7 +310,7 @@
     padding:17px 44px;border-radius:999px;text-decoration:none;
     box-shadow:0 8px 26px rgba(6,199,85,0.3);transition:transform .25s, box-shadow .25s;}
   .btn-line:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(6,199,85,0.4);}
-  .line-cta-note{margin-top:18px;font-size:11.5px;color:var(--cream-dim);font-weight:300;}
+  .btn-line:active{transform:scale(.96);}
 
   footer{position:relative;z-index:1;border-top:1px solid rgba(244,233,220,0.08);padding:40px 24px;text-align:center;}
   footer .flogo{font-family:'Zen Kaku Gothic New';font-weight:900;color:var(--gold-soft);font-size:17px;}
@@ -333,7 +354,7 @@
     <div class="now-title">〇 今夜のマッチング状況</div>
     <div class="now-big">
       <div class="n">LIVE ・ すぐに会える</div>
-      <div class="big">今すぐ</div>
+      <div class="big"><span id="live-count">今すぐ</span></div>
     </div>
     <div class="other-slots">
       <div class="slot"><span class="n">19:00</span>から</div>
@@ -375,7 +396,7 @@
       <span class="reveal reveal-d3" style="display:block;margin-top:22px;">そんな時に開くのが、Nomi Go。</span>
       <span class="reveal reveal-d4" style="display:block;">募集を見て、その日のうちに。</span>
     </p>
-    <div class="story-cheers reveal reveal-d4">― 乾杯。 ―</div>
+    <div class="story-cheers reveal reveal-d4"><span class="cheers-glow"></span>― 乾杯。 ―</div>
   </div>
 </section>
 
@@ -444,11 +465,11 @@
       <p>お酒が飲めなくても、ご飯だけでも大歓迎です。</p>
     </div>
     <div class="scenes">
-      <div class="scene reveal reveal-d1"><div class="emoji">🍺</div><h3>仕事終わりに軽く一杯</h3><p>今日はまっすぐ帰りたくない、そんな夜に。</p></div>
-      <div class="scene reveal reveal-d2"><div class="emoji">🍣</div><h3>ご飯だけでもOK</h3><p>お酒は飲めなくても大丈夫。食事メインの人も。</p></div>
-      <div class="scene reveal reveal-d3"><div class="emoji">🍷</div><h3>旅行先で飲み友達探し</h3><p>出張・旅先の夜も、地元の相手と過ごせる。</p></div>
-      <div class="scene reveal reveal-d1"><div class="emoji">🎉</div><h3>二次会メンバー募集</h3><p>もう少し飲みたい、という夜のもう一軒に。</p></div>
-      <div class="scene reveal reveal-d2"><div class="emoji">👥</div><h3>2対2で気軽に</h3><p>友達と一緒だから安心。2対2でも募集できます。</p></div>
+      <div class="scene reveal reveal-d1"><img src="scene_beer.jpg" alt="仕事終わりの一杯" loading="lazy"><h3>仕事終わりに軽く一杯</h3><p>今日はまっすぐ帰りたくない、そんな夜に。</p></div>
+      <div class="scene reveal reveal-d2"><img src="scene_food.jpg" alt="ご飯メイン" loading="lazy"><h3>ご飯だけでもOK</h3><p>お酒は飲めなくても大丈夫。食事メインの人も。</p></div>
+      <div class="scene reveal reveal-d3"><img src="scene_travel.jpg" alt="旅先のバー" loading="lazy"><h3>旅行先で飲み友達探し</h3><p>出張・旅先の夜も、地元の相手と過ごせる。</p></div>
+      <div class="scene reveal reveal-d1"><img src="scene_nijikai.jpg" alt="二次会" loading="lazy"><h3>二次会メンバー募集</h3><p>もう少し飲みたい、という夜のもう一軒に。</p></div>
+      <div class="scene reveal reveal-d2"><img src="scene_2v2.jpg" alt="2対2の乾杯" loading="lazy"><h3>2対2で気軽に</h3><p>友達と一緒だから安心。2対2でも募集できます。</p></div>
     </div>
   </div>
 </section>
@@ -513,12 +534,12 @@
     <div class="pricing">
       <div class="price-card female reveal reveal-d1">
         <div class="price-tag">女性</div>
-        <div class="price-num">¥0<span>／完全無料</span></div>
+        <div class="price-num count-target" data-target="0">¥0<span>／完全無料</span></div>
         <div class="price-note">何回使っても、料金はかかりません。</div>
       </div>
       <div class="price-card male reveal reveal-d2">
         <div class="price-tag">男性</div>
-        <div class="price-num">¥3,000<span>／マッチ成立ごと</span></div>
+        <div class="price-num count-target" data-target="3000">¥3,000<span>／マッチ成立ごと</span></div>
         <div class="price-note">マッチが成立しなければ、料金は発生しません。</div>
       </div>
     </div>
@@ -605,11 +626,11 @@
     });
   });
 
-  // 背景の泡（シャンパンの泡イメージ）
+  // 背景の泡（シャンパンの泡イメージ）※8個に削減：まばらな方が上品
   var box = document.getElementById('bubbles');
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(!reduced){
-    for(var i=0;i<14;i++){
+    for(var i=0;i<8;i++){
       var b = document.createElement('div');
       b.className = 'bubble';
       var size = 4 + Math.random()*10;
@@ -621,6 +642,47 @@
       box.appendChild(b);
     }
   }
+
+  // ===== 数字カウントアップ（共通関数） =====
+  // だんだん減速するカーブで数字を転がす。高級感の秘訣。
+  function countUp(el, target, suffix, duration){
+    var start = null;
+    function step(ts){
+      if(!start) start = ts;
+      var progress = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.floor(eased * target) + suffix;
+      if(progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ヒーローの「今すぐ」を人数表示に切り替える時に使う（ローンチ後に有効化）
+  // 例：countUp(document.getElementById('live-count'), 12, '人が募集中', 1200);
+  // ※0人の時は絶対に呼ばないこと。「今すぐ」表示のままにする。
+
+  // ===== 料金カードの数字カウントアップ =====
+  var priceObs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting) return;
+      priceObs.unobserve(e.target);
+      if(reduced) return; // 視差効果を減らす設定の人には動かさない
+      var target = parseInt(e.target.dataset.target);
+      var span = e.target.querySelector('span');
+      var suffix = span ? span.outerHTML : '';
+      var start = null;
+      function step(ts){
+        if(!start) start = ts;
+        var p = Math.min((ts - start) / 900, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        var val = Math.floor(eased * target);
+        e.target.innerHTML = '¥' + val.toLocaleString() + suffix;
+        if(p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  }, {threshold: 0.5});
+  document.querySelectorAll('.count-target').forEach(function(el){ priceObs.observe(el); });
 </script>
 
 </body>
