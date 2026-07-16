@@ -213,12 +213,63 @@ const FAQ_QA=[
   {keywords:['安全','危険','大丈夫','怖い'],answer:'通報機能や評価機能により、安心してご利用いただける仕組みを整えています。何か困ったことがあれば、マッチ画面から通報してください。'},
   {keywords:['タバコ','喫煙'],answer:'プロフィールで喫煙の有無を設定でき、お相手のプロフィールでも確認できます。'},
   {keywords:['お酒','酒'],answer:'プロフィールでお酒の強さを設定でき、マッチしたお相手のプロフィールでも確認できます。'},
-  {keywords:['パスワード','ログインできない'],answer:'ログイン画面の「パスワードを忘れた方はこちら」から、再設定用のメールを送ることができます。'},
-  {keywords:['LINE','連携','必須'],answer:'LINE連携は必須となっています。マッチ成立時など大事なお知らせを、アプリを開いていなくても受け取れるようにするためです。'},
-  {keywords:['複数','アカウント','2つ','二つ'],answer:'ご利用はお一人につき1アカウントまでとなっています。複数アカウントの作成は利用規約で禁止しています。'},
-  {keywords:['飲み終わり','リマインド','通知が来る'],answer:'マッチ成立から3時間経つと、アプリ内とLINEに「飲み終わりましたか？」という通知が届きます。「飲み終わった」ボタンから評価すると、次の募集ができるようになります。'}
+  {keywords:['パスワード','ログインできない'],answer:'ログイン画面の「パスワードを忘れた方はこちら」から、再設定用のメールを送ることができます。'}
 ];
 const ALCOHOL_LEVELS=['とても弱い','弱い','普通','強い','とても強い'];
+
+// ===== 今夜の目的（募集ごとに1タップで選ぶ）=====
+const PURPOSES=[
+  {id:'fun',emoji:'🍺',label:'とにかく楽しく飲みたい'},
+  {id:'chill',emoji:'🌙',label:'まったり話したい'},
+  {id:'vent',emoji:'☕',label:'愚痴OK・話を聞くよ'},
+  {id:'meet',emoji:'✨',label:'出会いも多少は期待'}
+];
+function purposeLabel(id){var p=PURPOSES.find(function(x){return x.id===id;});return p?(p.emoji+' '+p.label):'';}
+
+// ===== ひとことタグ（人となり重視・10ジャンル100個・3つまで選択）=====
+const TAG_GENRES=[
+  {name:'💬 基本キャラ',tags:['よく笑う','テンション高め','落ち着いてる','マイペース','ノリがいい','天然って言われる','しっかり者','甘えん坊','負けず嫌い','のんびり屋']},
+  {name:'🗣 話し方',tags:['聞き上手','話すの好き','ツッコミ担当','ボケ担当','リアクション大きめ','相づち丁寧','質問するの好き','オチのない話しがち','声大きめ','もの静か']},
+  {name:'🤝 初対面のとき',tags:['人見知りだけど飲むと喋る','初対面でも距離近め','最初は敬語派','敬語じゃなくてOK','緊張しいです','誰とでもすぐ仲良くなる','慣れるまで時間かかる','年上と話すの得意','年下に好かれる','初対面ほど喋る']},
+  {name:'🍶 酔うとどうなる',tags:['笑い上戸','泣き上戸','酔っても変わらない','よく喋るようになる','眠くなる','声が大きくなる','距離が近くなる','説教はしません','記憶はなくさない派','すぐ楽しくなる']},
+  {name:'❤️ 内面・価値観',tags:['ポジティブ','ネガティブ気味だけど笑える','単純です','涙もろい','義理人情タイプ','好き嫌いはっきりしてる','流されやすい','頑固って言われる','打たれ強い','繊細です']},
+  {name:'🫶 人との接し方',tags:['世話焼き','おごりたがり','気遣い屋','人の話を覚えてるタイプ','ほめ上手','いじられキャラ','いじるの好き（優しく）','おせっかい気味','人の悪口言わない','誰にでも平等']},
+  {name:'🌙 飲みの場での立ち位置',tags:['幹事タイプ','ついていくタイプ','盛り上げ役','聞き役に回りがち','注文係になりがち','取り分ける人','メニュー選び任せたい','メニュー選び得意','時間気にしない派','サクッと切り上げ派']},
+  {name:'💭 話したいこと',tags:['深い話したい','くだらない話が好き','恋バナOK','恋バナNG','仕事の話もOK','仕事の話はNG','夢とか将来の話好き','昔話で盛り上がりたい','議論好き','下ネタNG']},
+  {name:'🍺 お酒スタイル',tags:['ビール党','サワー派','ハイボール派','日本酒好き','ワイン好き','すぐ酔う','ザル','ゆっくり飲む派','ペース速め','締めのラーメン必須']},
+  {name:'🎯 趣味ざっくり',tags:['スポーツ好き','スポーツ観戦派','ゲーム・アニメ好き','音楽・カラオケ好き','旅行・アウトドア好き','映画・ドラマ好き','グルメ','サウナ・温泉好き','筋トレ中','推し活してる']}
+];
+const MAX_TAGS=3;
+function toggleProfileTag(tag,screenName){
+  if(!S.pf.tags)S.pf.tags=[];
+  var idx=S.pf.tags.indexOf(tag);
+  if(idx!==-1){S.pf.tags.splice(idx,1);}
+  else{
+    if(S.pf.tags.length>=MAX_TAGS){alert('タグは'+MAX_TAGS+'つまで選べます');return;}
+    S.pf.tags.push(tag);
+  }
+  sessionStorage.setItem('ngo_pf',JSON.stringify(S.pf));
+  re(screenName);
+}
+function toggleTagGenre(i,screenName){
+  S._openTagGenre=(S._openTagGenre===i)?null:i;
+  re(screenName);
+}
+function tagSectionH(screenName){
+  var selected=S.pf.tags||[];
+  var selHtml=selected.length
+    ?'<div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 4px">'+selected.map(function(t){return '<span class="tag-chip on" style="font-size:12px" onclick="toggleProfileTag(\''+t+'\',\''+screenName+'\')">'+t+' ✕</span>';}).join('')+'</div>'
+    :'<div style="font-size:11px;color:var(--muted);padding:6px 0 2px">まだ選んでいません（3つまで選べます）</div>';
+  var genresHtml=TAG_GENRES.map(function(g,i){
+    var open=S._openTagGenre===i;
+    var chips=open?'<div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 2px 12px">'+g.tags.map(function(t){
+      var on=selected.indexOf(t)!==-1;
+      return '<button class="tag-chip'+(on?' on':'')+'" style="font-size:12px" onclick="toggleProfileTag(\''+t+'\',\''+screenName+'\')">'+t+'</button>';
+    }).join('')+'</div>':'';
+    return '<div style="border-bottom:1px solid var(--border2)"><div style="display:flex;align-items:center;justify-content:space-between;padding:12px 2px;cursor:pointer" onclick="toggleTagGenre('+i+',\''+screenName+'\')"><span style="font-size:13px;font-weight:700;color:var(--cream)">'+g.name+'</span><span style="font-size:11px;color:var(--muted)">'+(open?'▲':'▼')+'</span></div>'+chips+'</div>';
+  }).join('');
+  return '<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 4px">ひとことタグ（任意・3つまで）</div><div style="font-size:11px;color:var(--muted);line-height:1.6">あなたの人となりが伝わるタグを選ぶと、マッチ相手に表示されます。</div>'+selHtml+genresHtml+'</div>';
+}
 
 // 待機画面で数秒おきに切り替える進行感の文言（マッチ待ち演出用）
 const WAIT_MESSAGES=[
@@ -264,7 +315,7 @@ function digitsOnly(el){
 var _isSubmitting=false;
 var S={
   screen:'loading',user:null,profile:null,authTab:'register',
-  form:{area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false},
+  form:{area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false},
   registration:null,match:null,matchMembers:[],
   chatMsgs:[],reviewStars:0,reviewChecks:[false,false,false],
   stats:{active:0,todayMatches:0,maleWaiting:0,femaleWaiting:0},
@@ -273,7 +324,7 @@ var S={
 };
 
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
   document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
 }
 
@@ -330,6 +381,7 @@ function go(sc){
   if(sc!=='id_verify_pending'&&S._idVerifyTimer){
     clearInterval(S._idVerifyTimer);S._idVerifyTimer=null;
   }
+  if(sc==='splash'){startWaitFeed();}else{stopWaitFeed();}
 }
 
 async function syncTicketCount(){
@@ -490,7 +542,7 @@ async function routeAfterLoad(){
   var awayMs=Date.now()-lastActive;
   var wasAwayLong=lastActive>0&&awayMs>2*60*1000;
   if(lastScreen2&&recruitFlowScreens.indexOf(lastScreen2)!==-1&&wasAwayLong){
-    S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
+    S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};
     go('splash');
     return;
   }
@@ -581,14 +633,15 @@ async function saveProfile(){
   if(mdiff<0||(mdiff===0&&today.getDate()<bd.getDate()))calcAge--;
   if(calcAge<20){S.error='生年月日から20歳未満と判定されました。Nomi Goは20歳以上限定です';re('profile_new');return;}
   if(parseInt(p.age)!==calcAge){S.error='年齢と生年月日が一致しません（生年月日からは'+calcAge+'歳です）。どちらかをご確認ください';re('profile_new');return;}
+  if(p.gender==='male'&&!p.photoFile){S.error='男性はご本人の顔写真の登録が必須です';re('profile_new');return;}
   var banned=await isBlacklisted(p.realname,p.birthdate);
   if(banned){S.error='ご利用いただけません。利用規約に違反したため、アカウントの作成を制限しています。';re('profile_new');return;}
   go('loading');
   var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
   var freeTicket=(p.gender==='male')?1:0;
-  await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,real_name:p.realname.trim(),birthdate:p.birthdate,verified_level:1,email_verified:!!S._emailVerified,id_verify_status:'none',ticket_count:freeTicket,updated_at:new Date().toISOString()});
+  await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,verified_level:1,email_verified:!!S._emailVerified,id_verify_status:'none',ticket_count:freeTicket,updated_at:new Date().toISOString()});
   await DB.from('user_stats').upsert({user_id:S.user.id});
-  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:!!S._emailVerified,id_verify_status:'none',ticket_count:freeTicket};
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:!!S._emailVerified,id_verify_status:'none',ticket_count:freeTicket};
   if(p.gender==='male'){S._freeTicketGranted=true;}
   go('cardregister');
 }
@@ -918,6 +971,71 @@ async function loadStats(){
   }catch(e){console.error('[loadStats] exception:',e);}
 }
 
+// ===== トップ画面「今夜のノミゴー待ち」カード =====
+// 実際に募集中の異性のデータを、テキストのみ（写真・アイコンなし）で数秒おきに入れ替え表示する。
+// 年齢は「20代後半」のように丸めて個人特定を防ぐ。架空データは絶対に混ぜない（0人ならカード非表示）。
+function ageBand(age){
+  if(!age)return '';
+  var dec=Math.floor(age/10)*10;
+  var half=(age%10<5)?'前半':'後半';
+  return dec+'代'+half;
+}
+async function loadWaitFeed(){
+  try{
+    if(!S.user||!S.profile||!S.profile.gender){S._waitFeed=[];return;}
+    var opp=S.profile.gender==='male'?'female':'male';
+    var regs=await DB.from('registrations').select('user_id,area_id,drink_style,purpose,gender,age').eq('status','waiting').eq('gender',opp).order('created_at',{ascending:false}).limit(5);
+    if(!regs.data||!regs.data.length){S._waitFeed=[];return;}
+    var feed=[];
+    for(var i=0;i<regs.data.length;i++){
+      var r=regs.data[i];
+      var pr=await DB.from('profiles').select('job,tags').eq('user_id',r.user_id).single();
+      feed.push({
+        band:ageBand(r.age),
+        gender:r.gender==='male'?'男性':'女性',
+        job:pr.data&&pr.data.job?pr.data.job:'',
+        area:areaName(r.area_id),
+        style:r.drink_style||'',
+        purpose:r.purpose?purposeLabel(r.purpose):'',
+        tag:pr.data&&pr.data.tags&&pr.data.tags.length?pr.data.tags[0]:''
+      });
+    }
+    S._waitFeed=feed;
+  }catch(e){S._waitFeed=[];}
+}
+function waitFeedItemH(f){
+  var line1=[f.band,f.gender,f.job].filter(function(x){return x;}).join('・');
+  var line2=[f.area,f.style].filter(function(x){return x;}).join('｜');
+  if(f.tag)line2+=(line2?'｜':'')+f.tag;
+  return '<div style="animation:fadeUp .4s ease both"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">'+escapeHtml(line1)+'</div><div style="font-size:11.5px;color:rgba(237,229,224,.7);margin-top:3px">'+escapeHtml(line2)+'</div>'+(f.purpose?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:3px">'+f.purpose+'</div>':'')+'</div>';
+}
+function startWaitFeed(){
+  stopWaitFeed();
+  loadWaitFeed().then(function(){
+    if(S.screen==='splash'&&S._waitFeed&&S._waitFeed.length)render();
+  });
+  S._waitFeedIdx=0;
+  S._waitFeedTimer=setInterval(function(){
+    if(S.screen!=='splash'){stopWaitFeed();return;}
+    if(!S._waitFeed||!S._waitFeed.length)return;
+    S._waitFeedIdx=(S._waitFeedIdx+1)%S._waitFeed.length;
+    var el=document.getElementById('wait-feed-body');
+    if(el)el.innerHTML=waitFeedItemH(S._waitFeed[S._waitFeedIdx]);
+  },4500);
+  S._waitFeedReload=setInterval(function(){
+    if(S.screen!=='splash'){stopWaitFeed();return;}
+    loadWaitFeed();
+  },60*1000);
+}
+function stopWaitFeed(){
+  if(S._waitFeedTimer){clearInterval(S._waitFeedTimer);S._waitFeedTimer=null;}
+  if(S._waitFeedReload){clearInterval(S._waitFeedReload);S._waitFeedReload=null;}
+}
+function waitFeedCardH(){
+  if(!S._waitFeed||!S._waitFeed.length)return '';
+  return '<div style="background:rgba(0,0,0,.22);border:1px solid rgba(201,160,99,.35);border-radius:12px;padding:14px 16px;margin-bottom:20px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="font-size:14px">🍷</span><span style="font-size:11px;font-weight:800;color:var(--gold);letter-spacing:.08em">今夜のノミゴー待ち</span></div><div id="wait-feed-body" style="min-height:44px">'+waitFeedItemH(S._waitFeed[S._waitFeedIdx||0])+'</div></div>';
+}
+
 // エリアごとの現在募集中の人数を取得する（エリア選択画面で「今このエリアで◯人が募集中」を出すため）
 async function loadAreaStats(){
   try{
@@ -944,6 +1062,11 @@ async function goRecruit(){
   if(cancelCheck.count!=null&&cancelCheck.count>=2){
     var proceed=confirm('過去にマッチ成立後のキャンセルが2回以上あります。マッチ成立後のキャンセルにはペナルティが発生します。このまま募集を続けますか？');
     if(!proceed)return;
+  }
+  if(S.profile.gender==='male'&&!S.profile.photo_url){
+    alert('募集にはご本人の顔写真の登録が必要になりました。プロフィール編集から顔写真を登録してください。');
+    goProfileEdit();
+    return;
   }
   var registered=await isCardRegistered();
   if(!registered){go('cardregister');return;}
@@ -1029,7 +1152,7 @@ async function isCardRegistered(){
 async function startRecruit(){
   if(_isSubmitting)return;
   var f=S.form;
-  if(!f.area||!f.slot||!f.drink_style){S.error='すべて選択してください';re('recruit');return;}
+  if(!f.area||!f.slot||!f.drink_style||!f.purpose){S.error='すべて選択してください';re('recruit');return;}
   if(f.mode==='2v2'&&!f.partner_age){S.error='すべて選択してください';re('recruit');return;}
   if(S.profile&&S.profile.gender==='male'){
     if(!S.profile.ticket_count||S.profile.ticket_count<1){S.error='ticket_zero';re('recruit');return;}
@@ -1154,6 +1277,8 @@ async function doRegister(){
       mode:S.form.mode||'1v1',
       gender:S.profile.gender,
       drink_style:S.form.drink_style,
+      purpose:S.form.purpose||null,
+      ok_nodrink:!!S.form.ok_nodrink,
       timing:'どちらでもOK',
       duration_pref:S.form.slot==='今すぐ'?(S.form.duration_pref||null):null,
       age_any:!!S.form.age_any,
@@ -1171,44 +1296,89 @@ async function doRegister(){
     clearTimeout(timeoutId);
     S.registration=ins.data;
     var matched=await tryMatch();
-    if(matched){go('matched');}else{startPolling();go('waiting');}
+    if(matched==='choice'){_isSubmitting=false;return;}
+    if(matched===true){go('matched');}else{startPolling();go('waiting');}
   }catch(e){clearTimeout(timeoutId);if(!timeoutFlag.hit){_isSubmitting=false;S.error='登録に失敗しました: '+e.message;re('recruit');}}
 }
 
 function dbgLog(msg){
 }
 
+// ===== 飲みスタイルの相性判定 =====
+// 同じスタイル同士はOK。片方が「ご飯メイン」でも、相手が「ご飯メインの人とでもOK」なら成立する
+function drinkCompat(myStyle,myOk,theirStyle,theirOk){
+  if(myStyle===theirStyle)return true;
+  if(myStyle==='ご飯メイン'&&theirOk)return true;
+  if(theirStyle==='ご飯メイン'&&myOk)return true;
+  return false;
+}
+
+// 候補の優先度スコア：目的一致 > 年齢の近さ
+function candidateScore(c){
+  var score=0;
+  if(S.form.purpose&&c.purpose&&c.purpose===S.form.purpose)score+=100;
+  var myAge=S.profile&&S.profile.age?S.profile.age:25;
+  score-=Math.abs((c.age||myAge)-myAge);
+  return score;
+}
+
 async function tryMatch(){
   if(!S.registration){dbgLog('S0: registration=null');return false;}
   var p=S.profile;
-  dbgLog('S1: area='+S.form.area+' slot='+S.form.slot+' timing='+S.form.timing);
+
+  // マッチの実行は女性側の端末のみが行う（女性が候補を確認・選択する設計のため）。
+  // 男性側は startPolling で自分の状態が matched になるのを待つだけ。
+  if(p.gender!=='female')return false;
 
   var candidates=await DB.from('registrations').select('*').eq('status','waiting').eq('area_id',S.form.area).eq('mode',S.registration.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
-  dbgLog('S2: err='+(candidates.error?candidates.error.message:'なし')+' 件数='+(candidates.data?candidates.data.length:0));
   if(!candidates.data||candidates.data.length===0){return false;}
 
   var filtered=candidates.data.filter(function(c){
-    if(c.drink_style!==S.form.drink_style)return false;
+    if(!drinkCompat(S.form.drink_style,S.form.ok_nodrink,c.drink_style,c.ok_nodrink))return false;
     var iWantThem=ageMatches(S.form.age_any,S.form.age_min?parseInt(S.form.age_min):null,S.form.age_max?parseInt(S.form.age_max):null,c.age);
     var theyWantMe=ageMatches(c.age_any,c.age_min,c.age_max,p.age);
     return iWantThem&&theyWantMe;
   });
-  dbgLog('S3: filtered='+filtered.length);
   if(filtered.length===0){return false;}
 
-  var best=filtered[0];
-  var prof=await DB.from('profiles').select('*').eq('user_id',best.user_id).single();
-  dbgLog('S4: prof='+(prof.data?prof.data.nickname:'null')+' err='+(prof.error?prof.error.message:'なし'));
-  best.profileData=prof.data||{};
+  // 目的一致・年齢の近さで並べ替え
+  filtered.sort(function(a,b){return candidateScore(b)-candidateScore(a);});
 
-  if(!S.form.slot){dbgLog('S4x: slot=undefined abort');return false;}
+  if(!S.form.slot){return false;}
 
-  var lockOpponent=await DB.from('registrations').update({status:'processing'}).eq('id',best.id).eq('status','waiting').select().single();
-  dbgLog('S4b: lock err='+(lockOpponent.error?lockOpponent.error.message:'なし')+' data='+(lockOpponent.data?'OK':'null'));
-  if(lockOpponent.error||!lockOpponent.data){
-    dbgLog('S4b: 他端末が先に確保済みのため中断');
-    return false;
+  // ----- 候補が1人：そのまま自動成立 -----
+  if(filtered.length===1){
+    var only=filtered[0];
+    var lock1=await DB.from('registrations').update({status:'processing'}).eq('id',only.id).eq('status','waiting').select().single();
+    if(lock1.error||!lock1.data)return false;
+    return await finalizeMatchWith(only,null);
   }
+
+  // ----- 候補が2人以上：上位2人を確保して2択画面へ -----
+  var c1=filtered[0],c2=filtered[1];
+  var lockA=await DB.from('registrations').update({status:'processing'}).eq('id',c1.id).eq('status','waiting').select().single();
+  if(lockA.error||!lockA.data){return false;}
+  var lockB=await DB.from('registrations').update({status:'processing'}).eq('id',c2.id).eq('status','waiting').select().single();
+  if(lockB.error||!lockB.data){
+    // 2人目を確保できなかったら1人目とそのまま成立
+    return await finalizeMatchWith(c1,null);
+  }
+  var pr1=await DB.from('profiles').select('*').eq('user_id',c1.user_id).single();
+  var pr2=await DB.from('profiles').select('*').eq('user_id',c2.user_id).single();
+  c1.profileData=pr1.data||{};
+  c2.profileData=pr2.data||{};
+  S._choice={cands:[c1,c2],deadline:Date.now()+90*1000,submitting:false};
+  if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}
+  go('choose');
+  startChoiceCountdown();
+  return 'choice';
+}
+
+// ===== マッチ確定処理（選ばれた相手と成立させ、選ばれなかった相手は募集中に戻す）=====
+async function finalizeMatchWith(bestReg,otherReg){
+  var p=S.profile;
+  var prof=bestReg.profileData?{data:bestReg.profileData}:await DB.from('profiles').select('*').eq('user_id',bestReg.user_id).single();
+  bestReg.profileData=prof.data||{};
 
   var matchRes=await DB.from('matches').insert({
     area_id:S.form.area,
@@ -1217,31 +1387,98 @@ async function tryMatch(){
     timing:S.form.timing,
     status:'confirmed'
   }).select().single();
-  dbgLog('S5: err='+(matchRes.error?matchRes.error.message:'なし')+' id='+(matchRes.data?matchRes.data.id.slice(0,8):'null'));
   if(matchRes.error){
-    await DB.from('registrations').update({status:'waiting'}).eq('id',best.id);
+    await DB.from('registrations').update({status:'waiting'}).eq('id',bestReg.id).eq('status','processing');
+    if(otherReg)await DB.from('registrations').update({status:'waiting'}).eq('id',otherReg.id).eq('status','processing');
     return false;
   }
   S.match=matchRes.data;
 
   var u1=await DB.from('registrations').update({status:'matched',match_id:matchRes.data.id}).eq('id',S.registration.id);
-  var u2=await DB.from('registrations').update({status:'matched',match_id:matchRes.data.id}).eq('id',best.id);
-  dbgLog('S6: u1='+(u1.error?u1.error.message:'OK')+' u2='+(u2.error?u2.error.message:'OK'));
-
+  var u2=await DB.from('registrations').update({status:'matched',match_id:matchRes.data.id}).eq('id',bestReg.id);
+  // 選ばれなかった候補は募集中に戻す（本人には何も通知されない）
+  if(otherReg)await DB.from('registrations').update({status:'waiting'}).eq('id',otherReg.id).eq('status','processing');
   if(u1.error||u2.error)return false;
 
   S.registration.status='matched';
   S.registration.match_id=matchRes.data.id;
 
-  var maleUserId=(p.gender==='male')?S.user.id:best.user_id;
+  var maleUserId=(p.gender==='male')?S.user.id:bestReg.user_id;
   await consumeTicket(matchRes.data.id,maleUserId);
-  
   await syncUserState();
-
   await loadMatchMembers();
-  sendMatchLineNotify(p,best.profileData);
+  sendMatchLineNotify(p,bestReg.profileData);
   render();
   return true;
+}
+
+// ===== 2択画面：カウントダウンと選択 =====
+function startChoiceCountdown(){
+  if(S._choiceTimer)clearInterval(S._choiceTimer);
+  S._choiceTimer=setInterval(function(){
+    if(!S._choice){clearInterval(S._choiceTimer);S._choiceTimer=null;return;}
+    var remain=Math.max(0,Math.ceil((S._choice.deadline-Date.now())/1000));
+    var el=document.getElementById('choice-timer');
+    if(el)el.textContent=remain+'秒';
+    if(remain<=0){
+      clearInterval(S._choiceTimer);S._choiceTimer=null;
+      // 時間切れ：条件一致度が高い方（1人目）と自動成立
+      submitChoice(0,true);
+    }
+  },500);
+}
+
+async function submitChoice(idx,isAuto){
+  if(!S._choice||S._choice.submitting)return;
+  S._choice.submitting=true;
+  if(S._choiceTimer){clearInterval(S._choiceTimer);S._choiceTimer=null;}
+  var chosen=S._choice.cands[idx];
+  var other=S._choice.cands[idx===0?1:0];
+  go('loading');
+  var ok=await finalizeMatchWith(chosen,other);
+  S._choice=null;
+  if(ok){go('matched');}
+  else{
+    // 成立に失敗したら募集中に戻る
+    startPolling();
+    go('waiting');
+  }
+}
+
+function choiceCardH(c,idx){
+  var pr=c.profileData||{};
+  var photo=pr.photo_url
+    ?'<img src="'+pr.photo_url+'" style="width:100%;aspect-ratio:1;object-fit:cover;display:block">'
+    :'<div style="width:100%;aspect-ratio:1;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:44px;color:var(--muted)">👤</div>';
+  var tags=(pr.tags||[]).slice(0,3).map(function(t){return '<span style="font-size:10.5px;color:var(--gold-bright);background:var(--gold-bg);border:1px solid rgba(201,160,99,.4);border-radius:6px;padding:2px 7px">'+escapeHtml(t)+'</span>';}).join('');
+  var info=[];
+  if(pr.age)info.push(pr.age+'歳');
+  if(pr.job)info.push(pr.job);
+  var sub=[];
+  if(pr.smoke==='no')sub.push('🚭 非喫煙');
+  if(pr.smoke==='yes')sub.push('🚬 喫煙');
+  if(pr.alcohol!=null)sub.push('🍺 '+ALCOHOL_LEVELS[pr.alcohol]);
+  var purpose=c.purpose?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px">'+purposeLabel(c.purpose)+'</div>':'';
+  return '<div style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface)">'
+    +photo
+    +'<div style="padding:12px 12px 8px"><div style="font-size:15px;font-weight:800;color:var(--cream)">'+escapeHtml(pr.nickname||'?')+'</div>'
+    +'<div style="font-size:11.5px;color:var(--muted);margin-top:2px">'+info.join('・')+'</div>'
+    +(sub.length?'<div style="font-size:10.5px;color:var(--muted);margin-top:3px">'+sub.join('　')+'</div>':'')
+    +purpose
+    +(tags?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+tags+'</div>':'')
+    +'</div>'
+    +'<div style="padding:0 12px 12px"><button class="btn btn-wine" style="padding:12px;font-size:14px" onclick="submitChoice('+idx+',false)">この人と飲む</button></div>'
+    +'</div>';
+}
+
+function chooseH(){
+  if(!S._choice)return loadingH();
+  var cards=S._choice.cands.map(function(c,i){return choiceCardH(c,i);}).join('');
+  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">マッチ候補が見つかりました</div><div class="hdr-title">今夜はどちらと？</div></div><div style="font-size:13px;font-weight:900;color:var(--gold);border:1.5px solid rgba(201,160,99,.45);border-radius:20px;padding:5px 12px" id="choice-timer"></div></div>'
+    +'<div class="body" style="padding:20px">'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">条件の合う方が2人見つかりました。どちらか一方を選んでください。時間内に選ばない場合は、条件がより近い方と自動で成立します。</div>'
+    +'<div style="display:flex;gap:12px">'+cards+'</div>'
+    +'</div></div>';
 }
 
 function sendMatchLineNotify(myProfile,otherProfile){
@@ -1276,10 +1513,20 @@ async function consumeTicket(matchId,targetUserId){
 function startPolling(){
   if(S.pollTimer)clearInterval(S.pollTimer);
   dbgLog('polling開始 reg='+(S.registration?S.registration.id.slice(0,8):'null'));
+  S._procSince=null;
   S.pollTimer=setInterval(async function(){
     try{
       if(S.registration){
         var reg=await DB.from('registrations').select('status,match_id').eq('id',S.registration.id).single();
+        // 相手（女性）の選択待ちで自分が processing のまま長時間経過した場合の自己復旧
+        // （女性側のアプリが途中で閉じられた等の保険。4分で自動的に募集中へ戻す）
+        if(reg.data&&reg.data.status==='processing'){
+          if(!S._procSince)S._procSince=Date.now();
+          if(Date.now()-S._procSince>4*60*1000){
+            await DB.from('registrations').update({status:'waiting'}).eq('id',S.registration.id).eq('status','processing');
+            S._procSince=null;
+          }
+        }else{S._procSince=null;}
         if(reg.data&&reg.data.status==='matched'&&reg.data.match_id){
           clearInterval(S.pollTimer);
           var m=await DB.from('matches').select('*').eq('id',reg.data.match_id).single();
@@ -1291,7 +1538,8 @@ function startPolling(){
         }
       }
       var matched=await tryMatch();
-      if(matched){clearInterval(S.pollTimer);_isSubmitting=false;go('matched');}
+      if(matched==='choice'){_isSubmitting=false;return;}
+      if(matched===true){clearInterval(S.pollTimer);_isSubmitting=false;go('matched');}
       loadStats();
     }catch(e){}
   },8000);
@@ -1302,7 +1550,7 @@ async function cancelReg(){
   if(S.pollTimer)clearInterval(S.pollTimer);
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
-  S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
+  S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
 
@@ -1364,7 +1612,7 @@ async function cancelAfterMatch(){
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
-  S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
+  S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
 
@@ -1383,7 +1631,7 @@ async function noShowMatch(){
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
   S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
-  S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};
+  S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
 
@@ -1589,7 +1837,7 @@ async function submitReview(){
   await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
   await saveUserResult(matchId,'completed');
   if(S.registration)await DB.from('registrations').update({status:'completed'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,timing:null,age_min:null,age_max:null,age_any:false};_isSubmitting=false;
+  S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};_isSubmitting=false;
   S.reviewStars=0;S.reviewChecks=[false,false,false];S.reviewOtherText='';S.chatMsgs=[];S.chargeId=null;go('splash');
 }
 
@@ -1694,7 +1942,7 @@ function splashH(){
   var profileMenuBackdrop=profileMenuOpen?'<div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998" onclick="S._showProfileMenu=false;re(\'splash\')"></div>':'';
   var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.25);border-radius:10px;padding:14px 16px;margin-bottom:20px"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div><button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button></div>':'';
   var introAnim='<div style="width:calc(100% + 40px);margin:-20px -20px 12px -20px;overflow:hidden"><img src="intro_temp.jpg" alt="Nomi Go" style="width:100%;height:180px;object-fit:cover;display:block"></div>';
-  return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div><div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今は'+oppLabel+'の募集がまだ少なめです</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">先に募集しておくと、相手が来たとき最初にマッチできます</div></div></div>';}})()+'<div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,000円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">今日の成立</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+S.stats.todayMatches+'</div></div></div>'+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 全ユーザー、身分証と顔写真による本人確認済み</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted)"><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
+  return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div><div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今は'+oppLabel+'の募集がまだ少なめです</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">先に募集しておくと、相手が来たとき最初にマッチできます</div></div></div>';}})()+(li?waitFeedCardH():'')+'<div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,000円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">今日の成立</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+S.stats.todayMatches+'</div></div></div>'+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 全ユーザー、身分証と顔写真による本人確認済み</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted)"><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
 }
 
 function emailH(){
@@ -1848,7 +2096,7 @@ function goLegalBack(){
 
 function goProfileEdit(){
   if(!S.profile)return;
-  S.pf={nickname:S.profile.nickname,age:String(S.profile.age),gender:S.profile.gender,job:S.profile.job,smoke:S.profile.smoke,alcohol:S.profile.alcohol};
+  S.pf={nickname:S.profile.nickname,age:String(S.profile.age),gender:S.profile.gender,job:S.profile.job,smoke:S.profile.smoke,alcohol:S.profile.alcohol,tags:(S.profile.tags||[]).slice()};
   go('profile_edit');
 }
 
@@ -1856,23 +2104,29 @@ async function saveProfileEdit(){
   var p=S.pf;
   if(!p.nickname||!p.age||!p.gender||!p.job||p.smoke===null||p.alcohol===null){S.error='すべての項目を入力してください';re('profile_edit');return;}
   if(parseInt(p.age)<20){S.error='Nomi Goは20歳以上の方がご利用いただけます';re('profile_edit');return;}
+  if(p.gender==='male'&&!p.photoFile&&!(S.profile&&S.profile.photo_url)){S.error='男性はご本人の顔写真の登録が必須です';re('profile_edit');return;}
   go('loading');
   var photoUrl=S.profile.photo_url;
   if(p.photoFile){
     var uploaded=await uploadProfilePhoto(S.user.id,p.photoFile);
     if(uploaded)photoUrl=uploaded;
   }
-  var upd=await DB.from('profiles').update({nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
+  var upd=await DB.from('profiles').update({nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
   if(upd.error){S.error='保存に失敗しました: '+upd.error.message;re('profile_edit');return;}
-  S.profile.nickname=p.nickname;S.profile.age=parseInt(p.age);S.profile.gender=p.gender;S.profile.job=p.job;S.profile.smoke=p.smoke;S.profile.alcohol=p.alcohol;S.profile.photo_url=photoUrl;
+  S.profile.nickname=p.nickname;S.profile.age=parseInt(p.age);S.profile.gender=p.gender;S.profile.job=p.job;S.profile.smoke=p.smoke;S.profile.alcohol=p.alcohol;S.profile.photo_url=photoUrl;S.profile.tags=p.tags||[];
   go('splash');
 }
 
 function profileNewH(){
   var p=S.pf;
   var photoPreview=p.photoPreview?'<img src="'+p.photoPreview+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':'<div style="width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">👤</div>';
-  var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">プロフィール写真（任意）</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を選ぶ<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></label></div><div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">マッチ画面では、プライバシー保護のためぼかして表示されます。</div></div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール設定</div><div class="hdr-title">基本情報を登録</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7">下の<span style="color:var(--gold);font-weight:700">本名・生年月日</span>は、本人確認（年齢確認）のためだけに使います。<span style="color:var(--cream);font-weight:700">お相手には表示されません。</span></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（漢字フルネーム）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div><div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
+  var isMalePf=p.gender==='male';
+  var photoLabel=isMalePf?'プロフィール写真（男性は必須）':'プロフィール写真（任意）';
+  var photoNote=isMalePf
+    ?'ご本人の顔がはっきり写った写真を登録してください（加工・マスク・複数人の写真は承認されません）。本人確認の顔写真と同一人物か、運営が確認します。'
+    :'写真を登録すると、マッチが早くなる傾向があります。';
+  var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+photoLabel+'</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を選ぶ<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></label></div><div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">'+photoNote+'</div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール設定</div><div class="hdr-title">基本情報を登録</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7">下の<span style="color:var(--gold);font-weight:700">本名・生年月日</span>は、本人確認（年齢確認）のためだけに使います。<span style="color:var(--cream);font-weight:700">お相手には表示されません。</span></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（漢字フルネーム）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
 }
 
 function profileEditH(){
@@ -1883,8 +2137,9 @@ function profileEditH(){
       :'<button class="btn btn-wine" onclick="goLineConnect()">LINEと連携する →</button>')
     +'</div>';
   var photoPreview=p.photoPreview?'<img src="'+p.photoPreview+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':(S.profile&&S.profile.photo_url?'<img src="'+S.profile.photo_url+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':'<div style="width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">👤</div>');
-  var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">プロフィール写真（任意）</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を変更<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_edit\')"></label></div></div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnEdit\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnEdit" style="font-size:11px;color:var(--red);margin-top:4px"></div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="S.pf.job=this.value;this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
+  var isMalePfE=p.gender==='male';
+  var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+(isMalePfE?'プロフィール写真（男性は必須）':'プロフィール写真（任意）')+'</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を変更<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_edit\')"></label></div>'+(isMalePfE?'<div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">ご本人の顔がはっきり写った写真のみ承認されます（加工・マスク・複数人NG）。</div>':'')+'</div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnEdit\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnEdit" style="font-size:11px;color:var(--red);margin-top:4px"></div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="S.pf.job=this.value;this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_edit')+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
 }
 
 function recruitH(){
@@ -1895,7 +2150,7 @@ function recruitH(){
   var defaultMax=myAgeNum+5;
   if(f.age_min==null||f.age_min===''){f.age_min=defaultMin;}
   if(f.age_max==null||f.age_max===''){f.age_max=defaultMax;}
-  var allOk=f.area&&f.slot&&f.drink_style&&(!isPair||f.partner_age);
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||f.partner_age);
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
   SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
@@ -1909,11 +2164,17 @@ function recruitH(){
   html+='<div class="sec-label">② 飲みスタイル</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
   DRINK_STYLES.forEach(function(d){var emoji=d==='ガッツリ飲みたい'?'🍺':d==='ゆっくり飲みたい'?'🥂':'🍽️';html+='<button class="choice-btn '+(f.drink_style===d?'on':'')+'" onclick="S.form.drink_style=\''+d+'\';re(\'recruit\')"><span>'+emoji+' '+d+'</span>'+(f.drink_style===d?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
   html+='</div>';
+  if(f.drink_style&&f.drink_style!=='ご飯メイン'){
+    html+='<div style="padding:8px 20px 0"><label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.preventDefault();S.form.ok_nodrink=!S.form.ok_nodrink;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.ok_nodrink?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.ok_nodrink?'✓':'')+'</span><span style="font-size:13px;color:var(--cream);font-weight:600">🍚 お酒を飲まない人（ご飯メイン）とでもOK</span></label></div>';
+  }
+  html+='<div class="sec-label">③ 今夜の目的</div><div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">';
+  PURPOSES.forEach(function(pp){html+='<button class="choice-btn '+(f.purpose===pp.id?'on':'')+'" onclick="S.form.purpose=\''+pp.id+'\';re(\'recruit\')"><span>'+pp.emoji+' '+pp.label+'</span>'+(f.purpose===pp.id?'<span style="color:var(--wine)">✓</span>':'')+'</button>';});
+  html+='</div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">同じ目的の人が優先的にマッチします。</div>';
   var ageFloor=20;
   var ageCeil=99;
-  html+='<div class="sec-label">③ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">✨ 何歳でもいい</span></label>'+(f.age_any?'':'<div style="display:flex;align-items:center;gap:10px"><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="下限" style="max-width:130px" value="'+(f.age_min||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_min=this.value" onblur="this.value=clampAgeMin(this.value,'+defaultMin+');S.form.age_min=this.value;updateRecruitSubmitBtn()"><span style="color:var(--muted)">〜</span><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="上限" style="max-width:130px" value="'+(f.age_max||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_max=this.value" onblur="this.value=clampAgeMax(this.value,'+defaultMax+');S.form.age_max=this.value;updateRecruitSubmitBtn()"></div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">※初期設定はご自身の年齢の上下5歳（最低20歳）です。数字を変えれば、さらに範囲を広げることもできます。範囲内で、より年齢が近い相手が優先的にマッチします。</div></div>';
+  html+='<div class="sec-label">④ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">✨ 何歳でもいい</span></label>'+(f.age_any?'':'<div style="display:flex;align-items:center;gap:10px"><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="下限" style="max-width:130px" value="'+(f.age_min||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_min=this.value" onblur="this.value=clampAgeMin(this.value,'+defaultMin+');S.form.age_min=this.value;updateRecruitSubmitBtn()"><span style="color:var(--muted)">〜</span><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="上限" style="max-width:130px" value="'+(f.age_max||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_max=this.value" onblur="this.value=clampAgeMax(this.value,'+defaultMax+');S.form.age_max=this.value;updateRecruitSubmitBtn()"></div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">※初期設定はご自身の年齢の上下5歳（最低20歳）です。数字を変えれば、さらに範囲を広げることもできます。範囲内で、より年齢が近い相手が優先的にマッチします。</div></div>';
   if(isPair){
-    html+='<div class="sec-label">④ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：27" style="max-width:120px;background:#FFFFFF;color:#6A4A50" value="'+(f.partner_age||'')+'" oninput="digitsOnly(this);S.form.partner_age=this.value;updateRecruitSubmitBtn()"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
+    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：27" style="max-width:120px;background:#FFFFFF;color:#6A4A50" value="'+(f.partner_age||'')+'" oninput="digitsOnly(this);S.form.partner_age=this.value;updateRecruitSubmitBtn()"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
   }
   html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。</div>';
   if(S.ticketPurchaseSuccess){
@@ -2043,11 +2304,12 @@ function matchedH(){
     if(smoke==='no')tags.push('🚭 非喫煙');
     if(smoke==='yes')tags.push('🚬 喫煙する');
     if(alcoholLabel)tags.push('🍺 お酒：'+alcoholLabel);
+    (u.profiles&&u.profiles.tags?u.profiles.tags:[]).slice(0,3).forEach(function(t){tags.push('💬 '+escapeHtml(t));});
     var tagsHtml=tags.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+tags.map(function(t){return '<span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:6px;padding:3px 8px">'+t+'</span>';}).join('')+'</div>':'';
     var verifiedBadge=verified?'<span style="font-size:10px;background:var(--gold-bg);color:var(--gold);border:1px solid rgba(201,160,99,.45);padding:2px 7px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px">✓ 本人確認済み</span>':'';
     var photoUrl=u.profiles?u.profiles.photo_url:null;
     var avatarHtml=photoUrl
-      ?'<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="'+photoUrl+'" style="width:100%;height:100%;object-fit:cover;filter:blur(2.5px) saturate(1.1);transform:scale(1.15)"></div>'
+      ?'<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="'+photoUrl+'" style="width:100%;height:100%;object-fit:cover"></div>'
       :'<div style="width:40px;height:40px;border-radius:50%;background:rgba(201,160,99,.14);border:1px solid rgba(201,160,99,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(gn==='male'?'♂':'♀')+'</div>';
     return '<div class="member-row" style="align-items:flex-start">'
       +avatarHtml
@@ -2122,7 +2384,7 @@ function updateRecruitSubmitBtn(){
   if(!btn)return;
   var f=S.form;
   var isPair=f.mode==='2v2';
-  var allOk=f.area&&f.slot&&f.drink_style&&(!isPair||f.partner_age);
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||f.partner_age);
   btn.disabled=!(allOk&&!_isSubmitting);
 }
 
