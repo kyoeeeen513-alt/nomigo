@@ -320,8 +320,10 @@
   .price-card.female{background:rgba(244,233,220,0.03);}
   .price-card.male{background:linear-gradient(160deg, rgba(107,26,36,0.55), rgba(58,14,20,0.55));border-color:rgba(201,160,99,0.3);}
   .price-tag{font-family:'Zen Kaku Gothic New';font-size:12px;font-weight:900;letter-spacing:0.2em;color:var(--gold-soft);margin-bottom:12px;}
-  .price-num{font-family:'Shippori Mincho',serif;font-weight:800;font-size:40px;margin-bottom:6px;}
-  .price-num span{font-size:14px;font-weight:400;color:var(--cream-dim);}
+  .price-num{font-family:'Shippori Mincho',serif;font-weight:800;font-size:40px;margin-bottom:6px;
+    display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:2px;line-height:1.2;}
+  .price-num .amt{white-space:nowrap;}
+  .price-num span{font-size:14px;font-weight:400;color:var(--cream-dim);white-space:nowrap;}
   .price-note{font-size:13px;font-weight:300;color:var(--cream-dim);}
 
   /* ===== FAQ ===== */
@@ -363,9 +365,43 @@
 
   @media(max-width:640px){
     section{padding:68px 20px;}
+    .wrap{padding:0 20px;}
     .compare-row{grid-template-columns:112px 1fr;}
     .compare-row .name{padding:15px;font-size:13px;}
     .compare-row .desc{padding:15px;font-size:12.5px;}
+
+    /* HERO：詰まりすぎないよう余白調整 */
+    .hero{padding:110px 20px 60px;}
+    .now-panel{padding:22px 18px;margin-top:38px;}
+    .other-slots{gap:6px;}
+    .slot{padding:7px 12px;font-size:12px;}
+
+    /* セクション見出しの下余白を圧縮 */
+    .section-head{margin-bottom:40px;}
+
+    /* 料金カード：横並びをやめ縦積み＋余白調整 */
+    .pricing{gap:16px;}
+    .price-card{padding:30px 24px;}
+    .price-num{font-size:38px;}
+
+    /* FAQ：右の＋と文字が被らないよう余白確保 */
+    .faq-q{font-size:14.5px;padding-right:36px;}
+    .faq-a{font-size:13px;}
+
+    /* LINE・最終CTAの内側余白を調整 */
+    .line-cta-box{padding:38px 24px;}
+    .final-cta h2{line-height:1.55;}
+  }
+
+  /* さらに狭い画面（iPhone SE等）向けの微調整 */
+  @media(max-width:380px){
+    .header-in{padding:12px 18px;}
+    .logo{font-size:18px;}
+    .header-cta{font-size:12px;padding:8px 15px;}
+    .price-num{font-size:34px;}
+    .now-big .big{font-size:30px;}
+    .other-slots{gap:5px;}
+    .slot{padding:6px 10px;font-size:11.5px;}
   }
 </style>
 </head>
@@ -601,12 +637,12 @@
     <div class="pricing">
       <div class="price-card female reveal reveal-d1">
         <div class="price-tag">女性</div>
-        <div class="price-num count-target" data-target="0">¥0<span>／完全無料</span></div>
+        <div class="price-num count-target" data-target="0"><span class="amt">¥0</span><span>／完全無料</span></div>
         <div class="price-note">何回使っても、料金はかかりません。</div>
       </div>
       <div class="price-card male reveal reveal-d2">
         <div class="price-tag">男性</div>
-        <div class="price-num count-target" data-target="3000">¥3,000<span>／マッチ成立ごと</span></div>
+        <div class="price-num count-target" data-target="3000"><span class="amt">¥3,000</span><span>／マッチ成立ごと</span></div>
         <div class="price-note">マッチが成立しなければ、料金は発生しません。</div>
       </div>
     </div>
@@ -747,7 +783,7 @@
         var p = Math.min((ts - start) / 900, 1);
         var eased = 1 - Math.pow(1 - p, 3);
         var val = Math.floor(eased * target);
-        e.target.innerHTML = '¥' + val.toLocaleString() + suffix;
+        e.target.innerHTML = '<span class="amt">¥' + val.toLocaleString() + '</span>' + suffix;
         if(p < 1) requestAnimationFrame(step);
       }
       requestAnimationFrame(step);
