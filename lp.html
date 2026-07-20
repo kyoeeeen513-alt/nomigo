@@ -230,12 +230,12 @@
   @media(max-width:820px){.scenes{grid-template-columns:repeat(2,1fr);}}
   @media(max-width:520px){.scenes{grid-template-columns:1fr;}}
   .scene{background:rgba(244,233,220,0.03);border:1px solid rgba(244,233,220,0.08);
-    border-radius:18px;padding:0 0 22px;overflow:hidden;
+    border-radius:18px;padding:0 0 22px;overflow:hidden;isolation:isolate;
     transition:border-color .3s, transform .3s, box-shadow .3s;}
   .scene:hover{border-color:rgba(201,160,99,0.45);transform:translateY(-6px);
     box-shadow:0 14px 30px rgba(0,0,0,0.3);}
   .scene img{width:100%;height:180px;object-fit:cover;object-position:center 35%;display:block;margin-bottom:16px;
-    filter:saturate(.92) brightness(.92);}
+    filter:saturate(.92) brightness(.92);transform:scale(1.03);}
   .scene h3,.scene p{padding:0 20px;}
   .scene h3{font-size:15px;font-weight:900;margin-bottom:6px;}
   .scene p{font-size:12.5px;font-weight:300;color:var(--cream-dim);}
