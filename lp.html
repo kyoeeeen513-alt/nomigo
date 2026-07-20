@@ -234,10 +234,8 @@
     transition:border-color .3s, transform .3s, box-shadow .3s;}
   .scene:hover{border-color:rgba(201,160,99,0.45);transform:translateY(-6px);
     box-shadow:0 14px 30px rgba(0,0,0,0.3);}
-  .scene img{width:100%;height:130px;object-fit:cover;object-position:center 35%;display:block;margin-bottom:16px;
-    filter:saturate(.92) brightness(.92);
-    border-bottom:1px solid rgba(201,160,99,0.35);
-    box-shadow:0 6px 16px rgba(0,0,0,0.35);}
+  .scene img{width:100%;height:180px;object-fit:cover;object-position:center 35%;display:block;margin-bottom:16px;
+    filter:saturate(.92) brightness(.92);}
   .scene h3,.scene p{padding:0 20px;}
   .scene h3{font-size:15px;font-weight:900;margin-bottom:6px;}
   .scene p{font-size:12.5px;font-weight:300;color:var(--cream-dim);}
@@ -389,6 +387,9 @@
     /* FAQ：右の＋と文字が被らないよう余白確保 */
     .faq-q{font-size:14.5px;padding-right:36px;}
     .faq-a{font-size:13px;}
+
+    /* シーン画像：スマホは1列なので少し高めにして横長を防ぐ */
+    .scene img{height:200px;}
 
     /* LINE・最終CTAの内側余白を調整 */
     .line-cta-box{padding:38px 24px;}
