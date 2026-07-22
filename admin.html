@@ -151,8 +151,8 @@ async function loadVerify(){
     h+='<div class="nm">'+esc(p.real_name||'（未入力）')+'</div>';
     h+='<div class="meta">ニックネーム: '+esc(p.nickname||'-')+' ／ 生年月日: '+esc(p.birthdate||'-')+'（'+age+'歳）</div>';
     h+='<div class="imgs">';
-    h+='<a href="'+esc(p.id_photo_url||'#')+'" target="_blank" rel="noopener">身分証を見る</a>';
-    h+='<a href="'+esc(p.face_photo_url||'#')+'" target="_blank" rel="noopener">顔写真を見る</a>';
+    h+='<a href="#" id="idlink-'+p.user_id+'" onclick="openPhoto(\'id_photos\',\''+esc(p.id_photo_url||'')+'\',this);return false;">身分証を見る</a>';
+    h+='<a href="#" id="facelink-'+p.user_id+'" onclick="openPhoto(\'id_photos\',\''+esc(p.face_photo_url||'')+'\',this);return false;">顔写真を見る</a>';
     h+='</div>';
     h+='<div class="meta">生年月日・書類名・発行元が読めるか／顔写真が同一人物か／20歳以上かを確認してください</div>';
     h+='<div class="acts">';
@@ -162,6 +162,19 @@ async function loadVerify(){
   }
   h+='</div>';
   box.innerHTML=h;
+}
+
+async function openPhoto(bucket,path,el){
+  if(!path){alert('画像が登録されていません');return;}
+  var orig=el.textContent;
+  el.textContent='読み込み中...';
+  var r=await DB.storage.from(bucket).createSignedUrl(path,300); // 5分間だけ有効
+  el.textContent=orig;
+  if(r.error||!r.data||!r.data.signedUrl){
+    alert('画像を開けませんでした: '+(r.error?r.error.message:'不明なエラー'));
+    return;
+  }
+  window.open(r.data.signedUrl,'_blank','noopener');
 }
 
 async function setV(uid,val){
