@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Nomi Go 運営管理</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#2a0a12;--card:#3a121c;--line:#5a2431;--gold:#c9a227;--text:#f5ece0;--muted:#b39b8a;--ok:#2e7d5b;--ng:#a33a3a;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text);}
+.wrap{max-width:720px;margin:0 auto;padding:16px;}
+h1{font-size:18px;margin:0 0 4px;color:var(--gold);}
+.sub{font-size:12px;color:var(--muted);margin-bottom:16px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
+label{display:block;font-size:13px;margin:10px 0 4px;color:var(--muted);}
+input{width:100%;padding:11px;border-radius:8px;border:1px solid var(--line);background:#1e0710;color:var(--text);font-size:16px;}
+button{cursor:pointer;border:none;border-radius:8px;font-size:14px;padding:11px 14px;font-weight:600;}
+.btn-main{background:var(--gold);color:#2a0a12;width:100%;margin-top:14px;}
+.btn-ok{background:var(--ok);color:#fff;flex:1;}
+.btn-ng{background:var(--ng);color:#fff;flex:1;}
+.btn-sm{background:#4a1c28;color:var(--text);font-size:12px;padding:7px 12px;}
+.tabs{display:flex;gap:8px;margin-bottom:14px;}
+.tab{flex:1;text-align:center;padding:11px;border-radius:8px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;}
+.tab.on{background:var(--gold);color:#2a0a12;border-color:var(--gold);}
+.row{border-bottom:1px solid var(--line);padding:12px 0;}
+.row:last-child{border-bottom:none;}
+.nm{font-size:15px;font-weight:600;}
+.meta{font-size:12px;color:var(--muted);margin-top:3px;}
+.imgs{display:flex;gap:8px;margin:10px 0;}
+.imgs a{flex:1;text-align:center;padding:9px;background:#1e0710;border:1px solid var(--line);border-radius:8px;color:var(--gold);text-decoration:none;font-size:13px;}
+.acts{display:flex;gap:8px;margin-top:8px;}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:26px 0;}
+.err{color:#ff9b9b;font-size:13px;margin-top:8px;}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;background:#4a1c28;color:var(--gold);margin-left:6px;}
+.txt{font-size:14px;margin-top:6px;white-space:pre-wrap;line-height:1.6;}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.hide{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ログイン画面 -->
+  <div id="login">
+    <h1>Nomi Go 運営管理</h1>
+    <div class="sub">運営者専用ページです</div>
+    <div class="card">
+      <label>メールアドレス</label>
+      <input id="em" type="email" autocomplete="username" placeholder="admin@nomi-go.jp">
+      <label>パスワード</label>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="パスワード">
+      <button class="btn-main" onclick="doLogin()">ログイン</button>
+      <div id="lerr" class="err"></div>
+    </div>
+  </div>
+
+  <!-- 管理画面 -->
+  <div id="app" class="hide">
+    <div class="top">
+      <div>
+        <h1>Nomi Go 運営管理</h1>
+        <div class="sub" id="who"></div>
+      </div>
+      <button class="btn-sm" onclick="doLogout()">ログアウト</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab on" id="t1" onclick="show('verify')">本人確認<span class="tag" id="c1">0</span></div>
+      <div class="tab" id="t2" onclick="show('inq')">お客様対応<span class="tag" id="c2">0</span></div>
+    </div>
+
+    <div id="verify"></div>
+    <div id="inq" class="hide"></div>
+  </div>
+
+</div>
+
+<script>
+var SB_URL='https://dwubothomxjwfudkeepy.supabase.co';
+var SB_KEY='sb_publishable_vpUd5hulLV1-gI1wsAkgWA_hrB9ZOJ9';
+var ADMIN_UID='e06723a4-35e5-430d-b4eb-9aac45073180';
+var DB=supabase.createClient(SB_URL,SB_KEY);
+var CUR='verify';
+
+// ---------- ログイン ----------
+async function doLogin(){
+  var em=document.getElementById('em').value.trim();
+  var pw=document.getElementById('pw').value;
+  var err=document.getElementById('lerr');
+  err.textContent='';
+  if(!em||!pw){err.textContent='メールアドレスとパスワードを入力してください';return;}
+  var r=await DB.auth.signInWithPassword({email:em,password:pw});
+  if(r.error){err.textContent='ログインできませんでした。入力内容をご確認ください。';return;}
+  checkAdmin();
+}
+
+async function doLogout(){
+  await DB.auth.signOut();
+  location.reload();
+}
+
+async function checkAdmin(){
+  var s=await DB.auth.getSession();
+  var u=s.data.session?s.data.session.user:null;
+  if(!u){showLogin();return;}
+  if(u.id!==ADMIN_UID){
+    await DB.auth.signOut();
+    showLogin('このアカウントには管理権限がありません。');
+    return;
+  }
+  document.getElementById('login').className='hide';
+  document.getElementById('app').className='';
+  document.getElementById('who').textContent=u.email;
+  loadVerify();
+  loadInq();
+}
+
+function showLogin(msg){
+  document.getElementById('login').className='';
+  document.getElementById('app').className='hide';
+  if(msg)document.getElementById('lerr').textContent=msg;
+}
+
+// ---------- タブ ----------
+function show(which){
+  CUR=which;
+  document.getElementById('verify').className=(which==='verify')?'':'hide';
+  document.getElementById('inq').className=(which==='inq')?'':'hide';
+  document.getElementById('t1').className=(which==='verify')?'tab on':'tab';
+  document.getElementById('t2').className=(which==='inq')?'tab on':'tab';
+}
+
+// ---------- 本人確認 ----------
+async function loadVerify(){
+  var box=document.getElementById('verify');
+  box.innerHTML='<div class="empty">読み込み中...</div>';
+  var r=await DB.from('profiles')
+    .select('user_id,real_name,birthdate,nickname,gender,id_photo_url,face_photo_url')
+    .eq('id_verify_status','pending');
+  if(r.error){box.innerHTML='<div class="card err">読み込みに失敗しました: '+r.error.message+'</div>';return;}
+  var list=r.data||[];
+  document.getElementById('c1').textContent=list.length;
+  if(list.length===0){box.innerHTML='<div class="card"><div class="empty">確認待ちの方はいません</div></div>';return;}
+  var h='<div class="card">';
+  for(var i=0;i<list.length;i++){
+    var p=list[i];
+    var age=calcAge(p.birthdate);
+    h+='<div class="row" id="v-'+p.user_id+'">';
+    h+='<div class="nm">'+esc(p.real_name||'（未入力）')+'</div>';
+    h+='<div class="meta">ニックネーム: '+esc(p.nickname||'-')+' ／ 生年月日: '+esc(p.birthdate||'-')+'（'+age+'歳）</div>';
+    h+='<div class="imgs">';
+    h+='<a href="'+esc(p.id_photo_url||'#')+'" target="_blank" rel="noopener">身分証を見る</a>';
+    h+='<a href="'+esc(p.face_photo_url||'#')+'" target="_blank" rel="noopener">顔写真を見る</a>';
+    h+='</div>';
+    h+='<div class="meta">生年月日・書類名・発行元が読めるか／顔写真が同一人物か／20歳以上かを確認してください</div>';
+    h+='<div class="acts">';
+    h+='<button class="btn-ok" onclick="setV(\''+p.user_id+'\',\'approved\')">承認する</button>';
+    h+='<button class="btn-ng" onclick="setV(\''+p.user_id+'\',\'rejected\')">否認する</button>';
+    h+='</div></div>';
+  }
+  h+='</div>';
+  box.innerHTML=h;
+}
+
+async function setV(uid,val){
+  var word=(val==='approved')?'承認':'否認';
+  if(!confirm('この方を'+word+'します。よろしいですか？'))return;
+  var r=await DB.from('profiles').update({id_verify_status:val}).eq('user_id',uid);
+  if(r.error){alert('更新に失敗しました: '+r.error.message);return;}
+  loadVerify();
+}
+
+function calcAge(bd){
+  if(!bd)return '-';
+  var d=new Date(bd);
+  if(isNaN(d.getTime()))return '-';
+  var t=new Date();
+  var a=t.getFullYear()-d.getFullYear();
+  var m=t.getMonth()-d.getMonth();
+  if(m<0||(m===0&&t.getDate()<d.getDate()))a--;
+  return a;
+}
+
+// ---------- お客様対応 ----------
+async function loadInq(){
+  var box=document.getElementById('inq');
+  box.innerHTML='<div class="empty">読み込み中...</div>';
+  var r=await DB.from('inquiries').select('*').order('created_at',{ascending:false}).limit(100);
+  if(r.error){box.innerHTML='<div class="card err">読み込みに失敗しました: '+r.error.message+'</div>';return;}
+  var list=r.data||[];
+  var open=0;
+  for(var k=0;k<list.length;k++){if(!list[k].handled)open++;}
+  document.getElementById('c2').textContent=open;
+  if(list.length===0){box.innerHTML='<div class="card"><div class="empty">お問い合わせはありません</div></div>';return;}
+  var h='<div class="card">';
+  for(var i=0;i<list.length;i++){
+    var q=list[i];
+    var isWithdraw=(q.content||'').indexOf('【退会申請】')>=0;
+    h+='<div class="row" style="opacity:'+(q.handled?'0.45':'1')+'">';
+    h+='<div class="nm">'+esc(q.name||'（お名前未入力）');
+    if(isWithdraw)h+='<span class="tag">退会申請</span>';
+    if(q.handled)h+='<span class="tag">対応済み</span>';
+    h+='</div>';
+    h+='<div class="meta">'+esc(q.email||'（メール未入力）')+' ／ '+fmtDate(q.created_at)+'</div>';
+    h+='<div class="txt">'+esc(q.content||'')+'</div>';
+    if(!q.handled){
+      h+='<div class="acts"><button class="btn-sm" onclick="setH(\''+q.id+'\')">対応済みにする</button></div>';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  box.innerHTML=h;
+}
+
+async function setH(id){
+  var r=await DB.from('inquiries').update({handled:true}).eq('id',id);
+  if(r.error){alert('更新に失敗しました: '+r.error.message+'\n（handled列が無い場合は設定が必要です）');return;}
+  loadInq();
+}
+
+function fmtDate(s){
+  if(!s)return '-';
+  var d=new Date(s);
+  if(isNaN(d.getTime()))return '-';
+  return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// 起動時：ログイン済みか確認
+checkAdmin();
+</script>
+</body>
+</html>
