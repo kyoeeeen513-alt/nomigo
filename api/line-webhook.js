@@ -4,8 +4,12 @@
 // 【変更点】同じLINEアカウントで2つ目のNomi Goアカウントを作れないようにしました。
 //   - 既に別ユーザーが使っているLINE IDなら、保存せずに理由を返信します
 //   - BANされたLINEなら、連携させません
+//
+// 【今回の変更】RLS(行レベルセキュリティ)を有効にしたため、
+//   サーバー側からの読み書きには service_role キーを使います。
+//   キーはVercelの環境変数 SUPABASE_SERVICE_ROLE_KEY から読み込みます。
 const SUPABASE_URL = 'https://dwubothomxjwfudkeepy.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_vpUd5hulLV1-gI1wsAkgWA_hrB9ZOJ9';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const HEADERS = {
   apikey: SUPABASE_KEY,
