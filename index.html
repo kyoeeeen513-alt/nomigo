@@ -1348,6 +1348,18 @@ async function doRegister(){
 }
 
 function dbgLog(msg){
+  try{
+    var box=document.getElementById('ngo-dbg');
+    if(!box){
+      box=document.createElement('div');
+      box.id='ngo-dbg';
+      box.style.cssText='position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;background:rgba(0,0,0,.88);color:#7CFC7C;font:11px/1.5 monospace;padding:8px 10px;z-index:99999;white-space:pre-wrap;word-break:break-all';
+      document.body.appendChild(box);
+    }
+    var t=new Date();
+    var hh=('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2)+':'+('0'+t.getSeconds()).slice(-2);
+    box.textContent=hh+'  '+msg+'\n'+box.textContent;
+  }catch(e){}
 }
 
 // ===== 飲みスタイルの相性判定 =====
@@ -1372,25 +1384,33 @@ function candidateScore(c){
 async function tryMatch(){
   if(!S.registration){dbgLog('S0: registration=null');return false;}
   var p=S.profile;
+  if(!p){dbgLog('S0: profile=null');return false;}
+  dbgLog('tryMatch開始 gender='+p.gender);
 
   // マッチの実行は女性側の端末のみが行う（女性が候補を確認・選択する設計のため）。
   // 男性側は startPolling で自分の状態が matched になるのを待つだけ。
-  if(p.gender!=='female')return false;
+  if(p.gender!=='female'){dbgLog('S1: 男性のため待機');return false;}
 
   // 検索条件は必ず S.registration（DBから読んだ自分の募集）から取る。
   // S.form は画面の入力状態なので、待機中の再読み込み等で消えることがある。
   var R=S.registration;
-  if(!R.area_id||!R.slot){dbgLog('S0: reg area/slot欠落');return false;}
+  dbgLog('S2: area='+R.area_id+' slot='+R.slot+' mode='+R.mode);
+  if(!R.area_id||!R.slot){dbgLog('S2x: area/slot欠落');return false;}
 
   var candidates=await DB.from('registrations').select('*').eq('status','waiting').eq('area_id',R.area_id).eq('mode',R.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
+  if(candidates.error){dbgLog('S3err: '+candidates.error.message);return false;}
+  dbgLog('S3: 候補'+((candidates.data&&candidates.data.length)||0)+'件');
   if(!candidates.data||candidates.data.length===0){return false;}
 
   var filtered=candidates.data.filter(function(c){
-    if(!drinkCompat(R.drink_style,R.ok_nodrink,c.drink_style,c.ok_nodrink))return false;
+    if(!drinkCompat(R.drink_style,R.ok_nodrink,c.drink_style,c.ok_nodrink)){dbgLog('  除外(飲み方) '+c.id.slice(0,8));return false;}
     var iWantThem=ageMatches(R.age_any,R.age_min?parseInt(R.age_min):null,R.age_max?parseInt(R.age_max):null,c.age);
     var theyWantMe=ageMatches(c.age_any,c.age_min,c.age_max,p.age);
-    return iWantThem&&theyWantMe;
+    if(!iWantThem){dbgLog('  除外(自分の年齢希望) '+c.id.slice(0,8));return false;}
+    if(!theyWantMe){dbgLog('  除外(相手の年齢希望) '+c.id.slice(0,8));return false;}
+    return true;
   });
+  dbgLog('S4: 条件通過'+filtered.length+'件');
   if(filtered.length===0){return false;}
 
   // 目的一致・年齢の近さで並べ替え
@@ -1400,6 +1420,7 @@ async function tryMatch(){
   if(filtered.length===1){
     var only=filtered[0];
     var lock1=await DB.from('registrations').update({status:'processing'}).eq('id',only.id).eq('status','waiting').select().single();
+    dbgLog('S5: 単独候補ロック '+(lock1.error?('失敗 '+lock1.error.message):(lock1.data?'成功':'データなし')));
     if(lock1.error||!lock1.data)return false;
     return await finalizeMatchWith(only,null);
   }
@@ -1439,6 +1460,7 @@ async function finalizeMatchWith(bestReg,otherReg){
     status:'confirmed'
   }).select().single();
   if(matchRes.error){
+    dbgLog('S6err: matches作成失敗 '+matchRes.error.message);
     await DB.from('registrations').update({status:'waiting'}).eq('id',bestReg.id).eq('status','processing');
     if(otherReg)await DB.from('registrations').update({status:'waiting'}).eq('id',otherReg.id).eq('status','processing');
     return false;
@@ -1449,7 +1471,8 @@ async function finalizeMatchWith(bestReg,otherReg){
   var u2=await DB.from('registrations').update({status:'matched',match_id:matchRes.data.id}).eq('id',bestReg.id);
   // 選ばれなかった候補は募集中に戻す（本人には何も通知されない）
   if(otherReg)await DB.from('registrations').update({status:'waiting'}).eq('id',otherReg.id).eq('status','processing');
-  if(u1.error||u2.error)return false;
+  if(u1.error||u2.error){dbgLog('S7err: 状態更新失敗 '+((u1.error&&u1.error.message)||'')+' / '+((u2.error&&u2.error.message)||''));return false;}
+  dbgLog('S8: マッチ成立 '+matchRes.data.id.slice(0,8));
 
   S.registration.status='matched';
   S.registration.match_id=matchRes.data.id;
@@ -1594,7 +1617,7 @@ function startPolling(){
       if(matched==='choice'){_isSubmitting=false;return;}
       if(matched===true){clearInterval(S.pollTimer);_isSubmitting=false;go('matched');}
       loadStats();
-    }catch(e){}
+    }catch(e){dbgLog('pollErr: '+e.message);}
   },8000);
 }
 
