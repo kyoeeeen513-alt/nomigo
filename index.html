@@ -1566,22 +1566,12 @@ function sendMatchLineNotify(myProfile,otherProfile){
 
 async function consumeTicket(matchId,targetUserId){
   dbgLog('T0: consumeTicket呼び出し matchId='+matchId.slice(0,8));
-  var lockRes=await DB.from('matches').update({ticket_consumed:true}).eq('id',matchId).eq('ticket_consumed',false).select().single();
-  dbgLog('T1: lockRes err='+(lockRes.error?lockRes.error.message:'なし')+' data='+(lockRes.data?JSON.stringify(lockRes.data).slice(0,80):'null'));
-  if(lockRes.error||!lockRes.data){
-    dbgLog('T1x: 消費済みor対象なしのため中断');
-    return;
-  }
-  var current=await DB.from('profiles').select('ticket_count').eq('user_id',targetUserId).single();
-  dbgLog('T2: current err='+(current.error?current.error.message:'なし')+' ticket_count='+(current.data?current.data.ticket_count:'null'));
-  var oldCount=current.data&&current.data.ticket_count?current.data.ticket_count:0;
-  var newCount=oldCount-1;
-  if(newCount<0)newCount=0;
-  var upd=await DB.from('profiles').update({ticket_count:newCount}).eq('user_id',targetUserId).eq('ticket_count',oldCount).select().single();
-  dbgLog('T3: upd err='+(upd.error?upd.error.message:'なし')+' newCount='+(upd.data?upd.data.ticket_count:'null'));
-  if(upd.error||!upd.data){
-    dbgLog('T3x: DB更新失敗');
-  }
+  // 相手のチケットは自分の端末から直接減らせない（RLSで拒否される）ため、
+  // サーバー側の関数に処理を任せる。二重消費の防止も関数内で行っている。
+  var res=await DB.rpc('consume_ticket',{p_match_id:matchId,p_user_id:targetUserId});
+  if(res.error){dbgLog('T1x: 消費失敗 '+res.error.message);return;}
+  if(res.data===-1){dbgLog('T1: 既に消費済み');return;}
+  dbgLog('T2: 消費完了 残り'+res.data+'枚');
 }
 
 function startPolling(){
@@ -1803,6 +1793,7 @@ async function initChat(){
 async function loadMessagesAsync(){
   if(!S.match||!S.match.id)return;
   var res=await DB.from('messages').select('*').eq('match_id',S.match.id).order('created_at',{ascending:true});
+  dbgLog('M0: メッセージ取得 '+(res.error?('失敗 '+res.error.message):((res.data&&res.data.length)||0)+'件'));
   if(res.error)return;
   applyMessages(res.data);
 }
@@ -1852,6 +1843,7 @@ function sendMsg(){
   var sendBtn=document.querySelector('.chat-send');
   if(sendBtn)sendBtn.disabled=true;
   DB.from('messages').insert({match_id:S.match.id,user_id:S.user.id,content:txt}).then(function(res){
+    dbgLog('M1: 送信 '+(res.error?('失敗 '+res.error.message):'成功'));
     _sendingMsg=false;
     if(sendBtn)sendBtn.disabled=false;
     if(res.error){dbgChat('INSERT ERR:'+res.error.message);return;}
