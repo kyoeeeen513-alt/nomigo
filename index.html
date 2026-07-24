@@ -1031,7 +1031,9 @@ async function loadWaitFeed(){
     var feed=[];
     for(var i=0;i<uniq.length;i++){
       var r=uniq[i];
-      var pr=await DB.from('profiles').select('job,tags').eq('user_id',r.user_id).single();
+      // 他人のプロフィールは直接読めない（RLS）。表示に必要な項目だけ関数経由で取得する。
+      var prRes=await DB.rpc('get_feed_profile',{p_user_id:r.user_id});
+      var pr={data:(prRes.data&&prRes.data[0])||null};
       feed.push({
         live:r.status==='waiting',
         band:ageBand(r.age),
@@ -1438,8 +1440,11 @@ async function tryMatch(){
     // 2人目を確保できなかったら1人目とそのまま成立
     return await finalizeMatchWith(c1,null);
   }
-  var pr1=await DB.from('profiles').select('*').eq('user_id',c1.user_id).single();
-  var pr2=await DB.from('profiles').select('*').eq('user_id',c2.user_id).single();
+  // マッチ前の候補確認用。本名・生年月日などは返さない関数を使う。
+  var pr1r=await DB.rpc('get_candidate_profile',{p_user_id:c1.user_id});
+  var pr2r=await DB.rpc('get_candidate_profile',{p_user_id:c2.user_id});
+  var pr1={data:(pr1r.data&&pr1r.data[0])||null};
+  var pr2={data:(pr2r.data&&pr2r.data[0])||null};
   c1.profileData=pr1.data||{};
   c2.profileData=pr2.data||{};
   S._choice={cands:[c1,c2],deadline:Date.now()+90*1000,submitting:false};
@@ -1452,7 +1457,9 @@ async function tryMatch(){
 // ===== マッチ確定処理（選ばれた相手と成立させ、選ばれなかった相手は募集中に戻す）=====
 async function finalizeMatchWith(bestReg,otherReg){
   var p=S.profile;
-  var prof=bestReg.profileData?{data:bestReg.profileData}:await DB.from('profiles').select('*').eq('user_id',bestReg.user_id).single();
+  var prof;
+  if(bestReg.profileData){prof={data:bestReg.profileData};}
+  else{var pfr=await DB.rpc('get_candidate_profile',{p_user_id:bestReg.user_id});prof={data:(pfr.data&&pfr.data[0])||null};}
   bestReg.profileData=prof.data||{};
 
   var RG=S.registration;
