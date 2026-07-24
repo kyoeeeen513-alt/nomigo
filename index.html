@@ -1347,7 +1347,11 @@ async function doRegister(){
   }catch(e){clearTimeout(timeoutId);if(!timeoutFlag.hit){_isSubmitting=false;S.error='登録に失敗しました: '+e.message;re('recruit');}}
 }
 
+// 画面へのデバッグ表示は本番では出さない。
+// 調査が必要になったら NGO_DEBUG を true にすると画面下にログが出る。
+var NGO_DEBUG=false;
 function dbgLog(msg){
+  if(!NGO_DEBUG)return;
   try{
     var box=document.getElementById('ngo-dbg');
     if(!box){
