@@ -490,7 +490,7 @@ async function loadProfile(){
   var matchedReg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
   if(matchedReg.data&&matchedReg.data.match_id){
     S.registration=matchedReg.data;
-    S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,drink_style:matchedReg.data.drink_style,timing:matchedReg.data.timing,age_min:matchedReg.data.age_min,age_max:matchedReg.data.age_max,age_any:matchedReg.data.age_any};
+    S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,mode:matchedReg.data.mode,drink_style:matchedReg.data.drink_style,purpose:matchedReg.data.purpose,ok_nodrink:matchedReg.data.ok_nodrink,duration_pref:matchedReg.data.duration_pref,timing:matchedReg.data.timing,age_min:matchedReg.data.age_min,age_max:matchedReg.data.age_max,age_any:matchedReg.data.age_any};
     var m=await DB.from('matches').select('*').eq('id',matchedReg.data.match_id).single();
     if(m.data)S.match=m.data;
     await loadMatchMembers();
@@ -500,7 +500,7 @@ async function loadProfile(){
   var reg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
   if(reg.data){
     S.registration=reg.data;
-    S.form={area:reg.data.area_id,slot:reg.data.slot,drink_style:reg.data.drink_style,timing:reg.data.timing,age_min:reg.data.age_min,age_max:reg.data.age_max,age_any:reg.data.age_any};
+    S.form={area:reg.data.area_id,slot:reg.data.slot,mode:reg.data.mode,drink_style:reg.data.drink_style,purpose:reg.data.purpose,ok_nodrink:reg.data.ok_nodrink,duration_pref:reg.data.duration_pref,timing:reg.data.timing,age_min:reg.data.age_min,age_max:reg.data.age_max,age_any:reg.data.age_any};
   }
 }
 
@@ -1313,7 +1313,7 @@ async function doRegister(){
     re('recruit');
   },10000);
   try{
-    var existing=await DB.from('registrations').select('id').eq('user_id',S.user.id).eq('status','waiting').single();
+    var existing=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').single();
     if(timeoutFlag.hit)return;
     if(existing.data){clearTimeout(timeoutId);_isSubmitting=false;S.registration=existing.data;startPolling();go('waiting');return;}
     var ins=await DB.from('registrations').insert({
@@ -1362,7 +1362,8 @@ function drinkCompat(myStyle,myOk,theirStyle,theirOk){
 // 候補の優先度スコア：目的一致 > 年齢の近さ
 function candidateScore(c){
   var score=0;
-  if(S.form.purpose&&c.purpose&&c.purpose===S.form.purpose)score+=100;
+  var myPurpose=(S.registration&&S.registration.purpose)||S.form.purpose;
+  if(myPurpose&&c.purpose&&c.purpose===myPurpose)score+=100;
   var myAge=S.profile&&S.profile.age?S.profile.age:25;
   score-=Math.abs((c.age||myAge)-myAge);
   return score;
@@ -1376,12 +1377,17 @@ async function tryMatch(){
   // 男性側は startPolling で自分の状態が matched になるのを待つだけ。
   if(p.gender!=='female')return false;
 
-  var candidates=await DB.from('registrations').select('*').eq('status','waiting').eq('area_id',S.form.area).eq('mode',S.registration.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
+  // 検索条件は必ず S.registration（DBから読んだ自分の募集）から取る。
+  // S.form は画面の入力状態なので、待機中の再読み込み等で消えることがある。
+  var R=S.registration;
+  if(!R.area_id||!R.slot){dbgLog('S0: reg area/slot欠落');return false;}
+
+  var candidates=await DB.from('registrations').select('*').eq('status','waiting').eq('area_id',R.area_id).eq('mode',R.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
   if(!candidates.data||candidates.data.length===0){return false;}
 
   var filtered=candidates.data.filter(function(c){
-    if(!drinkCompat(S.form.drink_style,S.form.ok_nodrink,c.drink_style,c.ok_nodrink))return false;
-    var iWantThem=ageMatches(S.form.age_any,S.form.age_min?parseInt(S.form.age_min):null,S.form.age_max?parseInt(S.form.age_max):null,c.age);
+    if(!drinkCompat(R.drink_style,R.ok_nodrink,c.drink_style,c.ok_nodrink))return false;
+    var iWantThem=ageMatches(R.age_any,R.age_min?parseInt(R.age_min):null,R.age_max?parseInt(R.age_max):null,c.age);
     var theyWantMe=ageMatches(c.age_any,c.age_min,c.age_max,p.age);
     return iWantThem&&theyWantMe;
   });
@@ -1389,8 +1395,6 @@ async function tryMatch(){
 
   // 目的一致・年齢の近さで並べ替え
   filtered.sort(function(a,b){return candidateScore(b)-candidateScore(a);});
-
-  if(!S.form.slot){return false;}
 
   // ----- 候補が1人：そのまま自動成立 -----
   if(filtered.length===1){
@@ -1426,11 +1430,12 @@ async function finalizeMatchWith(bestReg,otherReg){
   var prof=bestReg.profileData?{data:bestReg.profileData}:await DB.from('profiles').select('*').eq('user_id',bestReg.user_id).single();
   bestReg.profileData=prof.data||{};
 
+  var RG=S.registration;
   var matchRes=await DB.from('matches').insert({
-    area_id:S.form.area,
-    slot:S.form.slot,
+    area_id:RG.area_id||S.form.area,
+    slot:RG.slot||S.form.slot,
     mode:'1v1',
-    timing:S.form.timing,
+    timing:RG.timing||S.form.timing,
     status:'confirmed'
   }).select().single();
   if(matchRes.error){
@@ -1563,7 +1568,9 @@ function startPolling(){
   S.pollTimer=setInterval(async function(){
     try{
       if(S.registration){
-        var reg=await DB.from('registrations').select('status,match_id').eq('id',S.registration.id).single();
+        var reg=await DB.from('registrations').select('*').eq('id',S.registration.id).single();
+        // 検索条件が消えないよう、毎回DBの内容で自分の募集情報を上書きしておく
+        if(reg.data)S.registration=reg.data;
         // 相手（女性）の選択待ちで自分が processing のまま長時間経過した場合の自己復旧
         // （女性側のアプリが途中で閉じられた等の保険。4分で自動的に募集中へ戻す）
         if(reg.data&&reg.data.status==='processing'){
