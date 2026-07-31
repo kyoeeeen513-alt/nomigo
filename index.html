@@ -610,16 +610,64 @@ async function routeAfterLoad(){
   go('splash');
 }
 
+// ===== 写真の縮小 =====
+// スマホの写真はそのままだと数MBあり、文字データに変換すると一時保存の上限を超える。
+// またiPhoneのフォトライブラリの写真はHEIC形式のことがあり、そのままでは表示できない。
+// 表示・保存・アップロードのすべてに使えるよう、長辺1200pxのJPEGに縮小してから扱う。
+// 縮小に失敗した場合も、必ずcbを呼んで画面の動作を止めない。
+function shrinkImage(file,maxSide,quality,cb){
+  var done=false,url=null;
+  function finish(f,d){
+    if(done)return;done=true;
+    if(url){try{URL.revokeObjectURL(url);}catch(e){}}
+    cb(f,d);
+  }
+  var guard=setTimeout(function(){finish(null,null);},10000);
+  try{
+    url=URL.createObjectURL(file);
+    var img=new Image();
+    img.onload=function(){
+      clearTimeout(guard);
+      try{
+        var w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+        if(!w||!h){finish(null,null);return;}
+        var scale=Math.min(1,maxSide/Math.max(w,h));
+        var cw=Math.max(1,Math.round(w*scale)),ch=Math.max(1,Math.round(h*scale));
+        var cv=document.createElement('canvas');
+        cv.width=cw;cv.height=ch;
+        cv.getContext('2d').drawImage(img,0,0,cw,ch);
+        var dataUrl=cv.toDataURL('image/jpeg',quality);
+        cv.toBlob(function(blob){
+          var f=null;
+          if(blob){
+            try{f=new File([blob],'photo_'+Date.now()+'.jpg',{type:'image/jpeg'});}
+            catch(e){f=blob;}
+          }
+          finish(f,dataUrl);
+        },'image/jpeg',quality);
+      }catch(e){finish(null,null);}
+    };
+    img.onerror=function(){clearTimeout(guard);finish(null,null);};
+    img.src=url;
+  }catch(e){clearTimeout(guard);finish(null,null);}
+}
+
 function handlePhotoSelect(inputEl,screenName){
   var file=inputEl.files&&inputEl.files[0];
   if(!file)return;
-  S.pf.photoFile=file;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    S.pf.photoPreview=e.target.result;
+  shrinkImage(file,1200,0.85,function(smallFile,dataUrl){
+    if(dataUrl){
+      S.pf.photoFile=smallFile||file;
+      S.pf.photoPreview=dataUrl;
+      S.error='';
+    }else{
+      // 読み込めない形式・壊れた画像の場合。画面は必ず動かし続ける
+      S.pf.photoFile=null;
+      S.pf.photoPreview=null;
+      S.error='この写真は読み込めませんでした。別の写真を選ぶか、その場で撮影してください。';
+    }
     re(screenName);
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 async function uploadProfilePhoto(userId,file){
