@@ -186,6 +186,32 @@ var _payjp=null,_payjpElements=null,_payjpCardEl=null;
 var _sbReady=false;
 var DB;
 
+// ===== 一時保存（sessionStorage）の失敗で画面が止まらないようにする =====
+// プロフィール写真は文字データに変換されると容量が大きく、保存の上限を超えることがある。
+// 従来はここで例外が発生し、後続の「画面の描き直し」に到達しないため、
+// 写真を選んだ時点で以降のボタンがすべて反応しなくなっていた。
+// 保存に失敗した場合は写真を除いて保存し直し、それも失敗したら黙って諦める。
+// 保存はあくまで入力内容の一時退避であり、失敗しても画面の動作は続けてよい。
+(function(){
+  try{
+    var _origSet=sessionStorage.setItem.bind(sessionStorage);
+    sessionStorage.setItem=function(k,v){
+      try{
+        _origSet(k,v);
+      }catch(e){
+        try{
+          var o=JSON.parse(v);
+          if(o&&typeof o==='object'){
+            delete o.photoPreview;
+            delete o.photoFile;
+            _origSet(k,JSON.stringify(o));
+          }
+        }catch(e2){}
+      }
+    };
+  }catch(e){}
+})();
+
 const AREAS=[
   {id:'susukino',name:'すすきの',img:'area_susukino.jpg',open:true},
   {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg',open:true},
