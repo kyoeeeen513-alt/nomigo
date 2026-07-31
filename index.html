@@ -212,6 +212,16 @@ var DB;
   }catch(e){}
 })();
 
+// ===== 取得する列の定数 =====
+// registrations と 他人のprofiles は select('*') を使わない。
+// '*' だと決済識別子（stripe_customer_id / payment_intent_id）や
+// 本名・生年月日・身分証の保存先まで端末に降りてくるため、必要な列だけを列挙する。
+// DB側で該当列の閲覧権限を剥奪する前提のため、ここに決済列を足してはいけない。
+const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,drink_style,timing,age_pref,age,smoke,alcohol,partner_age,age_min,age_max,age_any,duration_pref,purpose,ok_nodrink';
+// マッチ相手のプロフィール。本名・生年月日・身分証・顔写真・決済識別子は含めない。
+// line_user_id は通知処理が使うため現時点では残す。
+const PROFILE_COLS_PARTNER='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,id_verify_status,line_user_id';
+
 const AREAS=[
   {id:'susukino',name:'すすきの',img:'area_susukino.jpg',open:true},
   {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg',open:true},
@@ -513,7 +523,7 @@ async function loadProfile(){
   S.profile=res.data;
   if(!S.profile)return;
 
-  var matchedReg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
+  var matchedReg=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
   if(matchedReg.data&&matchedReg.data.match_id){
     S.registration=matchedReg.data;
     S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,mode:matchedReg.data.mode,drink_style:matchedReg.data.drink_style,purpose:matchedReg.data.purpose,ok_nodrink:matchedReg.data.ok_nodrink,duration_pref:matchedReg.data.duration_pref,timing:matchedReg.data.timing,age_min:matchedReg.data.age_min,age_max:matchedReg.data.age_max,age_any:matchedReg.data.age_any};
@@ -523,7 +533,7 @@ async function loadProfile(){
     return;
   }
 
-  var reg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
+  var reg=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
   if(reg.data){
     S.registration=reg.data;
     S.form={area:reg.data.area_id,slot:reg.data.slot,mode:reg.data.mode,drink_style:reg.data.drink_style,purpose:reg.data.purpose,ok_nodrink:reg.data.ok_nodrink,duration_pref:reg.data.duration_pref,timing:reg.data.timing,age_min:reg.data.age_min,age_max:reg.data.age_max,age_any:reg.data.age_any};
@@ -960,7 +970,7 @@ async function submitIdVerify(){
   }
   var path=result.path;
   var facePath=faceResult.path;
-  var upd=await DB.from('profiles').update({id_photo_url:path,face_photo_url:facePath,id_verify_status:'pending'}).eq('user_id',S.user.id).select().single();
+  var upd=await DB.from('profiles').update({id_photo_url:path,face_photo_url:facePath,id_verify_status:'pending'}).eq('user_id',S.user.id).select('user_id,id_verify_status').single();
   _idVerifySubmitting=false;
   if(upd.error){S.error='保存に失敗しました: '+upd.error.message;re('id_verify');return;}
   S.profile.id_photo_url=path;
@@ -1361,7 +1371,7 @@ async function chargeForTicket(customerId){
     }
     var current=await DB.from('profiles').select('ticket_count').eq('user_id',S.user.id).single();
     var newCount=(current.data&&current.data.ticket_count?current.data.ticket_count:0)+1;
-    var upd=await DB.from('profiles').update({ticket_count:newCount}).eq('user_id',S.user.id).select().single();
+    var upd=await DB.from('profiles').update({ticket_count:newCount}).eq('user_id',S.user.id).select('user_id,ticket_count').single();
     if(upd.error||!upd.data){
       S.error='チケット反映エラー: '+(upd.error?upd.error.message:'不明なエラー');
       _ticketPurchasing=false;
@@ -1389,7 +1399,7 @@ async function doRegister(){
     re('recruit');
   },10000);
   try{
-    var existing=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').single();
+    var existing=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('status','waiting').single();
     if(timeoutFlag.hit)return;
     if(existing.data){clearTimeout(timeoutId);_isSubmitting=false;S.registration=existing.data;startPolling();go('waiting');return;}
     var ins=await DB.from('registrations').insert({
@@ -1412,7 +1422,7 @@ async function doRegister(){
       partner_age:S.form.mode==='2v2'&&S.form.partner_age?parseInt(S.form.partner_age):null,
       payment_intent_id:S.chargeId||null,
       status:'waiting'
-    }).select().single();
+    }).select(REG_COLS).single();
     if(timeoutFlag.hit)return;
     if(ins.error){clearTimeout(timeoutId);_isSubmitting=false;S.error='登録エラー: '+ins.error.message;re('recruit');return;}
     clearTimeout(timeoutId);
@@ -1477,7 +1487,7 @@ async function tryMatch(){
   dbgLog('S2: area='+R.area_id+' slot='+R.slot+' mode='+R.mode);
   if(!R.area_id||!R.slot){dbgLog('S2x: area/slot欠落');return false;}
 
-  var candidates=await DB.from('registrations').select('*').eq('status','waiting').eq('area_id',R.area_id).eq('mode',R.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
+  var candidates=await DB.from('registrations').select(REG_COLS).eq('status','waiting').eq('area_id',R.area_id).eq('mode',R.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
   if(candidates.error){dbgLog('S3err: '+candidates.error.message);return false;}
   dbgLog('S3: 候補'+((candidates.data&&candidates.data.length)||0)+'件');
   if(!candidates.data||candidates.data.length===0){return false;}
@@ -1499,7 +1509,7 @@ async function tryMatch(){
   // ----- 候補が1人：そのまま自動成立 -----
   if(filtered.length===1){
     var only=filtered[0];
-    var lock1=await DB.from('registrations').update({status:'processing'}).eq('id',only.id).eq('status','waiting').select().single();
+    var lock1=await DB.from('registrations').update({status:'processing'}).eq('id',only.id).eq('status','waiting').select(REG_COLS).single();
     dbgLog('S5: 単独候補ロック '+(lock1.error?('失敗 '+lock1.error.message):(lock1.data?'成功':'データなし')));
     if(lock1.error||!lock1.data)return false;
     return await finalizeMatchWith(only,null);
@@ -1507,9 +1517,9 @@ async function tryMatch(){
 
   // ----- 候補が2人以上：上位2人を確保して2択画面へ -----
   var c1=filtered[0],c2=filtered[1];
-  var lockA=await DB.from('registrations').update({status:'processing'}).eq('id',c1.id).eq('status','waiting').select().single();
+  var lockA=await DB.from('registrations').update({status:'processing'}).eq('id',c1.id).eq('status','waiting').select(REG_COLS).single();
   if(lockA.error||!lockA.data){return false;}
-  var lockB=await DB.from('registrations').update({status:'processing'}).eq('id',c2.id).eq('status','waiting').select().single();
+  var lockB=await DB.from('registrations').update({status:'processing'}).eq('id',c2.id).eq('status','waiting').select(REG_COLS).single();
   if(lockB.error||!lockB.data){
     // 2人目を確保できなかったら1人目とそのまま成立
     return await finalizeMatchWith(c1,null);
@@ -1666,7 +1676,7 @@ function startPolling(){
   S.pollTimer=setInterval(async function(){
     try{
       if(S.registration){
-        var reg=await DB.from('registrations').select('*').eq('id',S.registration.id).single();
+        var reg=await DB.from('registrations').select(REG_COLS).eq('id',S.registration.id).single();
         // 検索条件が消えないよう、毎回DBの内容で自分の募集情報を上書きしておく
         if(reg.data)S.registration=reg.data;
         // 相手（女性）の選択待ちで自分が processing のまま長時間経過した場合の自己復旧
@@ -1708,7 +1718,7 @@ async function cancelReg(){
 async function setMatchResultOnce(matchId,newStatus,extraFields){
   if(!matchId)return false;
   var updateData=Object.assign({status:newStatus},extraFields||{});
-  var res=await DB.from('matches').update(updateData).eq('id',matchId).eq('status','confirmed').select().single();
+  var res=await DB.from('matches').update(updateData).eq('id',matchId).eq('status','confirmed').select('id,status').single();
   if(res.error||!res.data){
     return false;
   }
@@ -1807,7 +1817,7 @@ function finishReminderBanner(){
 // LINE通知は1マッチにつき1回だけ。reminder_sent を排他更新して二重送信を防ぐ
 async function sendFinishReminderOnce(){
   if(!shouldRemindFinish())return;
-  var lock=await DB.from('matches').update({reminder_sent:true}).eq('id',S.match.id).eq('reminder_sent',false).select().single();
+  var lock=await DB.from('matches').update({reminder_sent:true}).eq('id',S.match.id).eq('reminder_sent',false).select('id,reminder_sent').single();
   if(lock.error||!lock.data)return;
   S.match.reminder_sent=true;
   for(var i=0;i<S.matchMembers.length;i++){
@@ -1833,10 +1843,10 @@ function startFinishReminderTimer(){
 
 async function loadMatchMembers(){
   if(!S.match)return;
-  var r=await DB.from('registrations').select('*').eq('match_id',S.match.id);
+  var r=await DB.from('registrations').select(REG_COLS).eq('match_id',S.match.id);
   if(!r.data)return;
   for(var i=0;i<r.data.length;i++){
-    var prof=await DB.from('profiles').select('*').eq('user_id',r.data[i].user_id).single();
+    var prof=await DB.from('profiles').select(PROFILE_COLS_PARTNER).eq('user_id',r.data[i].user_id).single();
     r.data[i].profiles=prof.data||{};
   }
   S.matchMembers=r.data;
@@ -1849,7 +1859,7 @@ async function openChat(){
   if(!registered){go('cardregister');return;}
   if(S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;}
   if(S.user){
-    var reg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
+    var reg=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
     if(reg.data){
       S.registration=reg.data;
       if(reg.data.match_id){
