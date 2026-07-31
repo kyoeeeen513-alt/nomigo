@@ -199,22 +199,11 @@ const AGE_PREFS=['年下','近い年齢','年上','年齢問わない','おま�
 const SLOTS=['今すぐ','19:00','20:00','21:00','22:00'];
 const REVIEW_TAGS=['時間を守った','話しやすかった','また飲みたい','礼儀正しかった','優しかった','聞き上手だった','盛り上げ上手だった','写真通りだった','その他'];
 const REVIEW_TAGS_LOW=['時間を守らなかった','話しにくかった','もう会いたくない','礼儀が良くなかった','冷たい態度だった','会話が弾まなかった','場を盛り下げた','写真と印象が違った','その他'];
-// ===== DBから取得する列の指定 =====
-// 決済識別子(stripe_customer_id / payment_intent_id)は画面表示に一切使っていないため取得しない。
-// 併せてDB側でも authenticated からこの2列のSELECT権限を剥奪する（A-3対策）。
-const REG_COLS_SELF='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,drink_style,timing,age_pref,age,smoke,alcohol,partner_age,age_min,age_max,age_any,duration_pref,purpose,ok_nodrink';
-// 他人の募集を照合するときは、マッチング判定に必要な項目のみ取得する。
-const REG_COLS_CANDIDATE='id,user_id,area_id,mode,gender,status,age,age_any,age_min,age_max,drink_style,ok_nodrink,purpose';
-// マッチ参加者の一覧は、表示をプロフィール側で行うため最小限にする。
-const REG_COLS_MEMBER='id,user_id,match_id,gender,status';
-// 相手のプロフィールは表示に使う項目のみ。本名・生年月日・身分証画像は取得しない。
-const PROFILE_COLS_PARTNER='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,line_user_id';
-
 const FAQ_QA=[
-  {keywords:['料金','値段','いくら','費用','価格'],answer:'女性は無料でご利用いただけます。男性はチケット制で、1回のマッチにつき3,000円かかります。'},
-  {keywords:['チケット','購入'],answer:'チケットはトップ画面の「チケット購入」ボタンから購入できます。1枚3,000円で、マッチが成立すると1枚消費されます。'},
-  {keywords:['キャンセル','取り消し'],answer:'マッチ成立前のキャンセルは無料です。マッチ成立後にキャンセルすると、3,000円のペナルティが発生する場合があります。'},
-  {keywords:['ペナルティ','違約金'],answer:'マッチ成立後に無断キャンセル・当日不参加があった場合、3,000円をご請求する場合があります。'},
+  {keywords:['料金','値段','いくら','費用','価格'],answer:'女性は無料でご利用いただけます。男性はチケット制です。チケット1枚3,980円（税込）で、マッチが成立すると1枚消費されます。'},
+  {keywords:['チケット','購入'],answer:'チケットはトップ画面の「チケット購入」ボタンから購入できます。1枚3,980円（税込）で、マッチが成立すると1枚消費されます。有効期限は購入日から180日です。'},
+  {keywords:['キャンセル','取り消し'],answer:'マッチ成立前のキャンセルは無料です。マッチ成立後にキャンセルした場合、男性は消費したチケットが返還されません。女性は、無断キャンセルと判断された場合にキャンセル料3,980円（税込）のご負担が生じることがあります。'},
+  {keywords:['ペナルティ','違約金'],answer:'マッチ成立後に連絡なく不参加となった場合、男性は消費したチケットが返還されません。女性はキャンセル料3,980円（税込）のご負担が生じることがあります。判断方法と異議申立ては利用規約第9条の2に定めています。'},
   {keywords:['エリア','場所','地域'],answer:'現在対応しているエリアは、すすきの・新宿の2か所です。上野・梅田は近日公開予定です。'},
   {keywords:['時間','何時','営業時間'],answer:'募集できる時間は「今すぐ」「19:00」「20:00」「21:00」「22:00」から選べます。'},
   {keywords:['2対2','2:2','2v2','友達'],answer:'2対2は、友達と一緒に参加して、同じく2人組の相手とマッチする仕組みです。1対1と2対2は別々にマッチングされます。'},
@@ -225,7 +214,7 @@ const FAQ_QA=[
   {keywords:['通報','迷惑','危険','嫌な思い'],answer:'マッチ後の画面にある「その他のメニュー」から通報できます。運営が内容を確認し、必要な対応をします。'},
   {keywords:['評価','レビュー','星'],answer:'飲み会が終わったら「飲み終わった」ボタンから、お相手を星とタグで評価できます。'},
   {keywords:['チャット','連絡','メッセージ'],answer:'マッチが成立すると、アプリ内のチャットで待ち合わせ場所や時間を相談できます。'},
-  {keywords:['カード','決済','支払い'],answer:'カード情報はPAY.JPという決済サービスで安全に管理されており、Nomi Goがカード番号を保持することはありません。'},
+  {keywords:['カード','決済','支払い'],answer:'カード情報は決済代行サービスで安全に管理されており、Nomi Goがカード番号を保持することはありません。'},
   {keywords:['プロフィール','ニックネーム','編集'],answer:'トップ画面右上のメニューから「プロフィール編集」を選ぶと、ニックネームや年齢などを変更できます。'},
   {keywords:['安全','危険','大丈夫','怖い'],answer:'通報機能や評価機能により、安心してご利用いただける仕組みを整えています。何か困ったことがあれば、マッチ画面から通報してください。'},
   {keywords:['タバコ','喫煙'],answer:'プロフィールで喫煙の有無を設定でき、お相手のプロフィールでも確認できます。'},
@@ -498,7 +487,7 @@ async function loadProfile(){
   S.profile=res.data;
   if(!S.profile)return;
 
-  var matchedReg=await DB.from('registrations').select(REG_COLS_SELF).eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
+  var matchedReg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
   if(matchedReg.data&&matchedReg.data.match_id){
     S.registration=matchedReg.data;
     S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,mode:matchedReg.data.mode,drink_style:matchedReg.data.drink_style,purpose:matchedReg.data.purpose,ok_nodrink:matchedReg.data.ok_nodrink,duration_pref:matchedReg.data.duration_pref,timing:matchedReg.data.timing,age_min:matchedReg.data.age_min,age_max:matchedReg.data.age_max,age_any:matchedReg.data.age_any};
@@ -508,7 +497,7 @@ async function loadProfile(){
     return;
   }
 
-  var reg=await DB.from('registrations').select(REG_COLS_SELF).eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
+  var reg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
   if(reg.data){
     S.registration=reg.data;
     S.form={area:reg.data.area_id,slot:reg.data.slot,mode:reg.data.mode,drink_style:reg.data.drink_style,purpose:reg.data.purpose,ok_nodrink:reg.data.ok_nodrink,duration_pref:reg.data.duration_pref,timing:reg.data.timing,age_min:reg.data.age_min,age_max:reg.data.age_max,age_any:reg.data.age_any};
@@ -1280,7 +1269,7 @@ function buyTicketConfirm(){
     S.error='カードを登録してください';
     return;
   }
-  if(confirm('チケットを購入しますか？\n登録済みのカードから\n3,000円（税込）を決済します。')){
+  if(confirm('チケットを購入しますか？\n登録済みのカードから\n3,980円（税込）を決済します。')){
     chargeForTicket(S.profile.stripe_customer_id);
   }
 }
@@ -1289,7 +1278,7 @@ async function chargeForTicket(customerId){
   if(_ticketPurchasing)return;
   _ticketPurchasing=true;
   try{
-    var res=await fetch('/api/charge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'charge_customer',customer_id:customerId,amount:3000,description:'Nomi Go チケット購入'})});
+    var res=await fetch('/api/charge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'charge_customer',customer_id:customerId,amount:3980,description:'Nomi Go チケット購入'})});
     var data=await res.json();
     if(!data.success){
       S.error=data.error||'決済に失敗しました';
@@ -1326,7 +1315,7 @@ async function doRegister(){
     re('recruit');
   },10000);
   try{
-    var existing=await DB.from('registrations').select(REG_COLS_SELF).eq('user_id',S.user.id).eq('status','waiting').single();
+    var existing=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','waiting').single();
     if(timeoutFlag.hit)return;
     if(existing.data){clearTimeout(timeoutId);_isSubmitting=false;S.registration=existing.data;startPolling();go('waiting');return;}
     var ins=await DB.from('registrations').insert({
@@ -1349,7 +1338,7 @@ async function doRegister(){
       partner_age:S.form.mode==='2v2'&&S.form.partner_age?parseInt(S.form.partner_age):null,
       payment_intent_id:S.chargeId||null,
       status:'waiting'
-    }).select(REG_COLS_SELF).single();
+    }).select().single();
     if(timeoutFlag.hit)return;
     if(ins.error){clearTimeout(timeoutId);_isSubmitting=false;S.error='登録エラー: '+ins.error.message;re('recruit');return;}
     clearTimeout(timeoutId);
@@ -1414,7 +1403,7 @@ async function tryMatch(){
   dbgLog('S2: area='+R.area_id+' slot='+R.slot+' mode='+R.mode);
   if(!R.area_id||!R.slot){dbgLog('S2x: area/slot欠落');return false;}
 
-  var candidates=await DB.from('registrations').select(REG_COLS_CANDIDATE).eq('status','waiting').eq('area_id',R.area_id).eq('mode',R.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
+  var candidates=await DB.from('registrations').select('*').eq('status','waiting').eq('area_id',R.area_id).eq('mode',R.mode||'1v1').neq('gender',p.gender).neq('user_id',S.user.id);
   if(candidates.error){dbgLog('S3err: '+candidates.error.message);return false;}
   dbgLog('S3: 候補'+((candidates.data&&candidates.data.length)||0)+'件');
   if(!candidates.data||candidates.data.length===0){return false;}
@@ -1436,7 +1425,7 @@ async function tryMatch(){
   // ----- 候補が1人：そのまま自動成立 -----
   if(filtered.length===1){
     var only=filtered[0];
-    var lock1=await DB.from('registrations').update({status:'processing'}).eq('id',only.id).eq('status','waiting').select('id').single();
+    var lock1=await DB.from('registrations').update({status:'processing'}).eq('id',only.id).eq('status','waiting').select().single();
     dbgLog('S5: 単独候補ロック '+(lock1.error?('失敗 '+lock1.error.message):(lock1.data?'成功':'データなし')));
     if(lock1.error||!lock1.data)return false;
     return await finalizeMatchWith(only,null);
@@ -1444,9 +1433,9 @@ async function tryMatch(){
 
   // ----- 候補が2人以上：上位2人を確保して2択画面へ -----
   var c1=filtered[0],c2=filtered[1];
-  var lockA=await DB.from('registrations').update({status:'processing'}).eq('id',c1.id).eq('status','waiting').select('id').single();
+  var lockA=await DB.from('registrations').update({status:'processing'}).eq('id',c1.id).eq('status','waiting').select().single();
   if(lockA.error||!lockA.data){return false;}
-  var lockB=await DB.from('registrations').update({status:'processing'}).eq('id',c2.id).eq('status','waiting').select('id').single();
+  var lockB=await DB.from('registrations').update({status:'processing'}).eq('id',c2.id).eq('status','waiting').select().single();
   if(lockB.error||!lockB.data){
     // 2人目を確保できなかったら1人目とそのまま成立
     return await finalizeMatchWith(c1,null);
@@ -1603,7 +1592,7 @@ function startPolling(){
   S.pollTimer=setInterval(async function(){
     try{
       if(S.registration){
-        var reg=await DB.from('registrations').select(REG_COLS_SELF).eq('id',S.registration.id).single();
+        var reg=await DB.from('registrations').select('*').eq('id',S.registration.id).single();
         // 検索条件が消えないよう、毎回DBの内容で自分の募集情報を上書きしておく
         if(reg.data)S.registration=reg.data;
         // 相手（女性）の選択待ちで自分が processing のまま長時間経過した場合の自己復旧
@@ -1707,7 +1696,7 @@ async function cancelAfterMatch(){
 var _cancelSubmitting=false;
 function confirmCancelAfterMatch(){
   if(_cancelSubmitting)return;
-  if(!confirm('キャンセルすると3,000円のペナルティが発生します。よろしいですか？'))return;
+  if(!confirm('キャンセルしますか？男性は消費したチケットが返還されません。女性は無断キャンセルと判断された場合、キャンセル料3,980円（税込）のご負担が生じることがあります。'))return;
   _cancelSubmitting=true;
   cancelAfterMatch().catch(function(){}).finally(function(){_cancelSubmitting=false;});
 }
@@ -1770,10 +1759,10 @@ function startFinishReminderTimer(){
 
 async function loadMatchMembers(){
   if(!S.match)return;
-  var r=await DB.from('registrations').select(REG_COLS_MEMBER).eq('match_id',S.match.id);
+  var r=await DB.from('registrations').select('*').eq('match_id',S.match.id);
   if(!r.data)return;
   for(var i=0;i<r.data.length;i++){
-    var prof=await DB.from('profiles').select(PROFILE_COLS_PARTNER).eq('user_id',r.data[i].user_id).single();
+    var prof=await DB.from('profiles').select('*').eq('user_id',r.data[i].user_id).single();
     r.data[i].profiles=prof.data||{};
   }
   S.matchMembers=r.data;
@@ -1786,7 +1775,7 @@ async function openChat(){
   if(!registered){go('cardregister');return;}
   if(S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;}
   if(S.user){
-    var reg=await DB.from('registrations').select(REG_COLS_SELF).eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
+    var reg=await DB.from('registrations').select('*').eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
     if(reg.data){
       S.registration=reg.data;
       if(reg.data.match_id){
@@ -2032,7 +2021,7 @@ function splashH(){
   var profileMenuBackdrop=profileMenuOpen?'<div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998" onclick="S._showProfileMenu=false;re(\'splash\')"></div>':'';
   var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.25);border-radius:10px;padding:14px 16px;margin-bottom:20px"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div><button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button></div>':'';
   var introAnim='<div style="width:calc(100% + 40px);margin:-20px -20px 12px -20px;overflow:hidden"><img src="intro_temp.jpg" alt="Nomi Go" style="width:100%;height:180px;object-fit:cover;display:block"></div>';
-  return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div>'+welcomeToastH()+'<div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今夜の一番乗りになれます</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">先に募集した人から順にマッチ。'+oppLabel+'が来たら最初に繋がるのはあなたです</div></div></div>';}})()+(li?waitFeedCardH():'')+'<div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,000円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">'+(S.stats.todayMatches>0?'今日の成立':'累計マッチ')+'</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+(S.stats.todayMatches>0?S.stats.todayMatches:(S.stats.totalMatches||0))+'</div></div></div>'+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 全ユーザー、身分証と顔写真による本人確認済み</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted)"><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
+  return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div>'+welcomeToastH()+'<div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今夜の一番乗りになれます</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">先に募集した人から順にマッチ。'+oppLabel+'が来たら最初に繋がるのはあなたです</div></div></div>';}})()+(li?waitFeedCardH():'')+'<div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,980円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">'+(S.stats.todayMatches>0?'今日の成立':'累計マッチ')+'</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+(S.stats.todayMatches>0?S.stats.todayMatches:(S.stats.totalMatches||0))+'</div></div></div>'+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 全ユーザー、身分証と顔写真による本人確認済み</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted)"><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
 }
 
 function emailH(){
@@ -2293,7 +2282,7 @@ function recruitH(){
   }else if(S.error){
     html+='<div class="err-msg" style="margin:8px 20px">'+S.error+'</div>';
   }
-  html+='</div><div class="ftr"><button class="btn btn-wine" id="recruit-submit-btn" '+(allOk&&!_isSubmitting?'':'disabled ')+'onclick="startRecruit()">'+(_isSubmitting?'処理中...':(S.profile&&S.profile.gender==='male'?'参加登録する（3,000円）→':'無料で参加登録する →'))+'</button></div></div>';
+  html+='</div><div class="ftr"><button class="btn btn-wine" id="recruit-submit-btn" '+(allOk&&!_isSubmitting?'':'disabled ')+'onclick="startRecruit()">'+(_isSubmitting?'処理中...':(S.profile&&S.profile.gender==='male'?'参加登録する（3,980円）→':'無料で参加登録する →'))+'</button></div></div>';
   return html;
 }
 
@@ -2308,11 +2297,11 @@ function cardRegisterH(){
   if(isMale){
     heroIcon=hasGift?'\ud83c\udf81':'\ud83c\udf77';
     heroTitle=hasGift?'\u7121\u6599\u30c1\u30b1\u30c3\u30c8\u3092\uff11\u679a\u30d7\u30ec\u30bc\u30f3\u30c8':'\u30ab\u30fc\u30c9\u3092\u767b\u9332\u3059\u308b';
-    heroSub=hasGift?'\u306f\u3058\u3081\u3066\u306e\uff11\u56de\u306f\u7121\u6599\u3067\u30de\u30c3\u30c1\u3067\u304d\u307e\u3059':'\u30de\u30c3\u30c1\u6210\u7acb\u3054\u3068\u306b3,000\u5186';
+    heroSub=hasGift?'\u306f\u3058\u3081\u3066\u306e\uff11\u56de\u306f\u7121\u6599\u3067\u30de\u30c3\u30c1\u3067\u304d\u307e\u3059':'\u30c1\u30b1\u30c3\u30c81\u679a 3,980\u5186\uff08\u30de\u30c3\u30c1\u6210\u7acb\u30671\u679a\u6d88\u8cbb\uff09';
   }else{
     heroIcon='\ud83e\udd42';
-    heroTitle='\u5973\u6027\u306f\u5b8c\u5168\u7121\u6599';
-    heroSub='\u4f55\u56de\u4f7f\u3063\u3066\u3082\u6599\u91d1\u306f\u304b\u304b\u308a\u307e\u305b\u3093';
+    heroTitle='\u5973\u6027\u306f\u30de\u30c3\u30c1\u5229\u7528\u6599\u304c\u7121\u6599';
+    heroSub='\u305f\u3060\u3057\u7121\u65ad\u30ad\u30e3\u30f3\u30bb\u30eb\u6642\u306e\u307f\u8cbb\u7528\u304c\u767a\u751f\u3057\u307e\u3059';
   }
   var hero='<div class="cardreg-hero"><div class="cardreg-hero-icon">'+heroIcon+'</div>'
     +'<div class="cardreg-hero-title">'+heroTitle+'</div>'
@@ -2327,13 +2316,13 @@ function cardRegisterH(){
   if(isMale){
     notes.push('\u6b21\u56de\u4ee5\u964d\u306e\u30c1\u30b1\u30c3\u30c8\u8cfc\u5165\u306b\u3082\u3001\u3053\u306e\u30ab\u30fc\u30c9\u3092\u4f7f\u3048\u307e\u3059\u3002');
   }else{
-    notes.push('\u30de\u30c3\u30c1\u6210\u7acb\u5f8c\u306e\u7121\u65ad\u30ad\u30e3\u30f3\u30bb\u30eb\u30fb\u5f53\u65e5\u4e0d\u53c2\u52a0\u304c\u78ba\u8a8d\u3055\u308c\u305f\u5834\u5408\u306e\u307f\u30013,000\u5186\u3092\u8acb\u6c42\u3059\u308b\u3053\u3068\u304c\u3042\u308a\u307e\u3059\u3002');
+    notes.push('\u30de\u30c3\u30c1\u6210\u7acb\u5f8c\u3001\u9023\u7d61\u306a\u304f\u4e0d\u53c2\u52a0\u3068\u306a\u3063\u305f\u5834\u5408\u306f\u3001\u30ad\u30e3\u30f3\u30bb\u30eb\u65993,980\u5186\uff08\u7a0e\u8fbc\uff09\u3092\u3054\u8ca0\u62c5\u3044\u305f\u3060\u304f\u3053\u3068\u304c\u3042\u308a\u307e\u3059\u3002\u5224\u65ad\u65b9\u6cd5\u3068\u7570\u8b70\u7533\u7acb\u3066\u306f\u5229\u7528\u898f\u7d04\u7b2c9\u6761\u306e2\u306b\u5b9a\u3081\u3066\u3044\u307e\u3059\u3002');
   }
   var notesHtml='<ul class="cardreg-notes">'+notes.map(function(t){
     return '<li><span class="cardreg-notes-mark">\u2713</span><span>'+t+'</span></li>';
   }).join('')+'</ul>';
 
-  var securityNote='<div class="cardreg-secure">\u30ab\u30fc\u30c9\u60c5\u5831\u306fPAY.JP\u304c\u5b89\u5168\u306b\u7ba1\u7406\u3057\u307e\u3059\u3002Nomi Go\u306f\u30ab\u30fc\u30c9\u756a\u53f7\u3092\u4fdd\u6301\u3057\u307e\u305b\u3093\u3002</div>';
+  var securityNote='<div class="cardreg-secure">\u30ab\u30fc\u30c9\u60c5\u5831\u306f\u6c7a\u6e08\u4ee3\u884c\u30b5\u30fc\u30d3\u30b9\u304c\u5b89\u5168\u306b\u7ba1\u7406\u3057\u307e\u3059\u3002Nomi Go\u306f\u30ab\u30fc\u30c9\u756a\u53f7\u3092\u4fdd\u6301\u3057\u307e\u305b\u3093\u3002</div>';
 
   return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">\u30ab\u30fc\u30c9\u767b\u9332</div><div class="hdr-title">\u30ab\u30fc\u30c9\u3092\u767b\u9332</div></div></div>'
     +'<div class="body" style="padding:20px;display:flex;flex-direction:column;gap:16px">'
@@ -2367,7 +2356,7 @@ function waitH(){
     +'</div>'
     +'<div style="padding:16px 20px 0">'+lineCtaHtml+'</div>'
     +'<div style="background:var(--surface);margin:16px 0 0;padding:4px 0"><div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+areaName(S.form.area)+'</span></div><div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+(S.form.slot||'')+(S.form.slot==='今すぐ'?'':'〜')+(S.form.slot==='今すぐ'&&S.form.duration_pref?'（'+S.form.duration_pref+'）':'')+'</span></div><div class="drow"><span class="drow-k">飲みスタイル</span><span class="drow-v">'+(S.form.drink_style||'')+'</span></div><div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(S.form.mode==='2v2'?'2対2':'1対1')+'</span></div></div>'
-    +'<div style="padding:28px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">募集をキャンセルする</button><div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">成立後のキャンセルは3,000円のペナルティが発生します</div></div></div></div>';
+    +'<div style="padding:28px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">募集をキャンセルする</button><div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">成立後のキャンセルは、男性はチケットが返還されません／女性はキャンセル料の対象です</div></div></div></div>';
 }
 
 async function goSplashFromMatched(){
@@ -2432,7 +2421,7 @@ function matchedH(){
     '<div style="margin-top:8px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">'
     +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="goReport()"><span>⚠️</span><span>問題を報告する</span></button>'
     +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="goNoShowReport()"><span>🚷</span><span>相手が来なかった</span></button>'
-    +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(204,64,64,.3);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="confirmCancelAfterMatch()"><span>✕</span><span>キャンセルする（3,000円ペナルティ）</span></button>'
+    +'<button style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(204,64,64,.3);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left" onclick="confirmCancelAfterMatch()"><span>✕</span><span>キャンセルする</span></button>'
     +'</div>'
   ):'';
 
@@ -2519,52 +2508,23 @@ function reportH(){
 
 function termsH(){
   var body='<div style="font-size:13px;color:var(--cream);line-height:1.9;white-space:pre-wrap">'
-+'本利用規約（以下「本規約」といいます。）は、本サービス「Nomi Go」（以下「本サービス」といいます。）の利用条件を定めるものです。ユーザーは本規約に同意の上、本サービスを利用するものとします。\n\n'
-+'第1条（サービス概要）\n本サービスは、ユーザー同士がリアルタイムでマッチングし、飲み会等の交流機会を形成することを目的としたマッチングサービスです。本サービスは、ユーザー間のマッチング機会を提供するものであり、実際の出会いや行動について保証するものではありません。\n\n'
-+'第2条（利用資格）\nユーザーは、本サービスの利用にあたり、以下の条件を満たすものとします。\n・20歳以上であること\n・本規約に同意していること\n・反社会的勢力に該当しないこと\n・過去に本サービスの利用停止措置を受けていないこと\n\n第2条の2（アカウント数の制限）\n本サービスの利用は、お一人につき1アカウントに限ります。同一人物が複数のアカウントを作成することは禁止します。\n\n運営は、本名・生年月日・LINEの識別情報等により同一人物と判断した場合、アカウントの作成を制限し、または既存のアカウントを停止することがあります。\n\n'
-+'第3条（禁止事項）\nユーザーは、本サービスの利用にあたり、以下の行為を行ってはなりません。\n・虚偽情報の登録\n・他ユーザーへの迷惑行為、誹謗中傷\n・営業・勧誘・宣伝目的での利用\n・なりすまし行為\n・複数アカウントの作成、および利用停止措置を回避する目的での再登録\n・本人確認において虚偽の情報を申告する行為\n・法令または公序良俗に反する行為\n・本サービスの運営を妨害する行為\n\n'
-+'第4条（マッチングおよび利用）\nマッチングの成立は出会いや約束の成立を保証するものではなく、その後の行動はすべてユーザー自身の責任において行うものとします。\n\n'
-+'第5条（チケットおよび課金）\n・男性ユーザーのみチケットを消費\n・チケットはマッチ成立時に消費\n・ユーザーの都合による返金は原則行わない（運営判断を除く）\n・本サービス側のシステム不具合により、正常にチケットが利用できなかった場合は、運営にて内容を確認のうえ、チケットの再付与または返金を行います\n\n'
-+'第6条（評価・通報機能）\n評価および通報は運営が確認し、必要に応じてアカウント停止等の措置を行う場合があります。\n\n'
-+'第7条（免責事項）\n本サービスは現状有姿で提供され、マッチング結果・ユーザー間トラブル・サービス継続性について一切保証しません。ユーザー間トラブルについて運営は責任を負いません。\n\n'
-+'第8条（サービス変更・停止）\n運営は事前通知なくサービス内容の変更・停止を行うことができます。\n\n'
-+'第9条（規約変更）\n本規約は必要に応じて変更され、掲載時点で効力を持ちます。\n\n'
-+'第10条（準拠法・管轄裁判所）\n本規約の解釈にあたっては日本法を準拠法とします。本サービスに関して紛争が生じた場合には、運営者所在地を管轄する裁判所を専属的合意管轄裁判所とします。'
++'本利用規約（以下「本規約」といいます。）は、TRP（以下「運営者」といいます。）が提供するサービス「Nomi Go」（以下「本サービス」といいます。）の利用条件を定めるものです。ユーザーは、本規約に同意のうえ、本サービスを利用するものとします。\n\n第1条（定義）\n1.「ユーザー」とは、本規約に同意し、本サービスの利用登録を行った個人をいいます。\n2.「チケット」とは、マッチの成立に使用するため、あらかじめ購入する電子的な利用権をいいます。\n3.「マッチ」とは、本サービスのしくみにより、ユーザー同士の組み合わせが成立することをいいます。\n\n第2条（サービスの概要）\n1. 本サービスは、ユーザー同士が飲食を伴う交流の機会を持つための、マッチングの機会を提供するものです。\n2. 運営者は、マッチングの機会を提供するにとどまり、実際に会うこと、会った結果、およびその後の関係について、いかなる保証も行いません。\n3. 本サービスは、飲食店の予約・手配・仲介を行うものではありません。\n\n第3条（利用資格）\n1. 次のすべてを満たす方に限り、本サービスを利用できます。\n・満20歳以上であること\n・本規約に同意していること\n・暴力団その他の反社会的勢力に該当せず、またこれらと関係を有しないこと\n・過去に本サービスの利用停止措置を受けていないこと\n2. 18歳未満の方は、本サービスを利用できません。\n3. 運営者は、公的な本人確認書類および顔写真により、年齢および本人性を確認します。確認ができない場合、利用をお断りすることがあります。\n\n第4条（アカウント数の制限）\n1. 本サービスの利用は、お一人につき1アカウントに限ります。同一人物が複数のアカウントを作成することを禁止します。\n2. 運営者は、本名・生年月日・LINEの識別情報等により同一人物と判断した場合、アカウントの作成を制限し、または既存のアカウントを停止することがあります。\n\n第5条（登録情報および本人確認）\n1. ユーザーは、真実かつ正確な情報を登録するものとします。\n2. 本人確認のために提出する書類は、有効な公的身分証に限ります。個人番号（マイナンバー）が記載された面は提出しないでください。誤って提出された場合、運営者は当該画像を速やかに削除します。\n3. 本名および生年月日は、年齢確認・本人確認・不正防止のためにのみ使用し、他のユーザーには表示しません。\n\n第6条（禁止事項）\nユーザーは、次の行為を行ってはなりません。\n・虚偽の情報を登録する行為、本人確認において虚偽の申告をする行為\n・他のユーザーへの迷惑行為、誹謗中傷、ハラスメント\n・営業、勧誘、宗教活動、政治活動、連鎖販売取引その他の宣伝を目的とする利用\n・金銭の要求、金銭の授受を伴う交際の申し込み、売春・買春につながる行為\n・なりすまし行為\n・複数アカウントの作成、および利用停止措置を回避する目的での再登録\n・他のユーザーの個人情報を、本人の同意なく第三者に開示する行為\n・本サービスで知り得た情報を、本サービスの目的以外に利用する行為\n・20歳未満の者への飲酒の勧誘、飲酒運転、飲酒の強要\n・法令または公序良俗に反する行為\n・本サービスの運営を妨害する行為、不正アクセス、自動化ツールの使用\n\n第7条（マッチングおよびユーザー間の責任）\n1. マッチの成立は、待ち合わせや飲食の約束の成立を保証するものではありません。\n2. 実際に会うかどうか、会った際の行動、費用の負担、およびその後の連絡は、すべてユーザー自身の判断と責任において行うものとします。\n3. 飲酒は各自の責任において行うものとします。\n4. ユーザー間で生じた紛争は、当事者間で解決するものとします。ただし、運営者は通報を受けた場合、第10条の措置をとることがあります。\n\n第8条（チケットおよび料金）\n1. 女性ユーザーは無料で利用できます。男性ユーザーはチケットを購入して利用します。\n2. チケットの価格その他の取引条件は、「特定商取引法に基づく表記」に定めるとおりです。\n3. チケットは、マッチの成立時に1枚消費されます。マッチが成立しなかった場合、チケットは消費されません。\n4. チケットの有効期限は、購入日から180日です。有効期限を過ぎた未使用のチケットは失効し、返金されません。\n5. チケットを現金に換えること、他のユーザーに譲渡または貸与することはできません。\n\n第9条（返金）\n1. ユーザーのご都合による返金は行いません。\n2. 本サービスのシステム不具合により、購入したチケットが正常に利用できなかった場合、運営者は内容を確認のうえ、チケットの再付与または返金を行います。\n3. 運営者が本サービスを終了する場合、終了時点で有効期限内にある未使用のチケットについて、購入金額に相当する額を返金します。\n4. 運営者の責めに帰すべき事由により重複して決済が行われた場合、運営者は速やかに返金します。\n\n第9条の2（無断キャンセルおよび当日不参加）\n1. マッチが成立した後、連絡なく待ち合わせに現れなかった場合、または正当な理由なく直前に取りやめた場合を「無断キャンセル」といいます。\n2. 無断キャンセルをしたユーザーには、次の措置をとります。\n・男性ユーザー：マッチの成立時に消費したチケットは返還されません。\n・女性ユーザー：キャンセル料として3,980円（税込）をご負担いただきます。この金額は、無断キャンセルにより飲み会が実施されなかったことに伴い、運営者がお相手の男性ユーザーにチケット1枚（販売価格3,980円・税込）を再付与するために生じる費用に相当するものです。\n3. 無断キャンセルをされた側のユーザーには、次の対応を行います。\n・男性ユーザー：マッチの成立時に消費したチケット1枚を再付与します。\n・女性ユーザー：費用のご負担は生じません。\n4. 無断キャンセルが確認された場合、運営者は次の措置を段階的にとります。\n・1回目：警告を行い、キャンセル率に記録します。\n・2回目：1週間の利用停止\n・3回目以降：無期限の利用停止\n5. 無断キャンセルに当たるかどうかは、双方の申告、チャットの内容その他の事情をもとに運営者が判断します。相手方の申告のみをもって直ちに決定することはありません。\n6. 前項の判断に異議がある場合、通知を受けた日から7日以内に、本サービス内のお問い合わせ機能よりお申し出ください。運営者は内容を確認し、必要に応じて措置およびキャンセル料の請求を取り消します。\n\n第10条（評価・通報・ブロック）\n1. ユーザーは、マッチの相手を評価し、また問題があった場合に通報することができます。\n2. 運営者は、通報の内容を確認し、必要に応じて、警告、機能の制限、アカウントの停止、登録の抹消を行うことがあります。\n3. 通報の内容、判断の理由および結果について、運営者は開示の義務を負いません。\n\n第11条（利用停止・登録抹消）\n1. 運営者は、ユーザーが本規約に違反した場合、または違反のおそれがあると判断した場合、事前の通知なく、機能の制限、アカウントの停止、登録の抹消を行うことができます。\n2. 前項の措置により未使用のチケットが失効した場合であっても、運営者は返金の義務を負いません。ただし、違反の事実が認められなかったときは、この限りではありません。\n\n第12条（退会）\n1. ユーザーは、本サービス内のお問い合わせ機能その他運営者の定める方法により、いつでも退会できます。\n2. 退会した場合、未使用のチケットは失効し、返金されません。\n3. 退会後の個人情報の取扱いは、プライバシーポリシーに従います。不正利用の防止のために必要な情報は、プライバシーポリシーに定める期間、保管されます。\n\n第13条（免責）\n1. 運営者は、本サービスについて、特定の目的への適合性、正確性、有用性および継続性を保証しません。\n2. 運営者は、ユーザー間で生じたトラブル、および本サービスの利用によりユーザーに生じた損害について、運営者の故意または重大な過失による場合を除き、責任を負いません。\n3. 前項により運営者が責任を負う場合であっても、賠償する額は、損害が発生した時点からさかのぼって12か月間に当該ユーザーが運営者に支払った金額を上限とし、通常生じうる直接かつ現実の損害に限るものとします。\n4. 消費者契約法その他の強行法規により前2項の全部または一部が適用されない場合、当該部分については、運営者は法令の定めに従って責任を負います。\n\n第14条（サービスの変更・中断・終了）\n1. 運営者は、本サービスの内容を変更することがあります。ユーザーに重大な影響を与える変更を行う場合は、原則として実施の30日前までに本サービス内で告知します。\n2. システムの保守、障害、天災その他やむを得ない事由により、事前の告知なく本サービスを一時的に中断することがあります。\n3. 運営者は、本サービスを終了することがあります。この場合、原則として終了の30日前までに告知し、第9条第3項に従い未使用チケットを返金します。\n\n第15条（知的財産権および投稿物）\n1. 本サービスに関する知的財産権は、運営者または正当な権利者に帰属します。\n2. ユーザーが登録・投稿した写真、文章その他の情報についての権利は、ユーザーに帰属します。ただし運営者は、本サービスの提供、不正利用の防止および紛争への対応のために必要な範囲で、これらを保存・確認・利用することができます。\n\n第16条（個人情報の取扱い）\n個人情報の取扱いは、別途定めるプライバシーポリシーに従います。\n\n第17条（通知・連絡）\n運営者からユーザーへの連絡は、本サービス内の表示、登録されたメールアドレスへの送信、またはLINEを連携している場合はLINEのメッセージにより行います。\n\n第18条（本規約の変更）\n1. 運営者は、民法第548条の4の定めに従い、本規約を変更することがあります。\n2. 変更を行う場合、運営者は、変更後の内容および効力発生時期を、効力発生時期の7日前までに本サービス内で告知します。ユーザーに不利益となる重要な変更を行う場合は、30日前までに告知します。\n3. 告知の後、ユーザーが本サービスの利用を継続した場合、変更に同意したものとみなします。\n\n第19条（分離可能性）\n本規約のいずれかの条項が無効または執行不能と判断された場合であっても、その他の条項は引き続き効力を有します。\n\n第20条（準拠法および管轄）\n1. 本規約は日本法に準拠します。\n2. 本サービスに関して運営者とユーザーとの間に紛争が生じた場合、運営者の所在地を管轄する地方裁判所を第一審の合意管轄裁判所とします。ただし、消費者契約に関する法令により、ユーザーの住所地を管轄する裁判所に訴えを提起することを妨げるものではありません。\n\n制定日：2026年7月31日'
 +'</div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="goLegalBack()">← 戻る</button><div class="hdr-info"><div class="hdr-title">利用規約</div></div></div><div class="body" style="padding:20px">'+body+'</div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="goLegalBack()">\u2190 \u623b\u308b</button><div class="hdr-info"><div class="hdr-title">\u5229\u7528\u898f\u7d04</div></div></div><div class="body" style="padding:20px">'+body+'</div></div>';
 }
 
 function tokushohoH(){
   var body='<div style="font-size:13px;color:var(--cream);line-height:2.1">'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売事業者</div><div>TRP</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">運営責任者</div><div>ご請求をいただいた場合、遅滞なく開示いたします。</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">所在地</div><div>ご請求をいただいた場合、遅滞なく開示いたします。</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">電話番号</div><div>ご請求をいただいた場合、遅滞なく開示いたします。</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">メールアドレス</div><div>info@nomi-go.jp</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売価格</div><div>男性：チケット1枚 3,000円（税込）<br>女性：無料</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">商品代金以外の必要料金</div><div>インターネット接続料金等、通信料はお客様のご負担となります。</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い方法</div><div>クレジットカード決済</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い時期</div><div>チケット購入時、および男性ユーザーのマッチ成立時に都度決済されます。</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">サービス提供時期</div><div>決済完了後、直ちにご利用いただけます。</div></div>'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">返品・キャンセル</div><div>デジタルサービスの性質上、ユーザーのご都合による返金は原則承っておりません。当サービス側のシステム不具合によりご利用いただけなかった場合は、内容を確認の上、返金または再付与にて対応いたします。</div></div>'
++'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売事業者</div><div>TRP</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">運営責任者</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">所在地</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">電話番号</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">メールアドレス</div><div>info@nomi-go.jp</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">開示のご請求方法</div><div>上記メールアドレス宛にご連絡ください。所在地および電話番号を含む表示事項を記載した電子メールを、遅滞なくお送りします。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売価格</div><div>男性：チケット1枚 3,980円（税込）<br>女性：無料<br>価格は購入画面に表示されます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">商品代金以外の必要料金</div><div>インターネット接続料金等の通信費は、お客様のご負担となります。実際の飲み会にかかる飲食代等は、本サービスの料金に含まれません。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い方法</div><div>クレジットカード決済</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い時期</div><div>チケットの購入手続きが完了した時点で決済されます。マッチ成立時は、保有しているチケットが1枚消費されるのみで、追加の決済は発生しません。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">サービス提供時期</div><div>決済の完了後、直ちにチケットが付与され、ご利用いただけます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">チケットの有効期限</div><div>購入日から180日。期限を過ぎた未使用のチケットは失効します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">無断キャンセル料</div><div>マッチ成立後に連絡なく不参加となった場合、女性ユーザーにはキャンセル料3,980円（税込）をご負担いただきます。これは、お相手の男性ユーザーにチケット1枚を再付与するために生じる費用に相当する額です。男性ユーザーが無断キャンセルした場合は、消費したチケットが返還されません。いずれの場合も、無断キャンセルをされた側の男性ユーザーにはチケット1枚を再付与します。判断方法および異議申立ての手続きは、利用規約第9条の2に定めます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">返品・キャンセル</div><div>デジタルサービスの性質上、お客様のご都合による返金は承っておりません。<br>当サービスのシステム不具合により正常にご利用いただけなかった場合は、内容を確認のうえ、チケットの再付与または返金にて対応いたします。<br>当サービスを終了する場合、終了時点で有効期限内にある未使用のチケットについては、購入金額に相当する額を返金いたします。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">動作環境</div><div>インターネットに接続されたスマートフォンおよびウェブブラウザ</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">ご利用条件</div><div>満20歳以上の方に限ります。</div></div>'
 +'</div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">特定商取引法に基づく表記</div></div></div><div class="body" style="padding:20px">'+body+'</div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">\u2190 \u623b\u308b</button><div class="hdr-info"><div class="hdr-title">\u7279\u5b9a\u5546\u53d6\u5f15\u6cd5\u306b\u57fa\u3065\u304f\u8868\u8a18</div></div></div><div class="body" style="padding:20px">'+body+'</div></div>';
 }
 
 function privacyH(){
   var body='<div style="font-size:13px;color:var(--cream);line-height:1.9;white-space:pre-wrap">'
-+'本プライバシーポリシーは、「Nomi Go」（以下「本サービス」）におけるユーザー情報の取扱いについて定めるものです。\n\n'
-+'第1条（取得する情報）\n・登録情報（メールアドレス、パスワード等）\n・プロフィール情報（名前、年齢、性別等）\n・本人確認情報（本名、生年月日、身分証画像、顔写真）\n・チケット購入履歴\n・マッチング履歴\n・チャット履歴\n・通報・評価情報\n・アクセスログ（IPアドレス等）\n・LINEの識別情報（LINE連携を行った場合）\n\n'
-+'第2条（利用目的）\n取得した情報は以下の目的で利用します。\n・サービス提供のため\n・マッチング機能の提供\n・年齢確認・本人確認\n・不正利用防止\n・課金処理\n・ユーザーサポート\n・サービス改善\n・マッチ成立等の通知（LINE連携を行った場合）\n\n'
-+'第3条（第三者提供）\n以下の場合を除き第三者提供は行いません。\n・本人同意がある場合\n・法令に基づく場合\n・安全確保のため必要な場合\n\n'
-+'第4条（業務委託）\n決済処理等を外部サービス（PAY.JP等）に委託する場合があります。\n\n'
-+'第5条（情報管理）\n適切な安全管理措置を講じますが、完全な安全性は保証しません。本人確認のために取得した身分証画像・顔写真は、確認目的以外には使用しません。\n\n第5条の2（不正利用防止のための情報の保管）\n本サービスでは、同一人物による複数アカウントの作成、および利用停止措置を受けた方の再登録を防止するため、以下の情報を利用停止後も一定期間保管します。\n・本名および生年月日\n・LINEの識別情報\n・本人確認書類および顔写真\n\nこれらの情報は、不正利用の防止という目的のみに使用し、それ以外の目的では利用しません。保管期間は、当該目的の達成に必要な範囲内とします。\n\n'
-+'第6条（チャット・投稿内容）\n不正防止のため保存・確認される場合があります。\n\n'
-+'第7条（免責）\nユーザー間トラブルおよび損害について責任を負いません。\n\n'
-+'第8条（改定）\n本ポリシーは必要に応じて変更されます。\n\n'
-+'第9条（お問い合わせ）\n本サービス内のお問い合わせ機能より対応します。'
++'本プライバシーポリシー（以下「本ポリシー」といいます。）は、「Nomi Go」（以下「本サービス」といいます。）におけるユーザー情報の取扱いについて定めるものです。\n\n第1条（事業者）\n名称：TRP\n住所：ご請求があれば遅滞なく開示します。\n代表者および個人情報の保護管理者：ご請求があれば、遅滞なく回答します（info@nomi-go.jp）\n連絡先：info@nomi-go.jp\n\n第2条（取得する情報）\n（1）登録情報：メールアドレス、パスワード、ニックネーム、年齢、性別、職業、喫煙の有無、お酒の強さ、興味・タグ、活動エリア、プロフィール写真\n（2）本人確認情報：本名、生年月日、本人確認書類の画像、顔写真\n（3）決済関連情報：チケットの購入履歴、決済代行事業者が発行する顧客IDおよび決済ID\n（4）利用情報：募集の内容、マッチング履歴、チャットの内容、評価、通報、ブロック、お問い合わせの内容\n（5）LINEの識別情報（LINE連携を行った場合）\n（6）アクセスログ（IPアドレス、ブラウザの種類、アクセス日時等）、Cookieおよび端末に保存される識別情報\n\nなお、クレジットカード番号、有効期限、セキュリティコードは、決済代行事業者が直接取得するものであり、本サービスのサーバーには保存されません。\n\n第3条（利用目的）\n取得した情報は、次の目的で利用します。\n・本サービスの提供および運営\n・マッチング機能の提供\n・年齢確認および本人確認\n・不正利用の防止、および利用停止措置を受けた方の再登録の防止\n・チケットの販売および決済処理\n・お問い合わせへの対応\n・通報およびトラブルへの対応、ならびに法令に基づく関係機関への協力\n・サービスの改善および統計データの作成（個人を特定できない形で行います）\n・マッチの成立その他の重要なお知らせの通知（LINE連携を行った場合はLINEを含みます）\n\n第4条（第三者提供）\n次の場合を除き、あらかじめ本人の同意を得ることなく、個人データを第三者に提供しません。\n・法令に基づく場合\n・人の生命、身体または財産の保護のために必要であり、本人の同意を得ることが困難な場合\n・警察その他の公的機関から、法令に基づく照会を受けた場合\n・事業の承継に伴って提供される場合\n\n第5条（業務委託）\n利用目的の達成に必要な範囲で、次の業務を外部に委託します。委託先に対しては、必要かつ適切な監督を行います。\n・データの保存および認証基盤の提供\n・決済処理（決済代行事業者）\n・メールおよび通知の配信\n\n第6条（外国にある第三者への提供）\n本サービスは、データの保存、決済処理および通知の配信について、外国にある事業者のサービスを利用しています。このため、取得した情報が日本国外のサーバーで保管・処理されることがあります。\n・データの保存および認証：Supabase Inc.（米国）　サーバー設置国：オーストラリア\n・決済処理：決済代行事業者\n・通知の配信：LINEヤフー株式会社（日本）　※LINE連携を行った場合\n\n移転先の国における個人情報の保護に関する制度、および移転先が講じる保護措置についての情報は、第13条のお問い合わせ先にご請求いただければ提供します。ユーザーは、本ポリシーに同意することにより、上記の提供に同意したものとします。\n\n第7条（安全管理措置）\n・本人確認書類の画像および顔写真は、外部から直接閲覧できない非公開の保管領域に保存します。\n・アクセスできる者を必要な範囲に限定し、データベース側でも利用者ごとのアクセス制御を行います。\n・通信は暗号化します。\n・年齢確認および本人確認の実施状況は、記録として保存します。\nただし、完全な安全性を保証するものではありません。\n\n第8条（本人確認情報の取扱い）\n1. 本人確認のために取得した本名、生年月日、本人確認書類の画像および顔写真は、年齢確認・本人確認・不正防止の目的にのみ使用し、他のユーザーには一切表示しません。\n2. 個人番号（マイナンバー）は取得しません。本人確認書類として、個人番号が記載された面をご提出いただかないようお願いします。誤って提出された場合、速やかに削除します。\n\n第9条（不正利用防止のための情報の保管）\n同一人物による複数アカウントの作成、および利用停止措置を受けた方の再登録を防止するため、本名、生年月日、LINEの識別情報、本人確認書類の画像、顔写真を、退会または利用停止の後も一定期間保管します。これらの情報は、不正利用の防止という目的にのみ使用します。保管期間は第10条のとおりです。\n\n第10条（保存期間）\n・アカウントに関する情報：退会後1年\n・不正防止のために保管する情報（第9条）：退会または利用停止後3年\n・年齢確認および本人確認の記録：確認を行った日から3年\n・決済に関する記録：7年（法令に基づく帳簿書類の保存期間）\n・チャットの内容：マッチの成立日から1年\n保存期間の経過後は、速やかに削除するか、個人を特定できない形に加工します。\n\n第11条（開示・訂正・利用停止等のご請求）\n1. ユーザーは、運営者が保有するご自身の個人データについて、開示、訂正、追加、削除、利用の停止、および第三者提供の停止を請求することができます。\n2. ご請求は、第13条のお問い合わせ先へご連絡ください。ご本人であることを確認のうえ、法令に従い、合理的な期間内に対応します。\n3. 手数料はいただきません。\n4. 法令により保管が義務づけられている情報、および不正利用の防止のために必要な情報については、ご請求に応じられない場合があります。その場合は、理由をお伝えします。\n\n第12条（Cookieの利用）\n本サービスは、ログイン状態の維持および入力内容の一時保存のために、ブラウザの保存領域を利用します。ブラウザの設定により無効にできますが、その場合、本サービスの一部が正常に動作しないことがあります。\n\n第13条（お問い合わせ窓口）\nTRP　個人情報お問い合わせ窓口\nメール：info@nomi-go.jp\n本サービス内のお問い合わせ機能からもご連絡いただけます。\n\n第14条（本ポリシーの変更）\n本ポリシーを変更する場合、変更後の内容を本サービス内に掲示します。重要な変更を行う場合は、実施の30日前までに告知します。\n\n制定日：2026年7月31日'
 +'</div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="goLegalBack()">← 戻る</button><div class="hdr-info"><div class="hdr-title">プライバシーポリシー</div></div></div><div class="body" style="padding:20px">'+body+'</div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="goLegalBack()">\u2190 \u623b\u308b</button><div class="hdr-info"><div class="hdr-title">\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u30dd\u30ea\u30b7\u30fc</div></div></div><div class="body" style="padding:20px">'+body+'</div></div>';
 }
 
 function goFaqBot(){
