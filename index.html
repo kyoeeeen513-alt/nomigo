@@ -540,8 +540,35 @@ async function loadProfile(){
   }
 }
 
+// ===== メール確認の状態 =====
+// 【重要】これはセキュリティ上の証明ではない。
+// 確認コードはブラウザ内で生成され、照合もブラウザ内で行っているため、
+// メールアドレスの保有を証明するものではない（9月にSupabase標準のメール確認へ移行予定）。
+// ここで行っているのは「登録の途中で確認画面をうっかり飛ばせないようにする」ことだけ。
+// 打ち間違えたアドレスのまま登録が完了し、パスワード再設定も連絡も届かなくなるのを防ぐ目的。
+function emailVerifiedKey(){
+  return 'ngo_ev_'+(S.user&&S.user.id?S.user.id:'');
+}
+function isEmailVerified(){
+  if(S._emailVerified)return true;
+  try{
+    if(localStorage.getItem(emailVerifiedKey())==='1'){S._emailVerified=true;return true;}
+  }catch(e){}
+  return false;
+}
+function markEmailVerified(){
+  S._emailVerified=true;
+  try{localStorage.setItem(emailVerifiedKey(),'1');}catch(e){}
+}
+
 async function routeAfterLoad(){
   if(!S.profile){
+    // プロフィール未作成＝登録の途中。メール確認を終えていない場合は必ず確認画面へ戻す。
+    // 以前は、ログインし直す・再読み込みするだけで確認画面を素通りできていた。
+    if(S.user&&!isEmailVerified()){
+      go('email_verify');
+      return;
+    }
     var lastScreen0=sessionStorage.getItem('ngo_screen');
     if(lastScreen0==='email'){
       go('email');
@@ -741,9 +768,20 @@ async function saveProfile(){
   go('loading');
   var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
   var freeTicket=(p.gender==='male')?1:0;
-  await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,verified_level:1,email_verified:!!S._emailVerified,id_verify_status:'none',ticket_count:freeTicket,updated_at:new Date().toISOString()});
+  var saved=await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,verified_level:1,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:freeTicket,updated_at:new Date().toISOString()});
+  if(saved.error){
+    // 同一人物（本名＋生年月日）での2つ目のアカウント作成は、DB側で禁止している。
+    // お一人につき1アカウントという規約（第4条）を、実際に担保するための処理。
+    var m=String(saved.error.message||'');
+    if(saved.error.code==='23505'||m.indexOf('duplicate key')!==-1||m.indexOf('uniq_profiles_person')!==-1){
+      S.error='この氏名・生年月日では既に登録があります。Nomi Goはお一人につき1アカウントまでです。心当たりがない場合は、お問い合わせからご連絡ください。';
+    }else{
+      S.error='登録に失敗しました: '+m;
+    }
+    re('profile_new');return;
+  }
   await DB.from('user_stats').upsert({user_id:S.user.id});
-  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:!!S._emailVerified,id_verify_status:'none',ticket_count:freeTicket};
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:freeTicket};
   if(p.gender==='male'){S._freeTicketGranted=true;}
   go('cardregister');
 }
@@ -1185,7 +1223,11 @@ async function loadAreaStats(){
 
 async function goRecruit(){
   if(!S.user){go('email');return;}
-  if(!S.profile){S.pf={nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null};go('profile_new');return;}
+  if(!S.profile){
+    // 登録が途中の状態。メール確認を終えていなければ確認画面へ戻す
+    if(!isEmailVerified()){go('email_verify');return;}
+    S.pf={nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null};go('profile_new');return;
+  }
   if(S.match&&S.registration&&S.registration.status==='matched'){
     alert('現在マッチ中です。現在のマッチが終了すると、新しいお相手を探せます。');
     return;
@@ -1206,6 +1248,16 @@ async function goRecruit(){
   if(idStatus!=='approved'){
     if(!idStatus||idStatus==='none'){go('id_verify');}else{go('id_verify_pending');}
     return;
+  }
+  // LINE連携を募集の前提条件として実際に確認する。
+  // 以前は連携画面を再読み込みで飛ばせたため、未連携のまま募集できていた。
+  // LINEは1アカウントにつき1つしか紐づけられない（DB側で重複禁止）ため、
+  // ここを必須にすることで複数アカウントの抑止が実効化する。
+  // マッチ成立の通知が確実に届くことは、無断キャンセルの判断の前提でもある。
+  var lineRes=await DB.from('profiles').select('line_user_id').eq('user_id',S.user.id).single();
+  if(!lineRes.error&&lineRes.data){
+    if(S.profile)S.profile.line_user_id=lineRes.data.line_user_id;
+    if(!lineRes.data.line_user_id){await goLineConnect();return;}
   }
   await loadAreaStats();
   go('area_select');
@@ -2180,7 +2232,7 @@ async function submitEmailVerify(){
   var savedCode=res.data&&res.data.length>0?res.data[0].code:null;
   if(savedCode&&savedCode===code){
     await DB.from('email_verifications').delete().eq('user_id',S.user.id);
-    S._emailVerified=true;
+    markEmailVerified();
     if(S.profile){
       await DB.from('profiles').update({email_verified:true}).eq('user_id',S.user.id);
       S.profile.email_verified=true;
