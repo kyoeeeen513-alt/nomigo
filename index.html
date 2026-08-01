@@ -416,6 +416,10 @@ function go(sc){
     function tryMount(){var el=document.getElementById('payjp-card-el');if(el){mountPayjp();}else if(tries++<20){setTimeout(tryMount,100);}}
     setTimeout(tryMount,150);
   }
+  if(sc==='recruit'){
+    // 経路によらず、募集画面に入った時点で「送信中」の札は必ず下ろす（押せなくなるのを防ぐ保険）
+    _isSubmitting=false;
+  }
   if(sc==='splash'&&S.user){
     syncTicketCount();
   }
@@ -1475,7 +1479,6 @@ async function doRegister(){
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
       partner_age:S.form.mode==='2v2'&&S.form.partner_age?parseInt(S.form.partner_age):null,
-      payment_intent_id:S.chargeId||null,
       status:'waiting'
     }).select(REG_COLS).single();
     if(timeoutFlag.hit)return;
@@ -1484,6 +1487,10 @@ async function doRegister(){
     S.registration=ins.data;
     var matched=await tryMatch();
     if(matched==='choice'){_isSubmitting=false;return;}
+    // 登録が成功した場合も「送信中」の札を必ず下ろす。
+    // ここが抜けていると、次に募集画面へ戻ったとき、条件をすべて選んでも
+    // 参加登録ボタンが光らないままになる。
+    _isSubmitting=false;
     if(matched===true){go('matched');}else{startPolling();go('waiting');}
   }catch(e){clearTimeout(timeoutId);if(!timeoutFlag.hit){_isSubmitting=false;S.error='登録に失敗しました: '+e.message;re('recruit');}}
 }
@@ -2550,8 +2557,10 @@ function matchedH(){
     var tagsHtml=tags.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+tags.map(function(t){return '<span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:6px;padding:3px 8px">'+t+'</span>';}).join('')+'</div>':'';
     var verifiedBadge=verified?'<span style="font-size:10px;background:var(--gold-bg);color:var(--gold);border:1px solid rgba(201,160,99,.45);padding:2px 7px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:3px">✓ 本人確認済み</span>':'';
     var photoUrl=u.profiles?u.profiles.photo_url:null;
+    // 写真の実体が失われている場合は、壊れた画像アイコンではなく性別アイコンに差し替える
+    var fallbackAv="this.parentNode.innerHTML='<div style=\\'width:40px;height:40px;border-radius:50%;background:rgba(201,160,99,.14);border:1px solid rgba(201,160,99,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px\\'>"+(gn==='male'?'♂':'♀')+"</div>'";
     var avatarHtml=photoUrl
-      ?'<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="'+photoUrl+'" style="width:100%;height:100%;object-fit:cover"></div>'
+      ?'<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="'+photoUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="'+fallbackAv+'"></div>'
       :'<div style="width:40px;height:40px;border-radius:50%;background:rgba(201,160,99,.14);border:1px solid rgba(201,160,99,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(gn==='male'?'♂':'♀')+'</div>';
     return '<div class="member-row" style="align-items:flex-start">'
       +avatarHtml
