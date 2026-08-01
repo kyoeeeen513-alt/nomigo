@@ -474,6 +474,55 @@ function poolLineH(){
   return '<div class="wait-row"><span class="wait-ico">🍷</span><div>条件の合う方が<b style="color:var(--gold-bright)">'+S._poolNew+'人</b>います。まもなく成立する見込みです</div></div>';
 }
 
+// ===== 登録ステップの表示 =====
+// 登録は全5段階。今どこまで来たか、あといくつで終わるかを常に示す。
+var SIGNUP_STEPS=5;
+function stepHeadH(n,label,title){
+  var seg='';
+  for(var i=1;i<=SIGNUP_STEPS;i++){
+    seg+='<span class="stp'+(i<n?' done':(i===n?' cur':''))+'"></span>';
+  }
+  var rest=SIGNUP_STEPS-n;
+  var restText=rest>0?('あと'+rest+'つ'):'これで最後です';
+  return '<div class="hdr-step">登録 '+n+' / '+SIGNUP_STEPS+'　'+label+'</div>'
+    +'<div class="hdr-title">'+title+'</div>'
+    +'<div class="stp-row">'+seg+'<span class="stp-rest">'+restText+'</span></div>';
+}
+
+// ===== 募集の残り時間 =====
+// 「今すぐ」は60分、時間指定はその時刻の30分後まで（期限はDB側が決める）。
+function remainMinutes(){
+  if(!S.registration||!S.registration.expires_at)return null;
+  return Math.ceil((new Date(S.registration.expires_at).getTime()-Date.now())/60000);
+}
+// 残り時間は見出しの直下に小さく置く（箱にしない）
+function expiryPillH(){
+  var m=remainMinutes();
+  if(m==null||m<=0)return '';
+  var label=m>=60?(Math.floor(m/60)+'時間'+(m%60?(m%60)+'分':'')):(m+'分');
+  return '<span class="wait-pill">⏳ あと'+label+'</span>';
+}
+// 期限切れのときだけ、はっきり伝える
+function expiredCardH(){
+  var m=remainMinutes();
+  if(m==null||m>0)return '';
+  return '<div style="margin:16px 20px 0;padding:16px;background:var(--card);border:1.5px solid var(--border);border-radius:14px">'
+    +'<div style="font-size:14px;font-weight:800;color:var(--cream);margin-bottom:6px">募集の受付を終了しました</div>'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.7">時間が経ちすぎたお相手とマッチしないよう、募集は自動で終了します。</div>'
+    +'<button class="btn btn-wine" style="padding:13px;font-size:14px;margin-top:12px" onclick="cancelReg()">もう一度募集する →</button>'
+    +'</div>';
+}
+// 期限が来たら募集を終了する
+async function expireMyRegistrationIfNeeded(){
+  var m=remainMinutes();
+  if(m==null||m>0)return false;
+  if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}
+  try{
+    await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id).eq('status','waiting');
+  }catch(e){}
+  return true;
+}
+
 function stopWaitMessageRotation(){
   if(S._waitMsgTimer){clearInterval(S._waitMsgTimer);S._waitMsgTimer=null;}
   if(S._waitLineTimer){clearTimeout(S._waitLineTimer);S._waitLineTimer=null;}
