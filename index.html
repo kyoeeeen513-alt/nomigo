@@ -49,7 +49,9 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
 .verify-dots span:nth-child(2){animation-delay:.2s}
 .verify-dots span:nth-child(3){animation-delay:.4s}
 @keyframes verifyDot{0%,80%,100%{opacity:0}40%{opacity:1}}
-.screen{flex:1;display:flex;flex-direction:column;animation:fadeUp .32s cubic-bezier(.2,.8,.2,1) both}
+.screen{flex:1;display:flex;flex-direction:column}
+/* 画面遷移のときだけ演出する。選択のたびに再生すると重く感じるため */
+.anim-in{animation:fadeUp .32s cubic-bezier(.2,.8,.2,1) both}
 .hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:rgba(29,13,16,.85);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 .hdr-back{background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:13px;color:var(--muted);padding:4px 0;font-weight:600;flex-shrink:0;transition:color .2s}
@@ -117,7 +119,7 @@ input[type=date].inp{color-scheme:dark}
 .msg-row.mine .msg-bubble{background:linear-gradient(135deg,#7A2230,var(--wine-true)) !important;color:#fff !important;border-bottom-right-radius:6px;box-shadow:0 3px 12px rgba(107,26,36,.4)}
 .msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px;border:1px solid var(--border2)}
 .chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0}
-.chat-inp{flex:1;padding:12px 16px;border-radius:24px;border:1.5px solid var(--border);background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
+.chat-inp{flex:1 1 auto;min-width:0;padding:12px 16px;border-radius:24px;border:1.5px solid var(--border);background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
 .chat-inp:focus{border-color:var(--gold)}
 .chat-send{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;font-size:18px;flex-shrink:0;
   background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:var(--night);font-weight:900;box-shadow:0 4px 14px rgba(201,160,99,.35);transition:transform .15s}
@@ -171,6 +173,15 @@ input[type=date].inp{color-scheme:dark}
 .cheers-burst .spark{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--gold-bright);animation:sparkFly 1.2s ease-out forwards}
 @keyframes sparkFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
 .intro-anim{display:none}
+/* マッチ後の流れ（①待ち合わせ →②評価）を段階として見せる */
+.flow-step{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--border2)}
+.flow-step:last-child{border-bottom:none}
+.flow-num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);
+  color:var(--gold-bright);font-family:'Zen Kaku Gothic New',sans-serif;font-size:13px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;margin-top:2px}
+.flow-body{flex:1;min-width:0}
+.flow-title{font-size:15px;font-weight:800;color:var(--cream)}
+.flow-note{font-size:11.5px;color:var(--muted);line-height:1.7;margin-top:3px}
 @keyframes faceCountPulse{0%{transform:scale(1.4);opacity:0}50%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:1}}
 @keyframes faceRingPulse{0%,100%{box-shadow:0 0 0 2000px rgba(0,0,0,.45),0 0 0 0 rgba(123,224,144,.5)}50%{box-shadow:0 0 0 2000px rgba(0,0,0,.45),0 0 0 14px rgba(123,224,144,0)}}
 .face-ring-counting{animation:faceRingPulse 0.8s ease-out infinite}
@@ -380,9 +391,14 @@ var S={
   pf:{nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null,realname:'',birthdate:''}
 };
 
+// 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
+var _animateNext=true;
 function render(){
   var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
-  document.getElementById('app').innerHTML=(map[S.screen]||loadingH)();
+  var app=document.getElementById('app');
+  app.innerHTML=(map[S.screen]||loadingH)();
+  if(_animateNext&&app.firstElementChild){app.firstElementChild.classList.add('anim-in');}
+  _animateNext=false;
 }
 
 // ===== 待機画面の演出用タイマー =====
@@ -396,6 +412,49 @@ function startWaitMessageRotation(){
   },4000);
 }
 
+// ===== 候補が尽きていないかの確認 =====
+// 一度マッチした相手は候補から外れるため、利用者が少ない時期は
+// 「条件に合う人はいるが、全員すでに会ったことがある」状態になりうる。
+// 黙って待たせ続けないよう、待機画面で状況を伝える。
+async function checkCandidatePool(){
+  try{
+    var res=await DB.rpc('count_new_candidates');
+    var row=res.data&&res.data[0];
+    if(!row)return;
+    S._poolWaiting=row.waiting_total;
+    S._poolNew=row.new_candidates;
+    if(S.screen==='waiting')render();
+  }catch(e){}
+}
+function startPoolCheck(){
+  if(S._poolTimer)clearInterval(S._poolTimer);
+  checkCandidatePool();
+  S._poolTimer=setInterval(function(){
+    if(S.screen!=='waiting'){clearInterval(S._poolTimer);S._poolTimer=null;return;}
+    checkCandidatePool();
+  },30000);
+}
+function stopPoolCheck(){
+  if(S._poolTimer){clearInterval(S._poolTimer);S._poolTimer=null;}
+  S._poolWaiting=null;S._poolNew=null;
+}
+// 候補が尽きているときだけ出す案内
+function poolNoticeH(){
+  if(S._poolWaiting==null)return '';
+  if(S._poolWaiting>0&&S._poolNew===0){
+    return '<div style="margin:0 20px 12px;padding:14px 16px;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);border-radius:12px">'
+      +'<div style="font-size:13px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">今のエリアでは、新しいお相手が見つかっていません</div>'
+      +'<div style="font-size:12px;color:var(--muted);line-height:1.7">一度お会いした方とは、重ねてマッチしない仕組みになっています。エリアや時間を変えるか、しばらく待つと新しい方が見つかることがあります。</div>'
+      +'</div>';
+  }
+  if(S._poolWaiting===0){
+    return '<div style="margin:0 20px 12px;padding:14px 16px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px">'
+      +'<div style="font-size:12.5px;color:var(--muted);line-height:1.7">今このエリアで募集している方は、まだいません。見つかり次第すぐにお知らせします。</div>'
+      +'</div>';
+  }
+  return '';
+}
+
 function stopWaitMessageRotation(){
   if(S._waitMsgTimer){clearInterval(S._waitMsgTimer);S._waitMsgTimer=null;}
   if(S._waitLineTimer){clearTimeout(S._waitLineTimer);S._waitLineTimer=null;}
@@ -405,6 +464,7 @@ function stopWaitMessageRotation(){
 function go(sc){
   if(sc!=='chat'&&S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;_sendingMsg=false;}
   S.screen=sc;S.error='';S.info='';
+  _animateNext=true;
   sessionStorage.setItem('ngo_screen',sc);
   sessionStorage.setItem('ngo_form',JSON.stringify(S.form));
   sessionStorage.setItem('ngo_pf',JSON.stringify(S.pf));
@@ -430,6 +490,7 @@ function go(sc){
   }
   if(sc==='waiting'){
     startWaitMessageRotation();
+    startPoolCheck();
     if(S._waitLineTimer)clearTimeout(S._waitLineTimer);
     S._waitShowLineCta=false;
     S._waitLineTimer=setTimeout(function(){
@@ -438,6 +499,7 @@ function go(sc){
     },3*60*1000);
   }else{
     stopWaitMessageRotation();
+    stopPoolCheck();
   }
   if(sc!=='id_verify_pending'&&S._idVerifyTimer){
     clearInterval(S._idVerifyTimer);S._idVerifyTimer=null;
@@ -1554,7 +1616,18 @@ async function tryMatch(){
   dbgLog('S3: 候補'+((candidates.data&&candidates.data.length)||0)+'件');
   if(!candidates.data||candidates.data.length===0){return false;}
 
+  // 一度マッチした相手とは再度マッチさせない。
+  // 会った後は連絡先を交換している前提のため、同じ相手を繰り返し出さない方針。
+  // 取得に失敗した場合は空配列として扱い、マッチング自体は止めない。
+  var pastIds={};
+  try{
+    var past=await DB.rpc('get_past_partner_ids');
+    if(past.data){past.data.forEach(function(x){pastIds[x.user_id]=true;});}
+  }catch(e){}
+  dbgLog('S3b: 過去マッチ'+Object.keys(pastIds).length+'人を除外対象に');
+
   var filtered=candidates.data.filter(function(c){
+    if(pastIds[c.user_id]){dbgLog('  除外(過去にマッチ済み) '+c.id.slice(0,8));return false;}
     if(!drinkCompat(R.drink_style,R.ok_nodrink,c.drink_style,c.ok_nodrink)){dbgLog('  除外(飲み方) '+c.id.slice(0,8));return false;}
     var iWantThem=ageMatches(R.age_any,R.age_min?parseInt(R.age_min):null,R.age_max?parseInt(R.age_max):null,c.age);
     var theyWantMe=ageMatches(c.age_any,c.age_min,c.age_max,p.age);
@@ -2507,7 +2580,7 @@ function waitH(){
       +'<div style="font-size:24px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px">今夜の相手を探しています</div>'
       +'<div id="wait-msg-text" style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.6;min-height:20px">'+WAIT_MESSAGES[0]+'</div>'
     +'</div>'
-    +'<div style="padding:16px 20px 0">'+lineCtaHtml+'</div>'
+    +'<div style="padding:16px 20px 0">'+poolNoticeH()+lineCtaHtml+'</div>'
     +'<div style="background:var(--surface);margin:16px 0 0;padding:4px 0"><div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+areaName(S.form.area)+'</span></div><div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+(S.form.slot||'')+(S.form.slot==='今すぐ'?'':'〜')+(S.form.slot==='今すぐ'&&S.form.duration_pref?'（'+S.form.duration_pref+'）':'')+'</span></div><div class="drow"><span class="drow-k">飲みスタイル</span><span class="drow-v">'+(S.form.drink_style||'')+'</span></div><div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(S.form.mode==='2v2'?'2対2':'1対1')+'</span></div></div>'
     +'<div style="padding:28px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">募集をキャンセルする</button><div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">成立後のキャンセルは、男性はチケットが返還されません／女性はキャンセル料の対象です</div></div></div></div>';
 }
@@ -2592,16 +2665,25 @@ function matchedH(){
     +'<div style="border-bottom:1px solid var(--border2)"><div class="sec-label">今夜のメンバー</div>'+membersHtml+'</div>'
     +'<div style="padding:16px 20px 0">'+reportedBadge+'</div>'
     +finishReminderBanner()
-    +'<div style="padding:4px 20px;display:flex;flex-direction:column;gap:10px">'
-      +'<button class="btn btn-wine" style="padding:16px;font-size:16px" onclick="openChat()">💬 チャットを開く</button>'
-      +'<div>'
-        +'<div style="font-size:11px;color:var(--muted);padding:0 2px 6px">飲み会が終わったらタップ</div>'
-        +'<button style="display:block;width:100%;padding:13px 16px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--cream);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="go(\'review\')">飲み終わった</button>'
-      +'</div>'
-      +'<button style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer" onclick="S._matchedMoreOpen=!S._matchedMoreOpen;re(\'matched\')"><span>その他のメニュー</span><span style="font-size:11px">'+(moreOpen?'▲':'▼')+'</span></button>'
-      +morePanel
+    // 通常の流れは「①待ち合わせを決める → ②飲み終わったら評価」の2段階だけ。
+    // 通報・キャンセルは例外の操作なので、目立たない文字リンクに下げる。
+    +'<div style="padding:4px 20px 0">'
+      +'<div class="flow-step"><span class="flow-num">1</span><div class="flow-body">'
+        +'<div class="flow-title">待ち合わせを決める</div>'
+        +'<div class="flow-note">チャットで場所と時間を相談してください。</div>'
+        +'<button class="btn btn-wine" style="padding:15px;font-size:15px;margin-top:10px" onclick="openChat()">💬 チャットを開く</button>'
+      +'</div></div>'
+      +'<div class="flow-step"><span class="flow-num">2</span><div class="flow-body">'
+        +'<div class="flow-title">飲み終わったら評価する</div>'
+        +'<div class="flow-note">評価を送ると、次の募集ができるようになります。</div>'
+        +'<button class="btn" style="padding:14px;font-size:15px;margin-top:10px;background:transparent;border:1.5px solid var(--gold);color:var(--gold-bright)" onclick="go(\'review\')">🍺 飲み終わった</button>'
+      +'</div></div>'
     +'</div>'
-    +'<div style="margin:18px 20px 40px;padding:12px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;display:flex;align-items:center;gap:8px"><span style="font-size:14px">🛡️</span><span style="font-size:11.5px;color:var(--muted);line-height:1.6">困ったことがあれば「その他のメニュー」から報告してください。</span></div>'
+    +'<div style="padding:6px 20px 0;text-align:center">'
+      +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:600;text-decoration:underline;cursor:pointer;padding:10px" onclick="S._matchedMoreOpen=!S._matchedMoreOpen;re(\'matched\')">困ったときは（通報・キャンセル）'+(moreOpen?' ▲':' ▼')+'</button>'
+    +'</div>'
+    +'<div style="padding:0 20px">'+morePanel+'</div>'
+    +'<div style="height:40px"></div>'
     +'</div>';
 }
 
