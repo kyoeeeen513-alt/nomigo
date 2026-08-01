@@ -174,6 +174,15 @@ input[type=date].inp{color-scheme:dark}
 @keyframes sparkFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
 .intro-anim{display:none}
 /* マッチ後の流れ（①待ち合わせ →②評価）を段階として見せる */
+/* 待機画面：情報を箱で積まず、1つのまとまりに行として並べる */
+.wait-badges{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.wait-live{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:20px;background:rgba(255,255,255,.1);font-size:12px;font-weight:700;color:rgba(237,229,224,.85)}
+.wait-dot{width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite}
+.wait-pill{display:inline-flex;align-items:center;padding:5px 13px;border-radius:20px;background:var(--gold-bg);border:1px solid rgba(201,160,99,.45);font-size:12px;font-weight:800;color:var(--gold-bright)}
+.wait-info{margin:16px 20px 0;padding:2px 0}
+.wait-row{display:flex;gap:10px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid var(--border2);font-size:12.5px;color:var(--muted);line-height:1.7}
+.wait-row:last-child{border-bottom:none}
+.wait-ico{flex:none;font-size:14px;line-height:1.5}
 /* 登録の進み具合 */
 .stp-row{display:flex;align-items:center;gap:4px;margin-top:7px}
 .stp{width:22px;height:3px;border-radius:2px;background:rgba(244,233,220,.16)}
@@ -453,71 +462,16 @@ function stopPoolCheck(){
   if(S._remainTimer){clearInterval(S._remainTimer);S._remainTimer=null;}
   S._poolWaiting=null;S._poolNew=null;
 }
-// 候補が尽きているときだけ出す案内
-function poolNoticeH(){
+// 状況は1行で伝える（箱にしない）
+function poolLineH(){
   if(S._poolWaiting==null)return '';
   if(S._poolWaiting>0&&S._poolNew===0){
-    return '<div style="margin:0 20px 12px;padding:14px 16px;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);border-radius:12px">'
-      +'<div style="font-size:13px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">今のエリアでは、新しいお相手が見つかっていません</div>'
-      +'<div style="font-size:12px;color:var(--muted);line-height:1.7">一度お会いした方とは、重ねてマッチしない仕組みになっています。エリアや時間を変えるか、しばらく待つと新しい方が見つかることがあります。</div>'
-      +'</div>';
+    return '<div class="wait-row"><span class="wait-ico">🌙</span><div>条件の合う方はいますが、すでにお会いした方のみです。一度お会いした方とは重ねてマッチしません。</div></div>';
   }
   if(S._poolWaiting===0){
-    return '<div style="margin:0 20px 12px;padding:14px 16px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px">'
-      +'<div style="font-size:12.5px;color:var(--muted);line-height:1.7">今このエリアで募集している方は、まだいません。見つかり次第すぐにお知らせします。</div>'
-      +'</div>';
+    return '<div class="wait-row"><span class="wait-ico">🌙</span><div>今このエリアで募集中の方は、まだいません</div></div>';
   }
-  return '';
-}
-
-// ===== 登録ステップの表示 =====
-// 登録は全5段階。今どこまで来たか、あといくつで終わるかを常に示す。
-// 途中離脱を防ぐうえで、進み具合が見えることは効果が大きい。
-var SIGNUP_STEPS=5;
-function stepHeadH(n,label,title){
-  var seg='';
-  for(var i=1;i<=SIGNUP_STEPS;i++){
-    seg+='<span class="stp'+(i<n?' done':(i===n?' cur':''))+'"></span>';
-  }
-  var rest=SIGNUP_STEPS-n;
-  var restText=rest>0?('あと'+rest+'つ'):'これで最後です';
-  return '<div class="hdr-step">登録 '+n+' / '+SIGNUP_STEPS+'　'+label+'</div>'
-    +'<div class="hdr-title">'+title+'</div>'
-    +'<div class="stp-row">'+seg+'<span class="stp-rest">'+restText+'</span></div>';
-}
-
-// ===== 募集の残り時間 =====
-// 「今すぐ」は60分、時間指定はその時刻の30分後まで（期限はDB側が決める）。
-// 残り時間を見せることで、待たされている感覚を「予約が生きている」感覚に変える。
-function remainMinutes(){
-  if(!S.registration||!S.registration.expires_at)return null;
-  return Math.ceil((new Date(S.registration.expires_at).getTime()-Date.now())/60000);
-}
-function expiryNoticeH(){
-  var m=remainMinutes();
-  if(m==null)return '';
-  if(m<=0){
-    return '<div style="margin:0 20px 12px;padding:14px 16px;background:rgba(0,0,0,.25);border:1px solid var(--border2);border-radius:12px">'
-      +'<div style="font-size:13px;font-weight:800;color:var(--cream);margin-bottom:6px">募集の受付を終了しました</div>'
-      +'<div style="font-size:12px;color:var(--muted);line-height:1.7">時間が経ちすぎたお相手とマッチしてしまわないよう、募集は自動で終了します。まだ飲みたい場合は、もう一度募集してください。</div>'
-      +'</div>';
-  }
-  var label=m>=60?(Math.floor(m/60)+'時間'+(m%60?(m%60)+'分':'')):(m+'分');
-  return '<div style="margin:0 20px 12px;padding:12px 16px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;gap:10px">'
-    +'<span style="font-size:16px">⏳</span>'
-    +'<div style="line-height:1.6"><div style="font-size:12.5px;color:var(--cream);font-weight:700">この募集はあと'+label+'有効です</div>'
-    +'<div style="font-size:11px;color:var(--muted)">時間が過ぎると自動で終了します。いま都合が合う方だけとマッチする仕組みです。</div></div>'
-    +'</div>';
-}
-// 期限が来たら募集を終了して画面を切り替える
-async function expireMyRegistrationIfNeeded(){
-  var m=remainMinutes();
-  if(m==null||m>0)return false;
-  if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}
-  try{
-    await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id).eq('status','waiting');
-  }catch(e){}
-  return true;
+  return '<div class="wait-row"><span class="wait-ico">🍷</span><div>条件の合う方が<b style="color:var(--gold-bright)">'+S._poolNew+'人</b>います。まもなく成立する見込みです</div></div>';
 }
 
 function stopWaitMessageRotation(){
@@ -2695,27 +2649,46 @@ function cardRegisterH(){
 function waitH(){
   var lineConnected=!!(S.profile&&S.profile.line_user_id);
   var showLineCta=!!S._waitShowLineCta&&!lineConnected;
+  var expired=(remainMinutes()!=null&&remainMinutes()<=0);
+
+  // 情報は箱を積まず、1つのまとまりの中に行として並べる。
+  // 箱が縦に並ぶと説明書のように見え、読み飛ばされる。
+  var rows='';
+  if(lineConnected){
+    rows+='<div class="wait-row"><span class="wait-ico">🔔</span><div>マッチしたらLINEに届きます。<b style="color:var(--cream)">アプリは閉じて大丈夫です</b></div></div>';
+  }
+  rows+=poolLineH();
+  var rowsHtml=(!expired&&rows)?'<div class="wait-info">'+rows+'</div>':'';
 
   var lineCtaHtml='';
-  if(lineConnected){
-    lineCtaHtml='<div style="margin:0 20px 0;padding:14px 16px;background:rgba(123,224,144,.12);border:1px solid rgba(123,224,144,.35);border-radius:10px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">✓</span><span style="font-size:12.5px;color:var(--cream);line-height:1.6">マッチしたらLINEにも通知が届きます。アプリを閉じても大丈夫です。</span></div>';
-  }else if(showLineCta){
-    lineCtaHtml='<div style="margin:0 20px 0;padding:16px;background:var(--card);border:1.5px solid var(--wine);border-radius:12px;display:flex;flex-direction:column;gap:10px">'
+  if(showLineCta&&!expired){
+    lineCtaHtml='<div style="margin:12px 20px 0;padding:16px;background:var(--card);border:1.5px solid var(--wine);border-radius:14px;display:flex;flex-direction:column;gap:10px">'
       +'<div style="font-size:13px;color:var(--cream);font-weight:700;line-height:1.6">マッチしたらLINEでお知らせします</div>'
-      +'<div style="font-size:11.5px;color:var(--muted);line-height:1.6">アプリを開いたままでなくても大丈夫。連携しておけば見つかり次第すぐ通知が届きます。</div>'
+      +'<div style="font-size:11.5px;color:var(--muted);line-height:1.6">連携しておけば、アプリを開いたままにしなくても通知が届きます。</div>'
       +'<button class="btn btn-wine" style="padding:12px" onclick="goLineConnect()">LINEで通知を受け取る →</button>'
       +'</div>';
   }
 
+  var heroSub=expired
+    ?'<div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.6;min-height:20px">受付を終了しました</div>'
+    :'<div id="wait-msg-text" style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.6;min-height:20px">'+WAIT_MESSAGES[0]+'</div>';
+
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← トップに戻る</button><div class="hdr-info"><div class="hdr-step">マッチング中</div><div class="hdr-title">募集中</div></div></div><div class="body">'
-    +'<div style="background:var(--hero);padding:28px 20px 24px;text-align:center">'
-      +'<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;background:rgba(255,255,255,.1);margin-bottom:14px"><span style="width:8px;height:8px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:rgba(237,229,224,.8)">マッチング中</span></div>'
-      +'<div style="font-size:24px;font-weight:900;letter-spacing:-.02em;margin-bottom:8px">今夜の相手を探しています</div>'
-      +'<div id="wait-msg-text" style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.6;min-height:20px">'+WAIT_MESSAGES[0]+'</div>'
+    +'<div style="background:var(--hero);padding:26px 20px 22px;text-align:center">'
+      +'<div class="wait-badges">'
+        +'<span class="wait-live"><span class="wait-dot"></span>'+(expired?'終了':'マッチング中')+'</span>'
+        +expiryPillH()
+      +'</div>'
+      +'<div style="font-size:24px;font-weight:900;letter-spacing:-.02em;margin:12px 0 8px">'+(expired?'募集を終了しました':'今夜の相手を探しています')+'</div>'
+      +heroSub
     +'</div>'
-    +'<div style="padding:16px 20px 0">'+expiryNoticeH()+poolNoticeH()+lineCtaHtml+'</div>'
+    +expiredCardH()
+    +rowsHtml
+    +lineCtaHtml
     +'<div style="background:var(--surface);margin:16px 0 0;padding:4px 0"><div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+areaName(S.form.area)+'</span></div><div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+(S.form.slot||'')+(S.form.slot==='今すぐ'?'':'〜')+(S.form.slot==='今すぐ'&&S.form.duration_pref?'（'+S.form.duration_pref+'）':'')+'</span></div><div class="drow"><span class="drow-k">飲みスタイル</span><span class="drow-v">'+(S.form.drink_style||'')+'</span></div><div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(S.form.mode==='2v2'?'2対2':'1対1')+'</span></div></div>'
-    +'<div style="padding:28px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">募集をキャンセルする</button><div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">'+(S.profile&&S.profile.gender==='male'?'マッチ成立後にキャンセルすると、使用したチケットは返還されません':'マッチ成立後、連絡なく不参加となった場合はキャンセル料の対象になります')+'</div></div></div></div>';
+    +'<div style="padding:24px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">'+(expired?'トップに戻る':'募集をキャンセルする')+'</button>'
+    +(expired?'':'<div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">'+(S.profile&&S.profile.gender==='male'?'マッチ成立後にキャンセルすると、使用したチケットは返還されません':'マッチ成立後、連絡なく不参加となった場合はキャンセル料の対象になります')+'</div>')
+    +'</div></div></div>';
 }
 
 async function goSplashFromMatched(){
