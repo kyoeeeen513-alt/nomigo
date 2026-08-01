@@ -174,6 +174,12 @@ input[type=date].inp{color-scheme:dark}
 @keyframes sparkFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
 .intro-anim{display:none}
 /* マッチ後の流れ（①待ち合わせ →②評価）を段階として見せる */
+/* 登録の進み具合 */
+.stp-row{display:flex;align-items:center;gap:4px;margin-top:7px}
+.stp{width:22px;height:3px;border-radius:2px;background:rgba(244,233,220,.16)}
+.stp.done{background:var(--gold)}
+.stp.cur{background:var(--gold-bright)}
+.stp-rest{margin-left:7px;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.04em;font-family:'Zen Kaku Gothic New',sans-serif}
 .flow-step{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--border2)}
 .flow-step:last-child{border-bottom:none}
 .flow-num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);
@@ -453,6 +459,22 @@ function poolNoticeH(){
       +'</div>';
   }
   return '';
+}
+
+// ===== 登録ステップの表示 =====
+// 登録は全5段階。今どこまで来たか、あといくつで終わるかを常に示す。
+// 途中離脱を防ぐうえで、進み具合が見えることは効果が大きい。
+var SIGNUP_STEPS=5;
+function stepHeadH(n,label,title){
+  var seg='';
+  for(var i=1;i<=SIGNUP_STEPS;i++){
+    seg+='<span class="stp'+(i<n?' done':(i===n?' cur':''))+'"></span>';
+  }
+  var rest=SIGNUP_STEPS-n;
+  var restText=rest>0?('あと'+rest+'つ'):'これで最後です';
+  return '<div class="hdr-step">登録 '+n+' / '+SIGNUP_STEPS+'　'+label+'</div>'
+    +'<div class="hdr-title">'+title+'</div>'
+    +'<div class="stp-row">'+seg+'<span class="stp-rest">'+restText+'</span></div>';
 }
 
 function stopWaitMessageRotation(){
@@ -786,6 +808,28 @@ async function uploadProfilePhoto(userId,file){
   return pub.data&&pub.data.publicUrl?pub.data.publicUrl:null;
 }
 
+// ===== エラー文の日本語化 =====
+// DBやネットワークが返す英語のメッセージを、そのまま利用者に見せない。
+// 内部構造を外に見せないためでもある。
+function friendlyError(err,fallback){
+  var m='';
+  try{m=String((err&&(err.message||err.msg))||err||'');}catch(e){}
+  var low=m.toLowerCase();
+  if(low.indexOf('permission denied')!==-1||low.indexOf('row-level security')!==-1||low.indexOf('42501')!==-1){
+    return 'この操作は許可されていません。時間をおいてもう一度お試しください。';
+  }
+  if(low.indexOf('duplicate key')!==-1||low.indexOf('23505')!==-1){
+    return 'すでに登録があります。内容をご確認ください。';
+  }
+  if(low.indexOf('failed to fetch')!==-1||low.indexOf('networkerror')!==-1||low.indexOf('timeout')!==-1||low.indexOf('load failed')!==-1){
+    return '通信に失敗しました。電波の良い場所でもう一度お試しください。';
+  }
+  if(low.indexOf('jwt')!==-1||low.indexOf('token')!==-1||low.indexOf('session')!==-1){
+    return 'ログインの有効期限が切れました。もう一度ログインしてください。';
+  }
+  return fallback||'うまくいきませんでした。もう一度お試しください。';
+}
+
 function saveInputs(){
   var nn=document.getElementById('pf-nn');var ag=document.getElementById('pf-ag');
   var rn=document.getElementById('pf-rn');var bd=document.getElementById('pf-bd');
@@ -845,7 +889,7 @@ async function saveProfile(){
     if(saved.error.code==='23505'||m.indexOf('duplicate key')!==-1||m.indexOf('uniq_profiles_person')!==-1){
       S.error='この氏名・生年月日では既に登録があります。Nomi Goはお一人につき1アカウントまでです。心当たりがない場合は、お問い合わせからご連絡ください。';
     }else{
-      S.error='登録に失敗しました: '+m;
+      S.error=friendlyError(saved.error,'登録に失敗しました。もう一度お試しください。');
     }
     re('profile_new');return;
   }
@@ -1064,14 +1108,14 @@ async function submitIdVerify(){
   var result=await uploadIdPhoto(S.user.id,S._idPhotoFile);
   if(!result.path){
     _idVerifySubmitting=false;
-    S.error='アップロード失敗: '+(result.error||'不明')+' / ログイン状態:'+(hasSession?'あり':'なし');
+    S.error=hasSession?'写真のアップロードに失敗しました。電波の良い場所でもう一度お試しください。':'ログインの有効期限が切れました。もう一度ログインしてください。';
     re('id_verify');
     return;
   }
   var faceResult=await uploadFacePhoto(S.user.id,S._facePhotoFile);
   if(!faceResult.path){
     _idVerifySubmitting=false;
-    S.error='顔写真のアップロードに失敗しました: '+(faceResult.error||'不明');
+    S.error='顔写真のアップロードに失敗しました。もう一度お試しください。';
     re('id_verify');
     return;
   }
@@ -1079,7 +1123,7 @@ async function submitIdVerify(){
   var facePath=faceResult.path;
   var upd=await DB.from('profiles').update({id_photo_url:path,face_photo_url:facePath,id_verify_status:'pending'}).eq('user_id',S.user.id).select('user_id,id_verify_status').single();
   _idVerifySubmitting=false;
-  if(upd.error){S.error='保存に失敗しました: '+upd.error.message;re('id_verify');return;}
+  if(upd.error){S.error=friendlyError(upd.error,'保存に失敗しました。もう一度お試しください。');re('id_verify');return;}
   S.profile.id_photo_url=path;
   S.profile.face_photo_url=facePath;
   S.profile.id_verify_status='pending';
@@ -1141,7 +1185,7 @@ function idVerifyH(){
   var preview=S._idPhotoPreview?'<img src="'+S._idPhotoPreview+'" style="width:100%;border-radius:12px;display:block;object-fit:cover">':'<div style="width:100%;aspect-ratio:1.6;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">身分証の写真がここに表示されます</div>';
   var facePreview=S._facePhotoPreview?'<img src="'+S._facePhotoPreview+'" style="width:100%;border-radius:12px;display:block;object-fit:cover">':'<div style="width:100%;aspect-ratio:1.6;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">顔写真がここに表示されます</div>';
   var bothReady=!!(S._idPhotoFile&&S._facePhotoFile);
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集するには</div><div class="hdr-title">本人確認（年齢確認）</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','年齢の確認')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
     +'<div style="font-size:14px;color:var(--cream);line-height:1.8">募集を始めるには、年齢確認が必要です。Nomi Goは20歳以上限定のサービスです。運転免許証・マイナンバーカード・パスポートなど、生年月日が確認できる身分証の写真と、ご本人の顔写真を1枚ずつアップロードしてください。</div>'
     +'<div style="font-size:12px;color:var(--muted);line-height:1.7">※アップロードされた写真は本人確認の目的のみに使用し、運営以外には公開されません。</div>'
     +'<div class="sec-label" style="padding:0">① 身分証の写真</div>'
@@ -1158,13 +1202,13 @@ function idVerifyH(){
 function idVerifyPendingH(){
   var rejected=S.profile&&S.profile.id_verify_status==='rejected';
   if(rejected){
-    return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集するには</div><div class="hdr-title">本人確認</div></div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">'
+    return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','本人確認')+'</div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">'
       +'<div style="font-size:40px">⚠️</div>'
       +'<div style="font-size:16px;font-weight:800;color:var(--cream)">確認できませんでした</div>'
       +'<div style="font-size:13px;color:var(--muted);line-height:1.7">写真がぼやけていたり、生年月日が読み取れなかった可能性があります。<br>もう一度、はっきり写った写真でお試しください。</div>'
       +'</div><div class="ftr"><button class="btn btn-wine" onclick="retryIdVerify()">もう一度アップロードする →</button></div></div>';
   }
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集するには</div><div class="hdr-title">確認中です</div></div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','確認中です')+'</div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">'
     +'<div class="verify-waiting"><div class="verify-waiting-ring"></div><div class="verify-waiting-ring verify-waiting-ring2"></div><div class="verify-waiting-core">🔍</div></div>'
     +'<div style="font-size:16px;font-weight:800;color:var(--cream)">運営が確認しています<span class="verify-dots"><span>.</span><span>.</span><span>.</span></span></div>'
     +'<div style="font-size:13px;color:var(--muted);line-height:1.7">身分証の確認には、しばらくお時間をいただく場合があります。<br>確認が完了すると、自動で次の画面に進みます。</div>'
@@ -1494,15 +1538,15 @@ async function confirmCardRegister(){
   if(btn){btn.disabled=true;btn.textContent='処理中...';}
   try{
     var r=await _payjp.createToken(_payjpCardEl);
-    if(r.error){if(errEl)errEl.textContent=r.error.message;if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}return;}
+    if(r.error){if(errEl)errEl.textContent=friendlyError(r.error,'カード情報をご確認ください。');if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}return;}
     var regRes=await fetch('/api/charge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'register_card',token:r.id,description:'Nomi Go ユーザー'})});
     var regData=await regRes.json();
     if(!regData.success){if(errEl)errEl.textContent=regData.error||'カード登録に失敗しました';if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}return;}
     var custUpd=await DB.from('profiles').update({stripe_customer_id:regData.customer_id}).eq('user_id',S.user.id);
-    if(custUpd.error){if(errEl)errEl.textContent='カード情報の保存に失敗しました: '+custUpd.error.message;if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}return;}
+    if(custUpd.error){if(errEl)errEl.textContent=friendlyError(custUpd.error,'カード情報の保存に失敗しました。もう一度お試しください。');if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}return;}
     S.profile.stripe_customer_id=regData.customer_id;
     goAfterCardRegister();
-  }catch(e){if(errEl)errEl.textContent='エラー: '+e.message;if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}}
+  }catch(e){if(errEl)errEl.textContent=friendlyError(e,'エラーが発生しました。もう一度お試しください。');if(btn){btn.disabled=false;btn.textContent='カードを登録する →';}}
 }
 
 var _ticketPurchasing=false;
@@ -1533,7 +1577,7 @@ async function chargeForTicket(customerId){
     var newCount=(current.data&&current.data.ticket_count?current.data.ticket_count:0)+1;
     var upd=await DB.from('profiles').update({ticket_count:newCount}).eq('user_id',S.user.id).select('user_id,ticket_count').single();
     if(upd.error||!upd.data){
-      S.error='チケット反映エラー: '+(upd.error?upd.error.message:'不明なエラー');
+      S.error=friendlyError(upd.error,'決済は完了しましたが、チケットの反映に失敗しました。お問い合わせください。');
       _ticketPurchasing=false;
       return;
     }
@@ -1544,7 +1588,7 @@ async function chargeForTicket(customerId){
 
     setTimeout(function(){S.ticketPurchaseSuccess=false;_ticketPurchasing=false;render();},4000);
   }catch(e){
-    S.error='エラー: '+e.message;
+    S.error=friendlyError(e,'エラーが発生しました。もう一度お試しください。');
     _ticketPurchasing=false;
   }
 }
@@ -1583,7 +1627,7 @@ async function doRegister(){
       status:'waiting'
     }).select(REG_COLS).single();
     if(timeoutFlag.hit)return;
-    if(ins.error){clearTimeout(timeoutId);_isSubmitting=false;S.error='登録エラー: '+ins.error.message;re('recruit');return;}
+    if(ins.error){clearTimeout(timeoutId);_isSubmitting=false;S.error=friendlyError(ins.error,'募集の登録に失敗しました。もう一度お試しください。');re('recruit');return;}
     clearTimeout(timeoutId);
     S.registration=ins.data;
     var matched=await tryMatch();
@@ -1593,7 +1637,7 @@ async function doRegister(){
     // 参加登録ボタンが光らないままになる。
     _isSubmitting=false;
     if(matched===true){go('matched');}else{startPolling();go('waiting');}
-  }catch(e){clearTimeout(timeoutId);if(!timeoutFlag.hit){_isSubmitting=false;S.error='登録に失敗しました: '+e.message;re('recruit');}}
+  }catch(e){clearTimeout(timeoutId);if(!timeoutFlag.hit){_isSubmitting=false;S.error=friendlyError(e,'募集の登録に失敗しました。もう一度お試しください。');re('recruit');}}
 }
 
 // 画面へのデバッグ表示は本番では出さない。
@@ -1954,7 +1998,12 @@ async function cancelAfterMatch(){
 var _cancelSubmitting=false;
 function confirmCancelAfterMatch(){
   if(_cancelSubmitting)return;
-  if(!confirm('キャンセルしますか？男性は消費したチケットが返還されません。女性は無断キャンセルと判断された場合、キャンセル料3,980円（税込）のご負担が生じることがあります。'))return;
+  // 自分に関係する条件だけを見せる。男女両方の条件を並べると読み解く負担が大きい。
+  var isMale=S.profile&&S.profile.gender==='male';
+  var msg=isMale
+    ?'キャンセルしますか？\n\n使用したチケット1枚は返還されません。\nお相手にはキャンセルの連絡が届きます。'
+    :'キャンセルしますか？\n\n事前にご連絡いただければ、費用はかかりません。\n連絡なく当日不参加となった場合のみ、キャンセル料3,980円（税込）のご負担が生じることがあります。';
+  if(!confirm(msg))return;
   _cancelSubmitting=true;
   cancelAfterMatch().catch(function(){}).finally(function(){_cancelSubmitting=false;});
 }
@@ -2115,7 +2164,7 @@ function sendMsg(){
     dbgLog('M1: 送信 '+(res.error?('失敗 '+res.error.message):'成功'));
     _sendingMsg=false;
     if(sendBtn)sendBtn.disabled=false;
-    if(res.error){dbgChat('INSERT ERR:'+res.error.message);return;}
+    if(res.error){dbgLog('M1x: 送信失敗 '+res.error.message);alert('メッセージを送信できませんでした。もう一度お試しください。');return;}
     loadMessages();
   });
 }
@@ -2207,7 +2256,7 @@ async function submitReport(){
     category:reason.value,
     description:desc?desc.value:''
   });
-  if(res.error){if(errEl)errEl.textContent='エラー: '+res.error.message;if(btn){btn.disabled=false;btn.textContent='通報する';}return;}
+  if(res.error){if(errEl)errEl.textContent=friendlyError(res.error,'エラーが発生しました。もう一度お試しください。');if(btn){btn.disabled=false;btn.textContent='通報する';}return;}
   S._reportDone=true;S._hasReported=true;re('report');
 }
 
@@ -2217,7 +2266,7 @@ async function requestDeactivation(){
     user_id:S.user.id,
     content:'【退会申請】このアカウントの退会を希望します。'
   });
-  if(res.error){alert('送信に失敗しました: '+res.error.message);return;}
+  if(res.error){alert(friendlyError(res.error,'送信に失敗しました。もう一度お試しください。'));return;}
   alert('退会申請を受け付けました。運営が確認後、対応いたします。');
 }
 
@@ -2297,7 +2346,7 @@ async function sendPasswordReset(){
   if(!email){S.error='メールアドレスを入力してください';S.info='';re('forgot_password');return;}
   S.error='';
   var res=await DB.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
-  if(res.error){S.error='送信に失敗しました: '+res.error.message;re('forgot_password');return;}
+  if(res.error){S.error=friendlyError(res.error,'送信に失敗しました。もう一度お試しください。');re('forgot_password');return;}
   S.info='再設定用のメールを送りました。メール内のリンクを開いてください。';
   re('forgot_password');
 }
@@ -2307,7 +2356,7 @@ async function saveNewPassword(){
   var errEl=document.getElementById('newpass-err');
   if(!pass||pass.length<6){if(errEl)errEl.textContent='パスワードは6文字以上です';return;}
   var res=await DB.auth.updateUser({password:pass});
-  if(res.error){if(errEl)errEl.textContent='エラー: '+res.error.message;return;}
+  if(res.error){if(errEl)errEl.textContent=friendlyError(res.error,'エラーが発生しました。もう一度お試しください。');return;}
   alert('パスワードを変更しました。もう一度ログインしてください。');
   await DB.auth.signOut();
   S.user=null;S.profile=null;
@@ -2327,7 +2376,7 @@ async function goLineConnect(){
 
 function lineConnectH(){
   // LINE連携は必須。完了するまで先へ進めないため戻る導線は出さない
-  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">新規登録　最後のステップ</div><div class="hdr-title">LINEと連携する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+  return '<div class="screen"><div class="hdr"><div class="hdr-info">'+stepHeadH(5,'LINE連携','LINEと連携する')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
     +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
@@ -2369,7 +2418,7 @@ async function submitEmailVerify(){
 }
 
 function emailVerifyH(){
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">新規登録</div><div class="hdr-title">メールを確認</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(1,'メールの確認','届いた番号を入力')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
     +'<div style="font-size:14px;color:var(--cream);line-height:1.7">'+(S.user?S.user.email:'')+' 宛に確認コードを送りました。届いた6桁の番号を入力してください。</div>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.6">※メールが届かない場合は、迷惑メールフォルダに入っていないかご確認ください。</div>'
     +'<input class="inp" id="everify-inp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="例：123456" maxlength="6" oninput="digitsOnly(this)">'
@@ -2463,7 +2512,7 @@ async function saveProfileEdit(){
     if(uploaded)photoUrl=uploaded;
   }
   var upd=await DB.from('profiles').update({nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
-  if(upd.error){S.error='保存に失敗しました: '+upd.error.message;re('profile_edit');return;}
+  if(upd.error){S.error=friendlyError(upd.error,'保存に失敗しました。もう一度お試しください。');re('profile_edit');return;}
   S.profile.nickname=p.nickname;S.profile.age=parseInt(p.age);S.profile.gender=p.gender;S.profile.job=p.job;S.profile.smoke=p.smoke;S.profile.alcohol=p.alcohol;S.profile.photo_url=photoUrl;S.profile.tags=p.tags||[];
   go('splash');
 }
@@ -2480,7 +2529,7 @@ function profileNewH(){
       ?'ご本人の顔がはっきり写った写真を登録してください（加工・マスク・複数人の写真は承認されません）。本人確認の顔写真と同一人物か、運営が確認します。'
       :'写真を登録すると、マッチが早くなる傾向があります。');
   var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+photoLabel+(isMalePf?'<span style="color:var(--red);margin-left:4px">*必須</span>':'')+'</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を選ぶ<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></label></div><div style="font-size:11px;color:'+(genderUnset?'var(--gold)':'var(--muted)')+';margin-top:6px;line-height:1.6">'+photoNote+'</div></div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール設定</div><div class="hdr-title">基本情報を登録</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7">下の<span style="color:var(--gold);font-weight:700">本名・生年月日</span>は、本人確認（年齢確認）のためだけに使います。<span style="color:var(--cream);font-weight:700">お相手には表示されません。</span></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（漢字フルネーム）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;var _a=calcAgeFromBirthdate(this.value);if(_a){S.pf.age=String(_a);}sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);re(\'profile_new\')"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div>'+(p.birthdate&&p.age?'<div style="font-size:11px;color:var(--muted);margin-top:2px">※生年月日から自動入力されました。違う場合は修正してください。</div>':'')+'</div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','あなたのことを教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7">下の<span style="color:var(--gold);font-weight:700">本名・生年月日</span>は、本人確認（年齢確認）のためだけに使います。<span style="color:var(--cream);font-weight:700">お相手には表示されません。</span></div>'+photoSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（相手には表示されません）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;var _a=calcAgeFromBirthdate(this.value);if(_a){S.pf.age=String(_a);}sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);re(\'profile_new\')"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div>'+(p.birthdate&&p.age?'<div style="font-size:11px;color:var(--muted);margin-top:2px">※生年月日から自動入力されました。違う場合は修正してください。</div>':'')+'</div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
 }
 
 function profileEditH(){
@@ -2540,7 +2589,7 @@ function recruitH(){
   }else if(S.error){
     html+='<div class="err-msg" style="margin:8px 20px">'+S.error+'</div>';
   }
-  html+='</div><div class="ftr"><button class="btn btn-wine" id="recruit-submit-btn" '+(allOk&&!_isSubmitting?'':'disabled ')+'onclick="startRecruit()">'+(_isSubmitting?'処理中...':(S.profile&&S.profile.gender==='male'?'参加登録する（3,980円）→':'無料で参加登録する →'))+'</button></div></div>';
+  html+='</div><div class="ftr"><button class="btn btn-wine" id="recruit-submit-btn" '+(allOk&&!_isSubmitting?'':'disabled ')+'onclick="startRecruit()">'+(_isSubmitting?'処理中...':(S.profile&&S.profile.gender==='male'?'この条件で募集する（チケット1枚）→':'この条件で募集する（無料）→'))+'</button></div></div>';
   return html;
 }
 
@@ -2551,15 +2600,18 @@ function cardRegisterH(){
   var hasGift=isMale&&S.profile&&S.profile.ticket_count>0;
 
   // 主役は1枚だけ。以前は色も文字サイズも違う箱が6つ並び、どれが大事か分からなかった
+  // 最大の不安は「今お金を取られるのか」。それに見出しで即答する。
   var heroIcon,heroTitle,heroSub;
   if(isMale){
-    heroIcon=hasGift?'\ud83c\udf81':'\ud83c\udf77';
-    heroTitle=hasGift?'\u7121\u6599\u30c1\u30b1\u30c3\u30c8\u3092\uff11\u679a\u30d7\u30ec\u30bc\u30f3\u30c8':'\u30ab\u30fc\u30c9\u3092\u767b\u9332\u3059\u308b';
-    heroSub=hasGift?'\u306f\u3058\u3081\u3066\u306e\uff11\u56de\u306f\u7121\u6599\u3067\u30de\u30c3\u30c1\u3067\u304d\u307e\u3059':'\u30c1\u30b1\u30c3\u30c81\u679a 3,980\u5186\uff08\u30de\u30c3\u30c1\u6210\u7acb\u30671\u679a\u6d88\u8cbb\uff09';
+    heroIcon=hasGift?'🎁':'🍷';
+    heroTitle='今は請求されません';
+    heroSub=hasGift
+      ?'はじめての1回は無料チケットでマッチできます。<br>先にカードの登録だけ済ませてください。'
+      :'登録するだけで、この時点では決済されません。<br>チケット1枚 3,980円（税込）／マッチ成立で1枚消費します。';
   }else{
-    heroIcon='\ud83e\udd42';
-    heroTitle='\u5973\u6027\u306f\u30de\u30c3\u30c1\u5229\u7528\u6599\u304c\u7121\u6599';
-    heroSub='\u305f\u3060\u3057\u7121\u65ad\u30ad\u30e3\u30f3\u30bb\u30eb\u6642\u306e\u307f\u8cbb\u7528\u304c\u767a\u751f\u3057\u307e\u3059';
+    heroIcon='🥂';
+    heroTitle='今は請求されません';
+    heroSub='女性はマッチ利用料が無料です。<br>カードは、無断キャンセルがあったときのためにお預かりします。';
   }
   var hero='<div class="cardreg-hero"><div class="cardreg-hero-icon">'+heroIcon+'</div>'
     +'<div class="cardreg-hero-title">'+heroTitle+'</div>'
@@ -2574,7 +2626,7 @@ function cardRegisterH(){
   if(isMale){
     notes.push('\u6b21\u56de\u4ee5\u964d\u306e\u30c1\u30b1\u30c3\u30c8\u8cfc\u5165\u306b\u3082\u3001\u3053\u306e\u30ab\u30fc\u30c9\u3092\u4f7f\u3048\u307e\u3059\u3002');
   }else{
-    notes.push('\u30de\u30c3\u30c1\u6210\u7acb\u5f8c\u3001\u9023\u7d61\u306a\u304f\u4e0d\u53c2\u52a0\u3068\u306a\u3063\u305f\u5834\u5408\u306f\u3001\u30ad\u30e3\u30f3\u30bb\u30eb\u65993,980\u5186\uff08\u7a0e\u8fbc\uff09\u3092\u3054\u8ca0\u62c5\u3044\u305f\u3060\u304f\u3053\u3068\u304c\u3042\u308a\u307e\u3059\u3002\u5224\u65ad\u65b9\u6cd5\u3068\u7570\u8b70\u7533\u7acb\u3066\u306f\u5229\u7528\u898f\u7d04\u7b2c9\u6761\u306e2\u306b\u5b9a\u3081\u3066\u3044\u307e\u3059\u3002');
+    notes.push('費用が発生するのは、マッチ成立後に連絡なく不参加となった場合だけです（キャンセル料3,980円・税込）。判断方法と異議申立ては利用規約第9条の2に定めています。');
   }
   var notesHtml='<ul class="cardreg-notes">'+notes.map(function(t){
     return '<li><span class="cardreg-notes-mark">\u2713</span><span>'+t+'</span></li>';
@@ -2582,7 +2634,7 @@ function cardRegisterH(){
 
   var securityNote='<div class="cardreg-secure">\u30ab\u30fc\u30c9\u60c5\u5831\u306f\u6c7a\u6e08\u4ee3\u884c\u30b5\u30fc\u30d3\u30b9\u304c\u5b89\u5168\u306b\u7ba1\u7406\u3057\u307e\u3059\u3002Nomi Go\u306f\u30ab\u30fc\u30c9\u756a\u53f7\u3092\u4fdd\u6301\u3057\u307e\u305b\u3093\u3002</div>';
 
-  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info"><div class="hdr-step">\u30ab\u30fc\u30c9\u767b\u9332</div><div class="hdr-title">\u30ab\u30fc\u30c9\u3092\u767b\u9332</div></div></div>'
+  return '<div class="screen"><div class="hdr">'+backBtn+'<div class="hdr-info">'+stepHeadH(3,'カード登録','カードを登録')+'</div></div>'
     +'<div class="body" style="padding:20px;display:flex;flex-direction:column;gap:16px">'
     +hero+cardField+notesHtml
     +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
@@ -2614,7 +2666,7 @@ function waitH(){
     +'</div>'
     +'<div style="padding:16px 20px 0">'+poolNoticeH()+lineCtaHtml+'</div>'
     +'<div style="background:var(--surface);margin:16px 0 0;padding:4px 0"><div class="drow"><span class="drow-k">エリア</span><span class="drow-v">'+areaName(S.form.area)+'</span></div><div class="drow"><span class="drow-k">時間</span><span class="drow-v">'+(S.form.slot||'')+(S.form.slot==='今すぐ'?'':'〜')+(S.form.slot==='今すぐ'&&S.form.duration_pref?'（'+S.form.duration_pref+'）':'')+'</span></div><div class="drow"><span class="drow-k">飲みスタイル</span><span class="drow-v">'+(S.form.drink_style||'')+'</span></div><div class="drow"><span class="drow-k">人数</span><span class="drow-v">'+(S.form.mode==='2v2'?'2対2':'1対1')+'</span></div></div>'
-    +'<div style="padding:28px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">募集をキャンセルする</button><div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">成立後のキャンセルは、男性はチケットが返還されません／女性はキャンセル料の対象です</div></div></div></div>';
+    +'<div style="padding:28px 20px 20px;text-align:center"><button class="btn" style="background:transparent;border:1.5px solid rgba(204,64,64,.4);color:var(--red)" onclick="cancelReg()">募集をキャンセルする</button><div style="font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px">'+(S.profile&&S.profile.gender==='male'?'マッチ成立後にキャンセルすると、使用したチケットは返還されません':'マッチ成立後、連絡なく不参加となった場合はキャンセル料の対象になります')+'</div></div></div></div>';
 }
 
 async function goSplashFromMatched(){
