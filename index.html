@@ -2734,11 +2734,13 @@ function waitH(){
   }
 
   // 条件は4行の表ではなく、1行のタグにまとめる。画面の半分を占めていた領域を圧縮する。
+  // タグは値だけで意味が通るため、絵文字は付けない。
+  // 絵文字は「その行が何の話か」を示すアイコンとしてだけ使う（情報行の2つ）。
   var chips=[];
-  if(S.form.area)chips.push('📍 '+areaName(S.form.area));
-  if(S.form.slot)chips.push('🕘 '+S.form.slot+(S.form.slot==='今すぐ'&&S.form.duration_pref?'・'+S.form.duration_pref:''));
-  if(S.form.drink_style)chips.push('🍺 '+S.form.drink_style);
-  chips.push('👥 '+(S.form.mode==='2v2'?'2対2':'1対1'));
+  if(S.form.area)chips.push(areaName(S.form.area));
+  if(S.form.slot)chips.push(S.form.slot+(S.form.slot==='今すぐ'&&S.form.duration_pref?'・'+S.form.duration_pref:''));
+  if(S.form.drink_style)chips.push(S.form.drink_style);
+  chips.push(S.form.mode==='2v2'?'2対2':'1対1');
   var chipsHtml='<div class="cond-wrap"><div class="cond-label">今回の条件</div><div class="cond-row">'
     +chips.map(function(c){return '<span class="cond-chip">'+c+'</span>';}).join('')+'</div></div>';
 
@@ -2762,7 +2764,7 @@ function waitH(){
     +(expired?''
       :'<div style="padding:6px 20px 28px;text-align:center">'
         +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;font-weight:700;text-decoration:underline;cursor:pointer;padding:12px" onclick="cancelReg()">募集をキャンセルする</button>'
-        +'<div style="font-size:11px;color:var(--lgray);line-height:1.7;margin-top:2px">'+(S.profile&&S.profile.gender==='male'?nb('マッチ成立後のキャンセルでは、')+nb('チケットは返還されません'):nb('マッチ成立後、連絡なく不参加の場合は')+nb('キャンセル料の対象になります'))+'</div>'
+        +'<div style="font-size:11.5px;color:var(--lgray);line-height:1.7;margin-top:2px">'+nb('マッチが成立する前のキャンセルは')+nb('無料です。')+'</div>'
       +'</div>')
     +'</div></div>';
 }
