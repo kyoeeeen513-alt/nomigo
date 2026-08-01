@@ -220,6 +220,9 @@ var DB;
 const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,drink_style,timing,age_pref,age,smoke,alcohol,partner_age,age_min,age_max,age_any,duration_pref,purpose,ok_nodrink';
 // マッチ相手のプロフィール。本名・生年月日・身分証・顔写真・決済識別子は含めない。
 // line_user_id は通知処理が使うため現時点では残す。
+// 自分自身のプロフィール。本名・生年月日・身分証および顔写真の保存先は画面で使わないため取得しない。
+// カード登録の有無と本人確認の状態は判定に必要なため含める。
+const PROFILE_COLS_SELF='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,ticket_count,verified_level,id_verify_status,id_photo_url,stripe_customer_id,line_user_id,email_verified,created_at,updated_at';
 const PROFILE_COLS_PARTNER='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,id_verify_status,line_user_id';
 
 const AREAS=[
@@ -512,14 +515,14 @@ async function logout(){
 
 async function syncUserState(){
   if(!S.user)return;
-  var res=await DB.from('profiles').select('*').eq('user_id',S.user.id).single();
+  var res=await DB.from('profiles').select(PROFILE_COLS_SELF).eq('user_id',S.user.id).single();
   if(res.data){
     S.profile=res.data;
   }
 }
 
 async function loadProfile(){
-  var res=await DB.from('profiles').select('*').eq('user_id',S.user.id).single();
+  var res=await DB.from('profiles').select(PROFILE_COLS_SELF).eq('user_id',S.user.id).single();
   S.profile=res.data;
   if(!S.profile)return;
 
@@ -1897,9 +1900,16 @@ async function loadMatchMembers(){
   if(!S.match)return;
   var r=await DB.from('registrations').select(REG_COLS).eq('match_id',S.match.id);
   if(!r.data)return;
+  // マッチ相手のプロフィールは profiles を直接読まず、サーバー側の関数から取得する。
+  // 直接読むと、DB側の許可の都合で本名・生年月日・身分証の保存先・カード顧客番号まで
+  // 端末に降りてしまうため。関数は安全な列だけを返し、そのマッチの参加者にしか応答しない。
+  var partners=await DB.rpc('get_match_partners',{p_match_id:S.match.id});
+  var byUser={};
+  if(partners.data){
+    partners.data.forEach(function(p){byUser[p.user_id]=p;});
+  }
   for(var i=0;i<r.data.length;i++){
-    var prof=await DB.from('profiles').select(PROFILE_COLS_PARTNER).eq('user_id',r.data[i].user_id).single();
-    r.data[i].profiles=prof.data||{};
+    r.data[i].profiles=byUser[r.data[i].user_id]||{};
   }
   S.matchMembers=r.data;
   await syncReportStatus();
