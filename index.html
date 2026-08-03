@@ -1873,7 +1873,7 @@ async function finalizeMatchWith(bestReg,otherReg){
   await consumeTicket(matchRes.data.id,maleUserId);
   await syncUserState();
   await loadMatchMembers();
-  sendMatchLineNotify(p,bestReg.profileData);
+  sendMatchLineNotify(matchRes.data.id);
   render();
   return true;
 }
@@ -1947,13 +1947,22 @@ function chooseH(){
     +'</div></div>';
 }
 
-function sendMatchLineNotify(myProfile,otherProfile){
-  var targets=[myProfile,otherProfile];
-  targets.forEach(function(t){
-    if(t&&t.line_user_id){
-      fetch('/api/line-notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineUserId:t.line_user_id,message:'🍻 マッチが成立しました！Nomi Goアプリを開いてチャットを確認してください。'})}).catch(function(){});
-    }
-  });
+// LINE通知の共通の窓口。送り先と文面はサーバー側が決めるため、ここでは渡さない
+async function pushLineNotify(matchId,kind){
+  try{
+    var s=await DB.auth.getSession();
+    var token=s&&s.data&&s.data.session?s.data.session.access_token:null;
+    if(!token||!matchId)return;
+    await fetch('/api/line-notify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({matchId:matchId,kind:kind})
+    });
+  }catch(e){}
+}
+
+function sendMatchLineNotify(matchId){
+  pushLineNotify(matchId,'match');
 }
 
 async function consumeTicket(matchId,targetUserId){
@@ -2122,13 +2131,7 @@ async function sendFinishReminderOnce(){
   var lock=await DB.from('matches').update({reminder_sent:true}).eq('id',S.match.id).eq('reminder_sent',false).select('id,reminder_sent').single();
   if(lock.error||!lock.data)return;
   S.match.reminder_sent=true;
-  for(var i=0;i<S.matchMembers.length;i++){
-    var pr=S.matchMembers[i].profiles;
-    if(pr&&pr.line_user_id){
-      fetch('/api/line-notify',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({lineUserId:pr.line_user_id,message:'🍺 今夜の飲み会はいかがでしたか？\nNomi Goを開いて「飲み終わった」から評価をお願いします。'})}).catch(function(){});
-    }
-  }
+  await pushLineNotify(S.match.id,'finish_reminder');
 }
 function startFinishReminderTimer(){
   if(S._remindTimer)clearInterval(S._remindTimer);
