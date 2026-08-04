@@ -37,6 +37,11 @@ button{cursor:pointer;border:none;border-radius:8px;font-size:14px;padding:11px 
 .txt{font-size:14px;margin-top:6px;white-space:pre-wrap;line-height:1.6;}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
 .hide{display:none;}
+textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px solid var(--line);background:#1e0710;color:var(--text);font-size:15px;font-family:inherit;resize:vertical;margin-top:8px;}
+.btn-send{background:var(--gold);color:#2a0a12;flex:1;}
+.replied{background:#1e0710;border-left:3px solid var(--gold);padding:9px 11px;margin-top:8px;border-radius:0 6px 6px 0;font-size:13px;white-space:pre-wrap;line-height:1.6;}
+.replied b{color:var(--gold);}
+.hint{font-size:12px;color:var(--muted);margin-top:6px;}
 </style>
 </head>
 <body>
@@ -89,6 +94,20 @@ var DB=supabase.createClient(SB_URL,SB_KEY,{
   }
 });
 var CUR='verify';
+
+// ---------- サーバー窓口の呼び出し ----------
+// 承認・返信はサーバー側で処理する。LINEの送り先と文面もサーバーが決める。
+async function api(payload){
+  var s=await DB.auth.getSession();
+  var token=s&&s.data&&s.data.session?s.data.session.access_token:null;
+  if(!token){location.reload();return {success:false};}
+  try{
+    var r=await fetch('/api/admin',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify(payload)});
+    return await r.json();
+  }catch(e){return {success:false,error:'通信に失敗しました'};}
+}
 
 // ---------- ログイン ----------
 async function doLogin(){
@@ -185,9 +204,30 @@ async function openPhoto(bucket,path,el){
 
 async function setV(uid,val){
   var word=(val==='approved')?'承認':'否認';
-  if(!confirm('この方を'+word+'します。よろしいですか？'))return;
-  var r=await DB.from('profiles').update({id_verify_status:val}).eq('user_id',uid);
-  if(r.error){alert('更新に失敗しました: '+r.error.message);return;}
+  var note='';
+  if(val==='rejected'){
+    note=prompt('否認の理由を入力してください。\nここに書いた内容が本人のLINEに届きます。\n（空欄のままでも進められます）','書類の文字が読み取れませんでした');
+    if(note===null)return;
+    note=note.trim();
+  }
+  if(!confirm('この方を'+word+'します。\n本人のLINEに通知が届きます。\nよろしいですか？'))return;
+
+  var row=document.getElementById('v-'+uid);
+  if(row)row.querySelectorAll('button').forEach(function(b){b.disabled=true;});
+
+  var r=await api({action:'verify',userId:uid,decision:val,note:note});
+  if(!r.success){
+    alert('処理に失敗しました。もう一度お試しください。');
+    if(row)row.querySelectorAll('button').forEach(function(b){b.disabled=false;});
+    return;
+  }
+  if(r.lineSent){
+    alert(word+'しました。LINEに通知を送りました。');
+  }else if(r.hasLine){
+    alert(word+'しました。ただしLINEの送信に失敗しました。\n（後ほど手動でご連絡ください）');
+  }else{
+    alert(word+'しました。\nこの方はLINE未連携のため、通知は送っていません。');
+  }
   loadVerify();
 }
 
@@ -224,13 +264,42 @@ async function loadInq(){
     h+='</div>';
     h+='<div class="meta">'+esc(q.email||'（メール未入力）')+' ／ '+fmtDate(q.created_at)+'</div>';
     h+='<div class="txt">'+esc(q.content||'')+'</div>';
-    if(!q.handled){
-      h+='<div class="acts"><button class="btn-sm" onclick="setH(\''+q.id+'\')">対応済みにする</button></div>';
+    if(q.reply_content){
+      h+='<div class="replied"><b>返信済み（'+fmtDate(q.replied_at)+'）</b>\n'+esc(q.reply_content)+'</div>';
+    }else{
+      h+='<textarea id="rp-'+q.id+'" placeholder="返信内容を入力してください（本人のLINEに届きます）"></textarea>';
+      h+='<div class="hint">'+(q.user_id?'ログイン利用者からの問い合わせです':'未ログインからの問い合わせです。LINEには届かないため、メールでの返信が必要です')+'</div>';
+      h+='<div class="acts">';
+      h+='<button class="btn-send" onclick="sendReply(\''+q.id+'\')">返信を送る</button>';
+      h+='<button class="btn-sm" onclick="setH(\''+q.id+'\')">返信せず対応済みにする</button>';
+      h+='</div>';
     }
     h+='</div>';
   }
   h+='</div>';
   box.innerHTML=h;
+}
+
+async function sendReply(id){
+  var box=document.getElementById('rp-'+id);
+  var text=box?box.value.trim():'';
+  if(!text){alert('返信内容を入力してください');return;}
+  if(text.length>2000){alert('返信は2000文字以内でお願いします');return;}
+  if(!confirm('この内容で返信します。\n本人のLINEに届きます。\nよろしいですか？'))return;
+
+  box.disabled=true;
+  var r=await api({action:'reply',inquiryId:id,reply:text});
+  if(!r.success){
+    alert('送信に失敗しました。もう一度お試しください。');
+    box.disabled=false;
+    return;
+  }
+  if(r.lineSent){
+    alert('返信をLINEに送りました。');
+  }else{
+    alert('返信内容を保存しました。\nただしLINEに送れませんでした。\nメール（'+(r.email||'未登録')+'）でご返信ください。');
+  }
+  loadInq();
 }
 
 async function setH(id){
