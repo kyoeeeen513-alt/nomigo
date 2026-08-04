@@ -85,7 +85,6 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 <script>
 var SB_URL='https://dwubothomxjwfudkeepy.supabase.co';
 var SB_KEY='sb_publishable_vpUd5hulLV1-gI1wsAkgWA_hrB9ZOJ9';
-var ADMIN_UID='56cfcf1c-4ddd-4101-af32-f51f089eb646';
 var DB=supabase.createClient(SB_URL,SB_KEY,{
   auth:{
     persistSession:true,
@@ -94,6 +93,7 @@ var DB=supabase.createClient(SB_URL,SB_KEY,{
   }
 });
 var CUR='verify';
+var ME={can_verify:true,can_reply:true,label:''};
 
 // ---------- サーバー窓口の呼び出し ----------
 // 承認・返信はサーバー側で処理する。LINEの送り先と文面もサーバーが決める。
@@ -130,14 +130,17 @@ async function checkAdmin(){
   var s=await DB.auth.getSession();
   var u=s.data.session?s.data.session.user:null;
   if(!u){showLogin();return;}
-  if(u.id!==ADMIN_UID){
+  // 運営かどうかの判定はサーバー側（admin_users テーブル）で行う
+  var chk=await api({action:'whoami'});
+  if(!chk.success){
     await DB.auth.signOut();
     showLogin('このアカウントには管理権限がありません。');
     return;
   }
+  ME=chk;
   document.getElementById('login').className='hide';
   document.getElementById('app').className='';
-  document.getElementById('who').textContent=u.email;
+  document.getElementById('who').textContent=(ME.label||u.email);
   loadVerify();
   loadInq();
 }
@@ -180,10 +183,15 @@ async function loadVerify(){
     h+='<a href="#" id="facelink-'+p.user_id+'" onclick="openPhoto(\'id_photos\',\''+esc(p.face_photo_url||'')+'\',this);return false;">顔写真を見る</a>';
     h+='</div>';
     h+='<div class="meta">生年月日・書類名・発行元が読めるか／顔写真が同一人物か／20歳以上かを確認してください</div>';
-    h+='<div class="acts">';
-    h+='<button class="btn-ok" onclick="setV(\''+p.user_id+'\',\'approved\')">承認する</button>';
-    h+='<button class="btn-ng" onclick="setV(\''+p.user_id+'\',\'rejected\')">否認する</button>';
-    h+='</div></div>';
+    if(ME.can_verify){
+      h+='<div class="acts">';
+      h+='<button class="btn-ok" onclick="setV(\''+p.user_id+'\',\'approved\')">承認する</button>';
+      h+='<button class="btn-ng" onclick="setV(\''+p.user_id+'\',\'rejected\')">否認する</button>';
+      h+='</div>';
+    }else{
+      h+='<div class="meta" style="margin-top:8px;color:#ff9b9b">このアカウントでは承認操作ができません（担当外）</div>';
+    }
+    h+='</div>';
   }
   h+='</div>';
   box.innerHTML=h;
