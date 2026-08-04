@@ -51,6 +51,16 @@ async function pushLine(lineUserId, text) {
   }
 }
 
+// 役割ごとの通知先を取り出す（notify_targets テーブル）
+async function notifyTarget(role) {
+  try {
+    const rows = await db(`notify_targets?role=eq.${role}&enabled=is.true&select=line_user_id`);
+    return rows && rows[0] ? rows[0].line_user_id : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // 操作の記録を残す。失敗しても本体の処理は止めない
 async function audit(action, targetTable, targetId, after, note) {
   try {
@@ -81,6 +91,47 @@ module.exports = async (req, res) => {
       return;
     }
 
+    const body0 = req.body || {};
+
+    // ── 年齢確認の申請通知 ────────────────────────
+    // これは申請した利用者自身が呼ぶため、運営確認より前に処理する。
+    // 送り先と文面はサーバーが決める。個人情報は一切含めない。
+    if (body0.action === 'notify_pending') {
+      const auth0 = req.headers.authorization || '';
+      if (!auth0.startsWith('Bearer ')) {
+        res.status(401).json({ success: false, error: 'unauthorized' });
+        return;
+      }
+      const u = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { apikey: ANON_KEY, Authorization: auth0 },
+      });
+      if (!u.ok) {
+        res.status(401).json({ success: false, error: 'unauthorized' });
+        return;
+      }
+      const uid = (await u.json()).id;
+
+      // 本当に申請中かどうかをサーバー側で確認する（嘘の通知を防ぐ）
+      const p = await db(`profiles?user_id=eq.${uid}&select=id_verify_status`);
+      if (!p || !p[0] || p[0].id_verify_status !== 'pending') {
+        res.status(200).json({ success: true, skipped: true });
+        return;
+      }
+
+      // 未対応の件数を数えて知らせる
+      const all = await db('profiles?id_verify_status=eq.pending&select=user_id');
+      const count = all ? all.length : 1;
+
+      const to = await notifyTarget('age_verification');
+      const sent = await pushLine(
+        to,
+        '📋 年齢確認の申請が届きました\n\n未対応：' + count + '件\n\n運営ページを開いて確認してください。\nhttps://nomigo-final-5.vercel.app/admin.html'
+      );
+
+      res.status(200).json({ success: true, sent: sent });
+      return;
+    }
+
     // ── 運営本人かどうかを確認する ─────────────────────
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) {
@@ -100,7 +151,7 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const body = req.body || {};
+    const body = body0;
     const action = body.action;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
