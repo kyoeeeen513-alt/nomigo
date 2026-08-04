@@ -1190,8 +1190,24 @@ async function submitIdVerify(){
   S.profile.face_photo_url=facePath;
   S.profile.id_verify_status='pending';
   S._idPhotoFile=null;S._idPhotoPreview=null;S._facePhotoFile=null;S._facePhotoPreview=null;
+  notifyIdVerifyPending();
   go('id_verify_pending');
   startIdVerifyPolling();
+}
+
+// 申請があったことを運営に知らせる。送り先と文面はサーバーが決めるため、ここでは渡さない。
+// 失敗しても申請そのものには影響させない。
+async function notifyIdVerifyPending(){
+  try{
+    var s=await DB.auth.getSession();
+    var token=s&&s.data&&s.data.session?s.data.session.access_token:null;
+    if(!token)return;
+    await fetch('/api/admin',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({action:'notify_pending'})
+    });
+  }catch(e){}
 }
 
 function startIdVerifyPolling(){
