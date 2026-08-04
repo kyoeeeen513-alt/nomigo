@@ -8,7 +8,8 @@
 // 【必要な環境変数】すべて設定済み
 //   SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY / LINE_CHANNEL_ACCESS_TOKEN
 
-const ADMIN_USER_ID = '56cfcf1c-4ddd-4101-af32-f51f089eb646';
+// 運営として認める人は admin_users テーブルで管理する。
+// 担当者が変わったときは、この表を変えるだけでよい（コードの修正は不要）。
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -62,13 +63,13 @@ async function notifyTarget(role) {
 }
 
 // 操作の記録を残す。失敗しても本体の処理は止めない
-async function audit(action, targetTable, targetId, after, note) {
+async function audit(actorId, action, targetTable, targetId, after, note) {
   try {
     await db('admin_audit_logs', {
       method: 'POST',
       prefer: 'return=minimal',
       body: {
-        actor_id: ADMIN_USER_ID,
+        actor_id: actorId,
         action: action,
         target_table: targetTable,
         target_id: String(targetId),
@@ -132,7 +133,7 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // ── 運営本人かどうかを確認する ─────────────────────
+    // ── 運営として登録された人かどうかを確認する ──────────
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) {
       res.status(401).json({ success: false, error: 'unauthorized' });
@@ -146,7 +147,12 @@ module.exports = async (req, res) => {
       return;
     }
     const myId = (await me.json()).id;
-    if (myId !== ADMIN_USER_ID) {
+
+    const adminRows = await db(
+      `admin_users?user_id=eq.${myId}&enabled=is.true&select=user_id,label,can_verify,can_reply`
+    );
+    const admin = adminRows && adminRows[0] ? adminRows[0] : null;
+    if (!admin) {
       res.status(403).json({ success: false, error: 'forbidden' });
       return;
     }
@@ -155,12 +161,27 @@ module.exports = async (req, res) => {
     const action = body.action;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+    // ── 自分が誰かを返す（運営ページの入場判定） ──────────
+    if (action === 'whoami') {
+      res.status(200).json({
+        success: true,
+        label: admin.label || null,
+        can_verify: !!admin.can_verify,
+        can_reply: !!admin.can_reply,
+      });
+      return;
+    }
+
     // ── 年齢確認の承認・否認 ───────────────────────
     if (action === 'verify') {
       const userId = body.userId;
       const decision = body.decision; // 'approved' か 'rejected'
       const note = (body.note || '').trim().slice(0, 300);
 
+      if (!admin.can_verify) {
+        res.status(403).json({ success: false, error: 'no_verify_permission' });
+        return;
+      }
       if (!userId || !isUuid.test(userId) ||
           (decision !== 'approved' && decision !== 'rejected')) {
         res.status(400).json({ success: false, error: 'bad_request' });
@@ -192,7 +213,7 @@ module.exports = async (req, res) => {
             'Nomi Goを開いて、もう一度書類のご提出をお願いします。';
       const sent = await pushLine(lineId, text);
 
-      await audit('verify_' + decision, 'profiles', userId,
+      await audit(myId, 'verify_' + decision, 'profiles', userId,
         { decision: decision, line_sent: sent }, note || null);
 
       res.status(200).json({ success: true, lineSent: sent, hasLine: !!lineId });
@@ -204,6 +225,10 @@ module.exports = async (req, res) => {
       const inquiryId = body.inquiryId;
       const reply = (body.reply || '').trim();
 
+      if (!admin.can_reply) {
+        res.status(403).json({ success: false, error: 'no_reply_permission' });
+        return;
+      }
       if (!inquiryId || !isUuid.test(inquiryId) ||
           reply.length === 0 || reply.length > 2000) {
         res.status(400).json({ success: false, error: 'bad_request' });
@@ -236,13 +261,13 @@ module.exports = async (req, res) => {
         body: {
           reply_content: reply,
           replied_at: new Date().toISOString(),
-          replied_by: ADMIN_USER_ID,
+          replied_by: myId,
           reply_channel: sent ? 'line' : 'none',
           handled: true,
         },
       });
 
-      await audit('inquiry_reply', 'inquiries', inquiryId, { line_sent: sent }, null);
+      await audit(myId, 'inquiry_reply', 'inquiries', inquiryId, { line_sent: sent }, null);
 
       res.status(200).json({
         success: true,
