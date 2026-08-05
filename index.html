@@ -1568,6 +1568,7 @@ async function startRecruit(){
   var f=S.form;
   if(!f.area||!f.slot||!f.drink_style||!f.purpose){S.error='すべて選択してください';re('recruit');return;}
   if(f.mode==='2v2'&&!f.partner_age){S.error='すべて選択してください';re('recruit');return;}
+  if(f.mode==='2v2'&&!(parseInt(f.partner_age)>=20&&parseInt(f.partner_age)<=99)){S.error='Nomi Goは20歳以上の方がご利用いただけます。もう1人の年齢をご確認ください';re('recruit');return;}
   if(S.profile&&S.profile.gender==='male'){
     if(!S.profile.ticket_count||S.profile.ticket_count<1){S.error='ticket_zero';re('recruit');return;}
   }
@@ -1712,7 +1713,7 @@ async function doRegister(){
       age:S.profile.age,
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
-      partner_age:S.form.mode==='2v2'&&S.form.partner_age?parseInt(S.form.partner_age):null,
+      partner_age:(S.form.mode==='2v2'&&parseInt(S.form.partner_age)>=20&&parseInt(S.form.partner_age)<=99)?parseInt(S.form.partner_age):null,
       status:'waiting'
     }).select(REG_COLS).single();
     if(timeoutFlag.hit)return;
@@ -2600,8 +2601,7 @@ function goProfileEdit(){
 
 async function saveProfileEdit(){
   var p=S.pf;
-  if(!p.nickname||!p.age||!p.gender||!p.job||p.smoke===null||p.alcohol===null){S.error='すべての項目を入力してください';re('profile_edit');return;}
-  if(parseInt(p.age)<20){S.error='Nomi Goは20歳以上の方がご利用いただけます';re('profile_edit');return;}
+  if(!p.nickname||!p.gender||!p.job||p.smoke===null||p.alcohol===null){S.error='すべての項目を入力してください';re('profile_edit');return;}
   if(p.gender==='male'&&!p.photoFile&&!(S.profile&&S.profile.photo_url)){S.error='男性はご本人の顔写真の登録が必須です';re('profile_edit');return;}
   go('loading');
   var photoUrl=S.profile.photo_url;
@@ -2609,9 +2609,9 @@ async function saveProfileEdit(){
     var uploaded=await uploadProfilePhoto(S.user.id,p.photoFile);
     if(uploaded)photoUrl=uploaded;
   }
-  var upd=await DB.from('profiles').update({nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
+  var upd=await DB.from('profiles').update({nickname:p.nickname,gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
   if(upd.error){S.error=friendlyError(upd.error,'保存に失敗しました。もう一度お試しください。');re('profile_edit');return;}
-  S.profile.nickname=p.nickname;S.profile.age=parseInt(p.age);S.profile.gender=p.gender;S.profile.job=p.job;S.profile.smoke=p.smoke;S.profile.alcohol=p.alcohol;S.profile.photo_url=photoUrl;S.profile.tags=p.tags||[];
+  S.profile.nickname=p.nickname;S.profile.gender=p.gender;S.profile.job=p.job;S.profile.smoke=p.smoke;S.profile.alcohol=p.alcohol;S.profile.photo_url=photoUrl;S.profile.tags=p.tags||[];
   go('splash');
 }
 
@@ -2640,7 +2640,7 @@ function profileEditH(){
   var photoPreview=p.photoPreview?'<img src="'+p.photoPreview+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':(S.profile&&S.profile.photo_url?'<img src="'+S.profile.photo_url+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':'<div style="width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">👤</div>');
   var isMalePfE=p.gender==='male';
   var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+(isMalePfE?'プロフィール写真（男性は必須）':'プロフィール写真（任意）')+'</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を変更<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_edit\')"></label></div>'+(isMalePfE?'<div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">ご本人の顔がはっきり写った写真のみ承認されます（加工・マスク・複数人NG）。</div>':'')+'</div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnEdit\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnEdit" style="font-size:11px;color:var(--red);margin-top:4px"></div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="S.pf.job=this.value;this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_edit')+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" type="text" readonly disabled style="max-width:120px;opacity:.7" value="'+(p.age?p.age+'歳':'')+'"><div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">年齢はご登録の生年月日から自動で決まります。ここでは変更できません。誤りがある場合はお問い合わせください。</div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="S.pf.job=this.value;this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_edit')+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
 }
 
 function recruitH(){
@@ -2651,7 +2651,7 @@ function recruitH(){
   var defaultMax=myAgeNum+5;
   if(f.age_min==null||f.age_min===''){f.age_min=defaultMin;}
   if(f.age_max==null||f.age_max===''){f.age_max=defaultMax;}
-  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||f.partner_age);
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||(parseInt(f.partner_age)>=20&&parseInt(f.partner_age)<=99));
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
   SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
@@ -2675,7 +2675,9 @@ function recruitH(){
   var ageCeil=99;
   html+='<div class="sec-label">④ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">✨ 何歳でもいい</span></label>'+(f.age_any?'':'<div style="display:flex;align-items:center;gap:10px"><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="下限" style="max-width:130px" value="'+(f.age_min||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_min=this.value" onblur="this.value=clampAgeMin(this.value,'+defaultMin+');S.form.age_min=this.value;updateRecruitSubmitBtn()"><span style="color:var(--muted)">〜</span><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="上限" style="max-width:130px" value="'+(f.age_max||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_max=this.value" onblur="this.value=clampAgeMax(this.value,'+defaultMax+');S.form.age_max=this.value;updateRecruitSubmitBtn()"></div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">※初期設定はご自身の年齢の上下5歳（最低20歳）です。数字を変えれば、さらに範囲を広げることもできます。範囲内で、より年齢が近い相手が優先的にマッチします。</div></div>';
   if(isPair){
-    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：27" style="max-width:120px;background:#FFFFFF;color:#6A4A50" value="'+(f.partner_age||'')+'" oninput="digitsOnly(this);S.form.partner_age=this.value;updateRecruitSubmitBtn()"></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を入力してください。</div>';
+    var partnerOpts='<option value="">選択してください</option>';
+    for(var _pa=20;_pa<=99;_pa++){partnerOpts+='<option value="'+_pa+'"'+(parseInt(f.partner_age)===_pa?' selected':'')+'>'+_pa+'歳</option>';}
+    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><select class="inp" style="max-width:160px;background:#FFFFFF;color:#6A4A50" onchange="S.form.partner_age=this.value;updateRecruitSubmitBtn()">'+partnerOpts+'</select></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を選んでください。Nomi Goは20歳以上の方のみご利用いただけます。</div>';
   }
   html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。<br>※募集は'+(f.slot==='今すぐ'?'60分で':'選んだ時間の30分後に')+'自動的に終了します。時間が経ちすぎたお相手とマッチしないための仕組みです。</div>';
   if(S.ticketPurchaseSuccess){
@@ -2931,7 +2933,7 @@ function updateRecruitSubmitBtn(){
   if(!btn)return;
   var f=S.form;
   var isPair=f.mode==='2v2';
-  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||f.partner_age);
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||(parseInt(f.partner_age)>=20&&parseInt(f.partner_age)<=99));
   btn.disabled=!(allOk&&!_isSubmitting);
 }
 
