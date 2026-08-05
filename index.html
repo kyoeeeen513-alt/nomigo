@@ -2677,7 +2677,7 @@ function recruitH(){
   if(isPair){
     var partnerOpts='<option value="">選択してください</option>';
     for(var _pa=20;_pa<=99;_pa++){partnerOpts+='<option value="'+_pa+'"'+(parseInt(f.partner_age)===_pa?' selected':'')+'>'+_pa+'歳</option>';}
-    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><select class="inp" style="max-width:160px;background:#FFFFFF;color:#6A4A50" onchange="S.form.partner_age=this.value;updateRecruitSubmitBtn()">'+partnerOpts+'</select></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を選んでください。Nomi Goは20歳以上の方のみご利用いただけます。</div>';
+    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><select class="inp'+(f.partner_age?' filled':'')+'" style="max-width:160px" onchange="S.form.partner_age=this.value;updateRecruitSubmitBtn()">'+partnerOpts+'</select></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を選んでください。Nomi Goは20歳以上の方のみご利用いただけます。</div>';
   }
   html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。<br>※募集は'+(f.slot==='今すぐ'?'60分で':'選んだ時間の30分後に')+'自動的に終了します。時間が経ちすぎたお相手とマッチしないための仕組みです。</div>';
   if(S.ticketPurchaseSuccess){
