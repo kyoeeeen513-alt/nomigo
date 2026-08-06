@@ -2384,9 +2384,10 @@ async function submitInquiry(){
     name:nameEl?nameEl.value.trim():'',
     email:email,
     content:content.value.trim()
-  });
+  }).select('id').single();
   if(res.error){if(errEl)errEl.textContent='送信に失敗しました';if(btn){btn.disabled=false;btn.textContent='送信する';}return;}
-  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:'info@nomi-go.jp',subject:'【Nomi Go】お問い合わせが届きました',message:'お名前：'+(nameEl?nameEl.value.trim():'（未入力）')+'\nメール：'+email+'\n\n内容：\n'+content.value.trim()})}).catch(function(){});
+  // 運営への通知。宛先も文面もサーバーが決めるため、ここでは問い合わせのIDだけを渡す
+  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'inquiry_notice',inquiryId:res.data&&res.data.id})}).catch(function(){});
   S._inquiryDone=true;re('inquiry');
 }
 
@@ -2484,12 +2485,18 @@ function lineConnectH(){
     +'</div></div>';
 }
 
+// 確認コードはサーバーが作り、サーバーが本人のメールアドレスへ送る。
+// 画面側はコードの中身を一切受け取らない。
 async function goEmailVerify(){
-  var code=String(Math.floor(100000+Math.random()*900000));
-  await DB.from('email_verifications').delete().eq('user_id',S.user.id);
-  await DB.from('email_verifications').insert({user_id:S.user.id,code:code});
-  var emailTo=S.user.email;
-  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:emailTo,subject:'【Nomi Go】確認コード',message:'確認コードは '+code+' です。アプリに入力してください。'})}).catch(function(){});
+  try{
+    var s=await DB.auth.getSession();
+    var token=s&&s.data&&s.data.session?s.data.session.access_token:null;
+    if(token){
+      await fetch('/api/send-email',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({action:'verify_code'})});
+    }
+  }catch(e){}
   go('email_verify');
 }
 
@@ -2498,10 +2505,20 @@ async function submitEmailVerify(){
   var errEl=document.getElementById('everify-err');
   var code=inp?inp.value.trim():'';
   if(!code){if(errEl)errEl.textContent='コードを入力してください';return;}
-  var res=await DB.from('email_verifications').select('code').eq('user_id',S.user.id);
-  var savedCode=res.data&&res.data.length>0?res.data[0].code:null;
-  if(savedCode&&savedCode===code){
-    await DB.from('email_verifications').delete().eq('user_id',S.user.id);
+  // 照合はサーバー側で行う。画面側は正解のコードを持たない
+  var ok=false;
+  try{
+    var ses=await DB.auth.getSession();
+    var tk=ses&&ses.data&&ses.data.session?ses.data.session.access_token:null;
+    if(!tk){if(errEl)errEl.textContent='ログインし直してください';return;}
+    var vr=await fetch('/api/send-email',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},
+      body:JSON.stringify({action:'verify_check',code:code})});
+    var vj=await vr.json();
+    ok=!!(vj&&vj.success);
+    if(!ok&&vj&&vj.error==='expired'){if(errEl)errEl.textContent='コードの有効期限が切れました。もう一度お送りします';await goEmailVerify();return;}
+  }catch(e){if(errEl)errEl.textContent='通信に失敗しました。もう一度お試しください';return;}
+  if(ok){
     markEmailVerified();
     if(S.profile){
       await DB.from('profiles').update({email_verified:true}).eq('user_id',S.user.id);
