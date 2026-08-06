@@ -398,6 +398,15 @@ function calcAgeFromBirthdate(bd){
   if(mdiff<0||(mdiff===0&&today.getDate()<b.getDate()))age--;
   return age;
 }
+// ランダムなIDを1つ作る
+function newUuid(){
+  try{ if(window.crypto&&window.crypto.randomUUID) return window.crypto.randomUUID(); }catch(e){}
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){
+    var r=Math.random()*16|0, v=(c==='x')?r:((r&0x3)|0x8);
+    return v.toString(16);
+  });
+}
+
 function digitsOnly(el){
   var v=el.value.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);});
   el.value=v.replace(/[^0-9]/g,'');
@@ -2379,15 +2388,18 @@ async function submitInquiry(){
   if(!email){if(errEl)errEl.textContent='メールアドレスを入力してください';return;}
   if(!content||!content.value.trim()){if(errEl)errEl.textContent='お問い合わせ内容を入力してください';return;}
   if(btn){btn.disabled=true;btn.textContent='送信中...';}
+  // 問い合わせは本人でも読み返せない決まりのため、IDはこちらで先に作って渡す
+  var inquiryId=newUuid();
   var res=await DB.from('inquiries').insert({
+    id:inquiryId,
     user_id:S.user?S.user.id:null,
     name:nameEl?nameEl.value.trim():'',
     email:email,
     content:content.value.trim()
-  }).select('id').single();
+  });
   if(res.error){if(errEl)errEl.textContent='送信に失敗しました';if(btn){btn.disabled=false;btn.textContent='送信する';}return;}
   // 運営への通知。宛先も文面もサーバーが決めるため、ここでは問い合わせのIDだけを渡す
-  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'inquiry_notice',inquiryId:res.data&&res.data.id})}).catch(function(){});
+  fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'inquiry_notice',inquiryId:inquiryId})}).catch(function(){});
   S._inquiryDone=true;re('inquiry');
 }
 
