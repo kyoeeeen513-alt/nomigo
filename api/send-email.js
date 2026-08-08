@@ -5,6 +5,14 @@
 // ・受け取るのは「どの種類のメールか(action)」だけ。
 // ・確認コードはサーバーが作り、サーバーが照合します。画面側はコードを知りません。
 //
+// 【2026-08-08 の変更】
+//  これまで確認コードの照合に成功したあと email_verifications の行を削除するだけで、
+//  「確認できた」という事実がサーバー側にどこにも残っていなかった。
+//  そのため画面側は端末内の記録（localStorage）に頼るしかなく、
+//  利用者が書き換えればメール確認を飛ばして登録を完了できる状態だった。
+//  照合成功時に email_verified_users へ記録し、
+//  確認済みかどうかをサーバーに問い合わせる action（verify_status）を追加した。
+//
 // 【必要な環境変数】
 //   RESEND_API_KEY            … 既に設定済みのもの
 //   SUPABASE_URL              … https://dwubothomxjwfudkeepy.supabase.co
@@ -18,6 +26,8 @@ const RESEND_KEY = process.env.RESEND_API_KEY;
 
 // 運営の受信先。ここ以外には運営宛メールを送りません。
 const ADMIN_TO = 'info@nomi-go.jp';
+// 運営ページのURL
+const ADMIN_PAGE_URL = 'https://nomi-go.jp/admin.html';
 // 確認コードの有効時間（分）
 const CODE_MINUTES = 10;
 
@@ -78,6 +88,37 @@ async function whoAmI(req) {
   }
 }
 
+// メール確認が済んでいるかを調べる
+async function isVerified(userId) {
+  try {
+    const rows = await db(`email_verified_users?user_id=eq.${userId}&select=user_id`);
+    return !!(rows && rows.length > 0);
+  } catch (e) {
+    return false;
+  }
+}
+
+// メール確認が済んだことを記録する
+async function markVerified(userId) {
+  // 確認済みの表に残す（何度呼ばれても重複しない）
+  try {
+    await db('email_verified_users?on_conflict=user_id', {
+      method: 'POST',
+      prefer: 'resolution=ignore-duplicates,return=minimal',
+      body: { user_id: userId },
+    });
+  } catch (e) {}
+
+  // プロフィールが既にある場合は、そちらの表示用の値もあわせて更新する
+  try {
+    await db(`profiles?user_id=eq.${userId}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { email_verified: true },
+    });
+  } catch (e) {}
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ success: false, error: 'method_not_allowed' });
@@ -126,7 +167,7 @@ module.exports = async (req, res) => {
         'メール：' + (q.email || '（未入力）') + '\n\n' +
         '内容：\n' + (q.content || '') + '\n\n' +
         '――――――\n運営ページから返信してください。\n' +
-        'https://nomigo-final-5.vercel.app/admin.html';
+        ADMIN_PAGE_URL;
 
       const sent = await sendMail(ADMIN_TO, '【Nomi Go】お問い合わせが届きました', text);
       res.status(200).json({ success: sent });
@@ -206,11 +247,30 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // 使い終わったコードは消す
       await db(`email_verifications?user_id=eq.${me.id}`, {
         method: 'DELETE',
         prefer: 'return=minimal',
       });
+
+      // 確認できたことをサーバー側に残す。
+      // これが無いと、画面側は端末内の記録に頼るしかなくなる。
+      await markVerified(me.id);
+
       res.status(200).json({ success: true });
+      return;
+    }
+
+    // ── ④ メール確認が済んでいるかを返す ──────────────────
+    // 画面側はこの結果だけを信じる。端末内の記録は根拠にしない。
+    if (action === 'verify_status') {
+      const me = await whoAmI(req);
+      if (!me) {
+        res.status(401).json({ success: false, error: 'unauthorized' });
+        return;
+      }
+      const verified = await isVerified(me.id);
+      res.status(200).json({ success: true, verified: verified });
       return;
     }
 
