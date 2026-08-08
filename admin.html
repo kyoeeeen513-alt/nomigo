@@ -141,8 +141,11 @@ async function checkAdmin(){
   document.getElementById('login').className='hide';
   document.getElementById('app').className='';
   document.getElementById('who').textContent=(ME.label||u.email);
-  loadVerify();
-  loadInq();
+  if(!ME.can_verify)document.getElementById('t1').className='tab hide';
+  if(!ME.can_reply)document.getElementById('t2').className='tab hide';
+  if(!ME.can_verify&&ME.can_reply)show('inq');
+  if(ME.can_verify)loadVerify();
+  if(ME.can_reply)loadInq();
 }
 
 function showLogin(msg){
@@ -164,11 +167,16 @@ function show(which){
 async function loadVerify(){
   var box=document.getElementById('verify');
   box.innerHTML='<div class="empty">読み込み中...</div>';
-  var r=await DB.from('profiles')
-    .select('user_id,real_name,birthdate,nickname,gender,id_photo_url,face_photo_url')
-    .eq('id_verify_status','pending');
-  if(r.error){box.innerHTML='<div class="card err">読み込みに失敗しました: '+r.error.message+'</div>';return;}
-  var list=r.data||[];
+  var r=await api({action:'list_pending'});
+  if(!r.success){
+    var msg=(r.error==='no_verify_permission')
+      ?'このアカウントでは本人確認の一覧を表示できません（担当外）'
+      :'読み込みに失敗しました';
+    box.innerHTML='<div class="card err">'+msg+'</div>';
+    document.getElementById('c1').textContent='0';
+    return;
+  }
+  var list=r.list||[];
   document.getElementById('c1').textContent=list.length;
   if(list.length===0){box.innerHTML='<div class="card"><div class="empty">確認待ちの方はいません</div></div>';return;}
   var h='<div class="card">';
@@ -179,8 +187,8 @@ async function loadVerify(){
     h+='<div class="nm">'+esc(p.real_name||'（未入力）')+'</div>';
     h+='<div class="meta">ニックネーム: '+esc(p.nickname||'-')+' ／ 生年月日: '+esc(p.birthdate||'-')+'（'+age+'歳）</div>';
     h+='<div class="imgs">';
-    h+='<a href="#" id="idlink-'+p.user_id+'" onclick="openPhoto(\'id_photos\',\''+esc(p.id_photo_url||'')+'\',this);return false;">身分証を見る</a>';
-    h+='<a href="#" id="facelink-'+p.user_id+'" onclick="openPhoto(\'id_photos\',\''+esc(p.face_photo_url||'')+'\',this);return false;">顔写真を見る</a>';
+    h+='<a href="#" id="idlink-'+p.user_id+'" onclick="openPhoto(\''+p.user_id+'\',\'id\',this);return false;">身分証を見る</a>';
+    h+='<a href="#" id="facelink-'+p.user_id+'" onclick="openPhoto(\''+p.user_id+'\',\'face\',this);return false;">顔写真を見る</a>';
     h+='</div>';
     h+='<div class="meta">生年月日・書類名・発行元が読めるか／顔写真が同一人物か／20歳以上かを確認してください</div>';
     if(ME.can_verify){
@@ -197,17 +205,18 @@ async function loadVerify(){
   box.innerHTML=h;
 }
 
-async function openPhoto(bucket,path,el){
-  if(!path){alert('画像が登録されていません');return;}
+async function openPhoto(userId,kind,el){
   var orig=el.textContent;
   el.textContent='読み込み中...';
-  var r=await DB.storage.from(bucket).createSignedUrl(path,300); // 5分間だけ有効
+  // 一時URLの発行はサーバー側で行う（閲覧の記録も残る）
+  var r=await api({action:'photo_url',userId:userId,kind:kind});
   el.textContent=orig;
-  if(r.error||!r.data||!r.data.signedUrl){
-    alert('画像を開けませんでした: '+(r.error?r.error.message:'不明なエラー'));
+  if(!r.success||!r.url){
+    var m=(r.error==='photo_not_found')?'画像が登録されていません':'画像を開けませんでした';
+    alert(m);
     return;
   }
-  window.open(r.data.signedUrl,'_blank','noopener');
+  window.open(r.url,'_blank','noopener');
 }
 
 async function setV(uid,val){
@@ -254,9 +263,16 @@ function calcAge(bd){
 async function loadInq(){
   var box=document.getElementById('inq');
   box.innerHTML='<div class="empty">読み込み中...</div>';
-  var r=await DB.from('inquiries').select('*').order('created_at',{ascending:false}).limit(100);
-  if(r.error){box.innerHTML='<div class="card err">読み込みに失敗しました: '+r.error.message+'</div>';return;}
-  var list=r.data||[];
+  var r=await api({action:'list_inquiries'});
+  if(!r.success){
+    var msg2=(r.error==='no_reply_permission')
+      ?'このアカウントではお客様対応の一覧を表示できません（担当外）'
+      :'読み込みに失敗しました';
+    box.innerHTML='<div class="card err">'+msg2+'</div>';
+    document.getElementById('c2').textContent='0';
+    return;
+  }
+  var list=r.list||[];
   var open=0;
   for(var k=0;k<list.length;k++){if(!list[k].handled)open++;}
   document.getElementById('c2').textContent=open;
@@ -311,8 +327,8 @@ async function sendReply(id){
 }
 
 async function setH(id){
-  var r=await DB.from('inquiries').update({handled:true}).eq('id',id);
-  if(r.error){alert('更新に失敗しました: '+r.error.message+'\n（handled列が無い場合は設定が必要です）');return;}
+  var r=await api({action:'mark_handled',inquiryId:id});
+  if(!r.success){alert('更新に失敗しました。もう一度お試しください。');return;}
   loadInq();
 }
 
