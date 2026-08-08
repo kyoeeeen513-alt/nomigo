@@ -5,16 +5,34 @@
 // ・LINEの送り先と文面はサーバーが決める。ブラウザからは指定できない。
 // ・操作内容は admin_audit_logs に記録する。
 //
+// 【2026-08-08 の変更】
+//  これまで admin.html がブラウザから直接データベースを読んでいたため、
+//  「奈良のアカウントだけ読める」というルール（RLS）に依存していた。
+//  そのため代表（永澤）がログインしても本人確認の一覧が空になり、
+//  法令上の担当者が作業できない状態だった。
+//  一覧の取得と画像URLの発行をすべてサーバー側に移し、
+//  admin_users テーブルの権限で判定する形に変更した。
+//  あわせて、奈良個人のIDで固定されたRLSポリシーを削除できるようにした。
+//
+//  追加した action：
+//    list_pending  … 本人確認の待ち一覧を返す（can_verify が必要）
+//    photo_url     … 身分証・顔写真の一時URLを発行する（can_verify が必要）
+//    list_inquiries… 問い合わせ一覧を返す（can_reply が必要）
+//    mark_handled  … 問い合わせを対応済みにする（can_reply が必要）
+//
 // 【必要な環境変数】すべて設定済み
 //   SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY / LINE_CHANNEL_ACCESS_TOKEN
-
-// 運営として認める人は admin_users テーブルで管理する。
-// 担当者が変わったときは、この表を変えるだけでよい（コードの修正は不要）。
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const LINE_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+
+// 運営ページのURL（LINE通知に載せる）
+const ADMIN_PAGE_URL = 'https://nomi-go.jp/admin.html';
+
+// 身分証を保存しているバケット名。ブラウザからは指定させない
+const ID_BUCKET = 'id_photos';
 
 // 運営権限でデータベースを読み書きする共通処理
 async function db(path, options) {
@@ -32,6 +50,26 @@ async function db(path, options) {
   const text = await r.text();
   if (!r.ok) throw new Error('db_error');
   try { return JSON.parse(text); } catch (e) { return null; }
+}
+
+// 保管庫の画像について、一定時間だけ有効なURLを発行する
+async function signUrl(bucket, path, seconds) {
+  const r = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${encodeURI(path)}`,
+    {
+      method: 'POST',
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ expiresIn: seconds }),
+    }
+  );
+  if (!r.ok) return null;
+  const j = await r.json();
+  if (!j || !j.signedURL) return null;
+  return `${SUPABASE_URL}/storage/v1${j.signedURL}`;
 }
 
 // LINEへ1通送る。失敗しても本体の処理は止めない
@@ -126,7 +164,7 @@ module.exports = async (req, res) => {
       const to = await notifyTarget('age_verification');
       const sent = await pushLine(
         to,
-        '📋 年齢確認の申請が届きました\n\n未対応：' + count + '件\n\n運営ページを開いて確認してください。\nhttps://nomigo-final-5.vercel.app/admin.html'
+        '📋 年齢確認の申請が届きました\n\n未対応：' + count + '件\n\n運営ページを開いて確認してください。\n' + ADMIN_PAGE_URL
       );
 
       res.status(200).json({ success: true, sent: sent });
@@ -169,6 +207,61 @@ module.exports = async (req, res) => {
         can_verify: !!admin.can_verify,
         can_reply: !!admin.can_reply,
       });
+      return;
+    }
+
+    // ── 本人確認の待ち一覧を返す ──────────────────────
+    // 年齢確認の担当者だけが取得できる。
+    if (action === 'list_pending') {
+      if (!admin.can_verify) {
+        res.status(403).json({ success: false, error: 'no_verify_permission' });
+        return;
+      }
+      const rows = await db(
+        'profiles?id_verify_status=eq.pending' +
+        '&select=user_id,real_name,birthdate,nickname,gender,id_photo_url,face_photo_url' +
+        '&order=updated_at.asc'
+      );
+      res.status(200).json({ success: true, list: rows || [] });
+      return;
+    }
+
+    // ── 身分証・顔写真の一時URLを発行する ──────────────
+    // どの画像かは「利用者ID＋種類」で指定させる。
+    // ブラウザから任意のファイル名を渡させない（他人の画像を覗かせない）。
+    if (action === 'photo_url') {
+      if (!admin.can_verify) {
+        res.status(403).json({ success: false, error: 'no_verify_permission' });
+        return;
+      }
+      const userId = body.userId;
+      const kind = body.kind; // 'id' か 'face'
+      if (!userId || !isUuid.test(userId) || (kind !== 'id' && kind !== 'face')) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+
+      const p = await db(`profiles?user_id=eq.${userId}&select=id_photo_url,face_photo_url`);
+      if (!p || !p[0]) {
+        res.status(404).json({ success: false, error: 'user_not_found' });
+        return;
+      }
+      const path = (kind === 'id') ? p[0].id_photo_url : p[0].face_photo_url;
+      if (!path) {
+        res.status(404).json({ success: false, error: 'photo_not_found' });
+        return;
+      }
+
+      const url = await signUrl(ID_BUCKET, path, 300); // 5分間だけ有効
+      if (!url) {
+        res.status(500).json({ success: false, error: 'sign_failed' });
+        return;
+      }
+
+      // 誰がいつ身分証を閲覧したかを記録する
+      await audit(myId, 'view_' + kind + '_photo', 'profiles', userId, null, null);
+
+      res.status(200).json({ success: true, url: url });
       return;
     }
 
@@ -217,6 +310,41 @@ module.exports = async (req, res) => {
         { decision: decision, line_sent: sent }, note || null);
 
       res.status(200).json({ success: true, lineSent: sent, hasLine: !!lineId });
+      return;
+    }
+
+    // ── 問い合わせ一覧を返す ────────────────────────
+    if (action === 'list_inquiries') {
+      if (!admin.can_reply) {
+        res.status(403).json({ success: false, error: 'no_reply_permission' });
+        return;
+      }
+      const rows = await db(
+        'inquiries?select=id,user_id,name,email,content,handled,reply_content,replied_at,created_at' +
+        '&order=created_at.desc&limit=100'
+      );
+      res.status(200).json({ success: true, list: rows || [] });
+      return;
+    }
+
+    // ── 問い合わせを対応済みにする ──────────────────
+    if (action === 'mark_handled') {
+      const inquiryId = body.inquiryId;
+      if (!admin.can_reply) {
+        res.status(403).json({ success: false, error: 'no_reply_permission' });
+        return;
+      }
+      if (!inquiryId || !isUuid.test(inquiryId)) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      await db(`inquiries?id=eq.${inquiryId}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: { handled: true },
+      });
+      await audit(myId, 'inquiry_mark_handled', 'inquiries', inquiryId, null, null);
+      res.status(200).json({ success: true });
       return;
     }
 
