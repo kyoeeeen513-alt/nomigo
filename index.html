@@ -712,18 +712,33 @@ function emailVerifiedKey(){
   return 'ngo_ev_'+(S.user&&S.user.id?S.user.id:'');
 }
 function isEmailVerified(){
-  if(S._emailVerified)return true;
-  try{
-    if(localStorage.getItem(emailVerifiedKey())==='1'){S._emailVerified=true;return true;}
-  }catch(e){}
-  return false;
+  // サーバーに問い合わせた結果だけを信じる。
+  // 端末内の記録（localStorage）は利用者が自由に書き換えられるため、根拠にしない。
+  return S._emailVerified===true;
 }
 function markEmailVerified(){
+  // 確認できた事実はサーバー側（email_verified_users）に記録される。
+  // ここでは画面の状態だけを更新する。
   S._emailVerified=true;
-  try{localStorage.setItem(emailVerifiedKey(),'1');}catch(e){}
+}
+
+// メール確認が済んでいるかをサーバーに確認する。ログイン直後に必ず呼ぶ。
+async function loadEmailVerified(){
+  S._emailVerified=false;
+  try{
+    var s0=await DB.auth.getSession();
+    var tk=s0&&s0.data&&s0.data.session?s0.data.session.access_token:null;
+    if(!tk)return;
+    var r=await fetch('/api/send-email',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},
+      body:JSON.stringify({action:'verify_status'})});
+    var j=await r.json();
+    S._emailVerified=!!(j&&j.success&&j.verified);
+  }catch(e){}
 }
 
 async function routeAfterLoad(){
+  await loadEmailVerified();
   if(!S.profile){
     // プロフィール未作成＝登録の途中。メール確認を終えていない場合は必ず確認画面へ戻す。
     // 以前は、ログインし直す・再読み込みするだけで確認画面を素通りできていた。
