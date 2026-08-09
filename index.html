@@ -426,7 +426,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
   var app=document.getElementById('app');
   app.innerHTML=(map[S.screen]||loadingH)();
   if(_animateNext&&app.firstElementChild){app.firstElementChild.classList.add('anim-in');}
@@ -627,19 +627,31 @@ async function init(){
   try{
     var sc=supabase;
     DB=sc.createClient('https://dwubothomxjwfudkeepy.supabase.co','sb_publishable_vpUd5hulLV1-gI1wsAkgWA_hrB9ZOJ9');
-    if(window.location.hash&&window.location.hash.indexOf('type=recovery')!==-1){
+    DB.auth.onAuthStateChange(function(event,session){
+      if(event==='PASSWORD_RECOVERY'){
+        S._recovering=true;
+        if(session&&session.user)S.user=session.user;
+        S.screen='newpassword';
+        render();
+        return;
+      }
+      if(S._recovering)return;
+      if(event==='SIGNED_IN'&&session&&session.user&&!S.user){S.user=session.user;loadProfile();}
+    });
+    var _h=window.location.hash||'';
+    var _q=window.location.search||'';
+    if(_h.indexOf('type=recovery')!==-1||_q.indexOf('type=recovery')!==-1){
+      S._recovering=true;
       S.screen='newpassword';
       render();
       return;
     }
     var r=await Promise.race([DB.auth.getSession(),new Promise(function(res){setTimeout(function(){res({data:{session:null}});},5000);})]);
+    if(S._recovering)return;
     var sess=r.data&&r.data.session;
     if(sess&&sess.user){S.user=sess.user;await loadProfile();routeAfterLoad();}
     else{go('splash');}
     loadStats();
-    DB.auth.onAuthStateChange(function(event,session){
-      if(event==='SIGNED_IN'&&session&&session.user&&!S.user){S.user=session.user;loadProfile();}
-    });
   }catch(e){go('splash');}
 }
 
@@ -2448,6 +2460,7 @@ function splashH(){
   var profileMenuDropdown=profileMenuOpen?'<div style="position:absolute;top:56px;right:16px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden;z-index:9999;min-width:190px">'
     +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer" onclick="S._showProfileMenu=false;goProfileEdit()"><span style="font-size:13px;color:var(--cream)">プロフィール編集</span></div>'
     +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer" onclick="S._showProfileMenu=false;goFaqBot()"><span style="font-size:13px;color:var(--cream)">よくある質問</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer" onclick="S._showProfileMenu=false;goChangePassword()"><span style="font-size:13px;color:var(--cream)">パスワード変更</span></div>'
     +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer" onclick="S._showProfileMenu=false;go(\'inquiry\')"><span style="font-size:13px;color:var(--cream)">お問い合わせ</span></div>'
     +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;'+(isMatched?'':'border-bottom:1px solid var(--border2);')+'cursor:pointer" onclick="S._showProfileMenu=false;requestDeactivation()"><span style="font-size:13px;color:var(--muted)">退会希望の方はこちら</span></div>'
     +(isMatched?'':'<div style="padding:12px 16px;cursor:pointer" onclick="S._showProfileMenu=false;logout()"><span style="font-size:13px;color:var(--red);font-weight:700">ログアウト</span></div>')
@@ -2492,6 +2505,30 @@ async function saveNewPassword(){
 
 function newPasswordH(){
   return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-title">新しいパスワードを設定</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><input class="inp" id="newpass-inp" type="password" placeholder="新しいパスワード（6文字以上）"><div id="newpass-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" onclick="saveNewPassword()">保存する</button></div></div>';
+}
+
+function goChangePassword(){
+  S.error='';S.info='';
+  go('change_password');
+}
+
+function changePasswordH(){
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">パスワード変更</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><div style="font-size:13px;color:var(--muted);line-height:1.7">新しいパスワードを入力してください。他のサービスと同じものは使わないでください。</div><input class="inp" id="cp-new1" type="password" placeholder="新しいパスワード（6文字以上）"><input class="inp" id="cp-new2" type="password" placeholder="確認のためもう一度"><div id="cp-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" onclick="saveChangedPassword()">変更する</button></div></div>';
+}
+
+async function saveChangedPassword(){
+  var p1=document.getElementById('cp-new1').value;
+  var p2=document.getElementById('cp-new2').value;
+  var errEl=document.getElementById('cp-err');
+  if(!p1||p1.length<6){if(errEl)errEl.textContent='パスワードは6文字以上です';return;}
+  if(p1!==p2){if(errEl)errEl.textContent='2つのパスワードが一致しません';return;}
+  if(errEl)errEl.textContent='';
+  var res=await DB.auth.updateUser({password:p1});
+  if(res.error){if(errEl)errEl.textContent=friendlyError(res.error,'変更できませんでした。もう一度お試しください。');return;}
+  alert('パスワードを変更しました。もう一度ログインしてください。');
+  await DB.auth.signOut();
+  S.user=null;S.profile=null;S.registration=null;S.match=null;
+  go('splash');
 }
 
 async function goLineConnect(){
