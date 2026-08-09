@@ -5,9 +5,30 @@
 //   - 既に別ユーザーが使っているLINE IDなら、保存せずに理由を返信します
 //   - BANされたLINEなら、連携させません
 //
-// 【今回の変更】RLS(行レベルセキュリティ)を有効にしたため、
+// 【RLS対応】RLS(行レベルセキュリティ)を有効にしたため、
 //   サーバー側からの読み書きには service_role キーを使います。
 //   キーはVercelの環境変数 SUPABASE_SERVICE_ROLE_KEY から読み込みます。
+//
+// 【今回の変更：署名検証の追加】
+//   これまでは、届いた通信が本当にLINEから来たものか確認していませんでした。
+//   そのため、外部から偽の通信を作って「連携番号は123456です」と送りつけることができ、
+//   6桁の番号を総当たりされると、他人のアカウントに攻撃者のLINEを紐づけられる状態でした。
+//   紐づけに成功されると、マッチ成立の通知（お相手の情報を含む）が攻撃者に届いてしまいます。
+//
+//   LINEは通信のたびに X-Line-Signature という「合言葉」を付けて送ってきます。
+//   これはチャネルシークレット（LINE側で発行される秘密の文字列）を使って本文から計算された値で、
+//   秘密の文字列を知らない第三者には正しい値を作れません。
+//   受け取った本文から同じ計算をして一致するか確かめることで、偽の通信をすべて弾きます。
+//
+//   合言葉の計算は「本文の1バイトも変えずに」行う必要があるため、
+//   Vercelが自動でJSONに変換する機能を止め（bodyParser: false）、
+//   本文を生のまま受け取ってから自分で変換しています。
+//
+//   必要な環境変数：LINE_CHANNEL_SECRET
+//   （LINE Developers の対象チャネル > チャネル基本設定 > チャネルシークレット）
+
+const crypto = require('crypto');
+
 const SUPABASE_URL = 'https://dwubothomxjwfudkeepy.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -16,13 +37,77 @@ const HEADERS = {
   Authorization: `Bearer ${SUPABASE_KEY}`,
 };
 
+// Vercelによる本文の自動変換を止める（署名計算には生の本文が必要なため）
+module.exports.config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// 生の本文をそのまま読み取る
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+// 届いた通信が本当にLINEから来たものか確かめる
+function isValidSignature(rawBody, signature, channelSecret) {
+  if (!signature || !channelSecret) return false;
+  const expected = crypto
+    .createHmac('sha256', channelSecret)
+    .update(rawBody)
+    .digest('base64');
+  const a = Buffer.from(expected);
+  const b = Buffer.from(String(signature));
+  // 長さが違う場合は比較せずに不一致とする
+  if (a.length !== b.length) return false;
+  // 一致するまでの時間差から秘密を推測されないよう、専用の比較関数を使う
+  return crypto.timingSafeEqual(a, b);
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(200).send('OK');
     return;
   }
+
   try {
-    const events = (req.body && req.body.events) || [];
+    const channelSecret = process.env.LINE_CHANNEL_SECRET;
+
+    // チャネルシークレットが未設定なら、検証できないので受け付けない
+    if (!channelSecret) {
+      console.error('LINE_CHANNEL_SECRET が設定されていません');
+      res.status(401).send('Unauthorized');
+      return;
+    }
+
+    const rawBody = await readRawBody(req);
+    const signature = req.headers['x-line-signature'];
+
+    // 署名が一致しない通信はここで全て弾く
+    if (!isValidSignature(rawBody, signature, channelSecret)) {
+      console.error('署名が一致しない通信を拒否しました');
+      res.status(401).send('Unauthorized');
+      return;
+    }
+
+    // ここから先は、LINEから届いた正規の通信であることが確認できている
+    let payload;
+    try {
+      payload = JSON.parse(rawBody.toString('utf8'));
+    } catch (e) {
+      res.status(200).send('OK');
+      return;
+    }
+
+    const events = (payload && payload.events) || [];
+
     for (const event of events) {
       if (event.type === 'message' && event.message && event.message.type === 'text') {
         const text = event.message.text.trim();
