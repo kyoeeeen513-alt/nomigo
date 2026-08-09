@@ -141,8 +141,10 @@ async function checkAdmin(){
   document.getElementById('login').className='hide';
   document.getElementById('app').className='';
   document.getElementById('who').textContent=(ME.label||u.email);
-  if(!ME.can_verify)document.getElementById('t1').className='tab hide';
-  if(!ME.can_reply)document.getElementById('t2').className='tab hide';
+  // 担当外のタブは画面から消す。className では .tab の指定に負けて
+  // 消えないことがあるため、style で直接指定する。
+  if(!ME.can_verify)document.getElementById('t1').style.display='none';
+  if(!ME.can_reply)document.getElementById('t2').style.display='none';
   if(!ME.can_verify&&ME.can_reply)show('inq');
   if(ME.can_verify)loadVerify();
   if(ME.can_reply)loadInq();
