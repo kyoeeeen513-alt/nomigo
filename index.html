@@ -426,7 +426,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
   var app=document.getElementById('app');
   app.innerHTML=(map[S.screen]||loadingH)();
   if(_animateNext&&app.firstElementChild){app.firstElementChild.classList.add('anim-in');}
@@ -2478,17 +2478,32 @@ function emailH(){
 }
 
 function forgotPasswordH(){
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'email\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">パスワード再設定</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><div style="font-size:13px;color:var(--muted);line-height:1.7">登録したメールアドレスを入力してください。パスワードを再設定するためのリンクをお送りします。</div><input class="inp" id="fp-einp" type="email" placeholder="メールアドレス">'+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+(S.info?'<div style="font-size:12px;color:var(--green);text-align:center">'+S.info+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="sendPasswordReset()">再設定メールを送る →</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'email\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">パスワード再設定</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><div style="font-size:13px;color:var(--muted);line-height:1.7">登録したメールアドレスを入力してください。パスワードを再設定するためのリンクをお送りします。</div><input class="inp" id="fp-einp" type="email" placeholder="メールアドレス">'+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" id="fp-btn" onclick="sendPasswordReset()">再設定メールを送る →</button></div></div>';
 }
 
 async function sendPasswordReset(){
+  if(S._sendingReset)return;
   var email=document.getElementById('fp-einp').value.trim();
   if(!email){S.error='メールアドレスを入力してください';S.info='';re('forgot_password');return;}
-  S.error='';
+  S._sendingReset=true;
+  S.error='';S.info='';
+  var btn=document.getElementById('fp-btn');
+  if(btn){btn.disabled=true;btn.style.opacity='.55';btn.textContent='送信中…';}
   var res=await DB.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
-  if(res.error){S.error=friendlyError(res.error,'送信に失敗しました。もう一度お試しください。');re('forgot_password');return;}
-  S.info='再設定用のメールを送りました。メール内のリンクを開いてください。';
-  re('forgot_password');
+  S._sendingReset=false;
+  if(res.error){
+    if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='再設定メールを送る →';}
+    S.error=friendlyError(res.error,'送信に失敗しました。もう一度お試しください。');
+    re('forgot_password');
+    return;
+  }
+  S._resetSentTo=email;
+  go('reset_sent');
+}
+
+function resetSentH(){
+  var to=S._resetSentTo||'';
+  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-title">メールを送りました</div></div></div><div class="body" style="padding:32px 24px;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center"><div style="font-size:44px;line-height:1">✉️</div><div style="font-size:16px;font-weight:800;color:var(--cream);line-height:1.6">再設定用のメールを送りました</div><div style="font-size:13px;color:var(--cream);word-break:break-all;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 14px">'+to+'</div><div style="font-size:13px;color:var(--muted);line-height:1.9;text-align:left">1. メールアプリを開いてください<br>2. 「Reset your password」というメールの中のリンクを開いてください<br>3. 新しいパスワードを入力すれば完了です</div><div style="font-size:12px;color:var(--muted);line-height:1.8;text-align:left;background:rgba(0,0,0,.2);border-radius:10px;padding:14px 16px">・届くまで数分かかることがあります<br>・見当たらないときは<span style="color:var(--gold);font-weight:700">迷惑メールフォルダ</span>もご確認ください<br>・リンクは1回だけ有効です。使えないときは、もう一度送り直してください</div></div><div class="ftr"><button class="btn" style="background:var(--surface);border:1.5px solid var(--border);color:var(--muted)" onclick="go(\'forgot_password\')">メールをもう一度送る</button><button class="btn btn-wine" style="margin-top:10px" onclick="go(\'email\')">ログイン画面に戻る</button></div></div>';
 }
 
 async function saveNewPassword(){
