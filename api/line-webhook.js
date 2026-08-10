@@ -9,7 +9,7 @@
 //   サーバー側からの読み書きには service_role キーを使います。
 //   キーはVercelの環境変数 SUPABASE_SERVICE_ROLE_KEY から読み込みます。
 //
-// 【今回の変更：署名検証の追加】
+// 【署名検証の追加（8/9）】
 //   これまでは、届いた通信が本当にLINEから来たものか確認していませんでした。
 //   そのため、外部から偽の通信を作って「連携番号は123456です」と送りつけることができ、
 //   6桁の番号を総当たりされると、他人のアカウントに攻撃者のLINEを紐づけられる状態でした。
@@ -26,6 +26,21 @@
 //
 //   必要な環境変数：LINE_CHANNEL_SECRET
 //   （LINE Developers の対象チャネル > チャネル基本設定 > チャネルシークレット）
+//
+// 【今回の変更：番号の有効期限と試行回数の制限（8/10）】
+//   署名検証により外部からの偽の通信は塞がりましたが、連携番号そのものの守りは薄いままでした。
+//   6桁の番号には有効期限がなく、一度発行すると連携を完了するまで永久に使える状態だったため、
+//   連携を途中でやめた人の番号が残り続け、時間をかければ当てられる余地がありました。
+//
+//   対策は2つです。
+//   ① 有効期限：番号は発行から10分だけ有効。期限はDB側のトリガーが自動でつけるため、
+//      利用者が期限を延ばすことはできません。期限切れの番号では連携できません。
+//   ② 試行回数の制限：同じLINEアカウントが10分間に5回まちがえると、1時間受け付けません。
+//      これにより、総当たりに現実的でない時間がかかるようになります。
+//
+//   件数の数え直しやロックの判定はすべてDB側の関数（line_link_check_allowed /
+//   line_link_record_failure / line_link_clear_failures）で行い、
+//   これらの関数は一般利用者からは呼び出せないようにしてあります。
 
 const crypto = require('crypto');
 
@@ -69,6 +84,25 @@ function isValidSignature(rawBody, signature, channelSecret) {
   if (a.length !== b.length) return false;
   // 一致するまでの時間差から秘密を推測されないよう、専用の比較関数を使う
   return crypto.timingSafeEqual(a, b);
+}
+
+// DB側の関数を呼ぶ（総当たり対策の判定・記録）
+// 失敗しても連携そのものは止めない方針だが、判定は安全側（呼べなければ許可）に倒す
+async function callRpc(fnName, params) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+    method: 'POST',
+    headers: { ...HEADERS, 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    console.error(`RPC ${fnName} 失敗: ${res.status}`);
+    return null;
+  }
+  try {
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
 }
 
 module.exports = async (req, res) => {
@@ -116,6 +150,17 @@ module.exports = async (req, res) => {
         // 送られてきた文字が6桁の数字かどうかチェック
         if (/^\d{6}$/.test(text)) {
 
+          // --- ⓪ 短時間にまちがえすぎていないか確認（総当たりの抑止）---
+          const allowed = await callRpc('line_link_check_allowed', { p_line_user_id: lineUserId });
+          if (allowed === false) {
+            await replyMessage(
+              event.replyToken,
+              '番号のまちがいが続いたため、しばらく受け付けを停止しています。\n' +
+              '1時間ほど時間をおいてから、アプリで番号を発行し直してお試しください。'
+            );
+            continue;
+          }
+
           // --- ① このLINEがBANされていないか確認 ---
           const banRes = await fetch(
             `${SUPABASE_URL}/rest/v1/blacklist?line_user_id=eq.${encodeURIComponent(lineUserId)}&select=id&limit=1`,
@@ -139,17 +184,24 @@ module.exports = async (req, res) => {
           const alreadyLinkedUserId =
             Array.isArray(dupRows) && dupRows.length > 0 ? dupRows[0].user_id : null;
 
-          // --- ③ 番号からユーザーを探す ---
+          // --- ③ 番号からユーザーを探す（有効期限内のものだけを対象とする）---
+          //     期限切れの番号は、そもそも見つからない扱いになる
+          const nowIso = new Date().toISOString();
           const findRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/profiles?line_link_code=eq.${text}&select=user_id`,
+            `${SUPABASE_URL}/rest/v1/profiles?line_link_code=eq.${text}` +
+            `&line_link_code_expires_at=gt.${encodeURIComponent(nowIso)}` +
+            `&select=user_id`,
             { headers: HEADERS }
           );
           const rows = await findRes.json();
 
           if (!Array.isArray(rows) || rows.length === 0) {
+            // まちがい（または期限切れ）として記録する
+            await callRpc('line_link_record_failure', { p_line_user_id: lineUserId });
             await replyMessage(
               event.replyToken,
-              '番号が見つかりませんでした。アプリでもう一度番号を発行してください。'
+              '番号が見つかりませんでした。\n' +
+              '番号の有効期限は発行から10分です。アプリでもう一度番号を発行してからお送りください。'
             );
             continue;
           }
@@ -168,6 +220,7 @@ module.exports = async (req, res) => {
 
           // 同じユーザーが再度送ってきた場合は、そのまま完了扱い
           if (alreadyLinkedUserId === userId) {
+            await callRpc('line_link_clear_failures', { p_line_user_id: lineUserId });
             await replyMessage(event.replyToken, '連携はすでに完了しています。');
             continue;
           }
@@ -188,6 +241,9 @@ module.exports = async (req, res) => {
             );
             continue;
           }
+
+          // 連携できたので、まちがえた回数の記録は消す
+          await callRpc('line_link_clear_failures', { p_line_user_id: lineUserId });
 
           await replyMessage(
             event.replyToken,
