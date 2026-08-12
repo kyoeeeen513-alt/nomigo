@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>お支払い手続き｜Nomi Go</title>
+<style>
+  :root{
+    --bg:#1a1512;
+    --cream:#ede5e0;
+    --muted:rgba(237,229,224,.6);
+    --wine:#7b2d3b;
+    --green:#5aaa70;
+    --line:rgba(237,229,224,.15);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{width:100%;max-width:420px;background:rgba(0,0,0,.25);border:1px solid var(--line);
+    border-radius:14px;padding:28px 22px}
+  .mark{width:56px;height:56px;border-radius:50%;background:rgba(90,170,112,.15);
+    border:1px solid rgba(90,170,112,.35);display:flex;align-items:center;justify-content:center;
+    font-size:26px;color:var(--green);margin:0 auto 18px}
+  h1{font-size:19px;font-weight:900;text-align:center;margin:0 0 16px;line-height:1.5}
+  p{font-size:14px;line-height:1.9;color:var(--cream);margin:0 0 14px}
+  .note{font-size:12.5px;line-height:1.9;color:var(--muted);
+    background:rgba(0,0,0,.2);border-radius:10px;padding:14px;margin:18px 0 22px}
+  a.btn{display:block;text-align:center;background:var(--wine);color:#fff;text-decoration:none;
+    border-radius:10px;padding:15px;font-size:15px;font-weight:800}
+  .sub{text-align:center;margin:16px 0 0;font-size:12px;color:var(--muted)}
+  .sub a{color:var(--muted)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="mark">✓</div>
+      <h1>お支払い手続きが<br>完了しました</h1>
+
+      <p>ご購入ありがとうございます。<br>
+      アプリに戻って、チケットの枚数をご確認ください。</p>
+
+      <div class="note">
+        チケットの反映まで、少しお時間をいただく場合があります。<br>
+        すぐに反映されていない場合は、しばらくしてからアプリを開き直してください。<br><br>
+        30分以上経っても反映されない場合は、お手数ですがアプリ内の「お問い合わせ」からご連絡ください。確認のうえ対応いたします。
+      </div>
+
+      <a class="btn" href="https://www.nomi-go.jp/">アプリに戻る</a>
+
+      <p class="sub">
+        Nomi Go　<a href="mailto:info@nomi-go.jp">info@nomi-go.jp</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
