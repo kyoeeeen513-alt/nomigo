@@ -51,6 +51,16 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 .secret{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:1px;background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:11px;text-align:center;word-break:break-all;margin-top:8px;}
 .code{letter-spacing:8px;text-align:center;font-size:22px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .btn-copy{background:var(--gold);color:#2a0a12;width:100%;margin-top:8px;}
+.lead{font-size:14px;line-height:1.9;}
+.stepno{display:flex;align-items:center;font-size:15px;font-weight:800;color:var(--gold);margin-bottom:12px;}
+.stepno .num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#2a0a12;font-size:13px;margin-right:9px;flex:none;}
+.note{font-size:12px;color:var(--muted);line-height:1.8;margin-top:8px;}
+.tiny{font-size:11.5px;color:var(--muted);line-height:1.7;}
+.howto{margin:0;padding-left:20px;}
+.howto li{font-size:13.5px;line-height:1.9;margin-bottom:9px;}
+.tabs2{display:flex;gap:6px;margin-bottom:12px;}
+.tab2{flex:1;text-align:center;padding:9px 4px;border-radius:8px;background:#1e0710;border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;}
+.tab2.on{background:var(--line);color:var(--text);}
 .btn-copy.done{background:var(--ok);color:#fff;}
 .foldbtn{background:#4a1c28;color:var(--text);width:100%;margin-top:10px;font-size:13px;}
 .qrnote{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.7;}
@@ -76,47 +86,79 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 
   <!-- ② 2段階認証の初回設定 -->
   <div id="mfaSetup" class="hide">
-    <h1>Nomi Go 運営管理</h1>
-    <div class="sub">2段階認証の設定</div>
+    <h1>2段階認証の設定</h1>
+    <div class="sub">はじめに一度だけ行う設定です。5分ほどで終わります。</div>
+
     <div class="card">
-      <h2>認証アプリを登録してください</h2>
-      <div class="step">
-        運営ページでは、お客様の身分証をお預かりしています。<br>
-        万が一パスワードが漏れても入られないよう、
-        ログイン時に認証アプリの6桁の番号を入力する設定を行います。
+      <div class="lead">
+        運営ページではお客様の身分証をお預かりしています。<br>
+        パスワードが万が一漏れても入られないよう、ログイン時に
+        <b>6桁の番号</b>の入力を追加します。
       </div>
-
       <div class="warn">
-        <b>いちばん大事なこと</b><br>
-        下の登録キーは、<b>この一度しか表示されません</b>。<br>
-        画面を閉じる前に、<b>2台以上の端末に登録してください</b>。<br>
-        1台だけだと、その端末を失ったときにログインできなくなります。
+        この設定は<b>お手元のスマートフォンで</b>行います。<br>
+        この画面は開いたままにしてください。
+      </div>
+    </div>
+
+    <!-- 手順1 -->
+    <div class="card">
+      <div class="stepno"><span class="num">1</span>登録キーをコピーする</div>
+      <div class="secret" id="secretBox">読み込み中...</div>
+      <button class="btn-copy" id="copyBtn" onclick="onCopy()">登録キーをコピー</button>
+      <div class="note">この番号は、この画面を閉じると二度と表示されません。</div>
+    </div>
+
+    <!-- 手順2 -->
+    <div class="card">
+      <div class="stepno"><span class="num">2</span>スマートフォンに登録する</div>
+      <div class="note" style="margin-bottom:10px">お使いの端末を選んでください。</div>
+
+      <div class="tabs2">
+        <div class="tab2 on" id="g1" onclick="guide('ios')">iPhone・iPad</div>
+        <div class="tab2" id="g2" onclick="guide('app')">その他・アプリを使う</div>
       </div>
 
-      <div class="step">
-        <b>この画面を見ている端末とは別の端末</b>（お手持ちのスマートフォンなど）で登録します。<br>
-        下の「登録キーをコピー」を押し、そのキーを別の端末の認証アプリに貼り付けてください。
+      <div id="guide-ios">
+        <ol class="howto">
+          <li>ホーム画面で「<b>パスワード</b>」アプリを開く<br>
+              <span class="tiny">見つからないときは、ホーム画面を下にスワイプして「パスワード」と検索</span></li>
+          <li>一覧から <b>nomi-go.jp</b> を選ぶ<br>
+              <span class="tiny">ない場合は右下の「＋」で作る。ユーザ名はログイン用のメールアドレス</span></li>
+          <li>「<b>コードを設定</b>」を押す</li>
+          <li>「<b>セットアップキーを入力</b>」を選ぶ</li>
+          <li>手順1でコピーしたキーを<b>貼り付け</b>て保存</li>
+        </ol>
+        <div class="note">iPhoneで登録すると、iPadにも自動で入ります。</div>
       </div>
 
+      <div id="guide-app" class="hide">
+        <ol class="howto">
+          <li>「<b>Google Authenticator</b>」をインストールして開く</li>
+          <li>右下の「<b>＋</b>」を押す</li>
+          <li>「<b>セットアップキーを入力</b>」を選ぶ<br>
+              <span class="tiny">「QRコードをスキャン」ではないほう</span></li>
+          <li>アカウント名に <b>Nomi Go 運営</b> と入れる</li>
+          <li>キーの欄に、手順1でコピーしたキーを<b>貼り付け</b>て追加</li>
+        </ol>
+        <div class="note">紛失に備え、2台目にも同じキーで登録しておくと安心です。</div>
+      </div>
+
+      <button class="foldbtn" id="qrFold" onclick="toggleQr()">QRコードで登録したい方はこちら</button>
       <div id="qrArea"></div>
+    </div>
 
-      <div class="step" style="margin-top:14px">
-        読み取ったら、アプリに表示された6桁の番号を入力してください。
-      </div>
+    <!-- 手順3 -->
+    <div class="card">
+      <div class="stepno"><span class="num">3</span>表示された6桁を入力する</div>
+      <div class="note" style="margin-bottom:10px">登録したアプリに6桁の番号が出ます。それを入れてください。</div>
       <input id="setupCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
       <button class="btn-main" onclick="verifySetup()">設定を完了する</button>
       <div id="serr" class="err"></div>
-      <button class="link" onclick="doLogout()">ログイン画面に戻る</button>
     </div>
 
     <div class="card">
-      <h2>認証アプリとは</h2>
-      <div class="step">
-        6桁の番号を30秒ごとに作るアプリです。無料で使えます。<br><br>
-        <b>スマートフォン</b>：Google Authenticator、Microsoft Authenticator など<br>
-        <b>パソコン</b>：1Password、Bitwarden、Authy など<br><br>
-        普段パソコンで作業される場合は、パソコン側にも必ず登録しておいてください。
-      </div>
+      <button class="btn-sm" style="width:100%" onclick="doLogout()">中止してログイン画面に戻る</button>
     </div>
   </div>
 
@@ -129,10 +171,10 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
       <input id="loginCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
       <button class="btn-main" onclick="verifyLogin()">確認する</button>
       <div id="cerr" class="err"></div>
-      <button class="link" onclick="doLogout()">ログイン画面に戻る</button>
-      <div class="hint" style="margin-top:10px">
+      <div class="note" style="margin-top:14px">
         端末を紛失して番号が分からない場合は、奈良までご連絡ください。設定を解除できます。
       </div>
+      <button class="btn-sm" style="width:100%;margin-top:10px" onclick="doLogout()">ログイン画面に戻る</button>
     </div>
   </div>
 
@@ -268,12 +310,43 @@ async function checkAdmin(){
 }
 
 // ---------- 2段階認証：初回設定 ----------
+var SETUP_SECRET='';
+
+// 端末ごとの案内を切り替える
+function guide(which){
+  document.getElementById('guide-ios').className=(which==='ios')?'':'hide';
+  document.getElementById('guide-app').className=(which==='app')?'':'hide';
+  document.getElementById('g1').className=(which==='ios')?'tab2 on':'tab2';
+  document.getElementById('g2').className=(which==='app')?'tab2 on':'tab2';
+}
+
+// QRコードの表示・非表示
+function toggleQr(){
+  var area=document.getElementById('qrArea');
+  var btn=document.getElementById('qrFold');
+  if(area.style.display==='none'||area.style.display===''){
+    if(!area.innerHTML){
+      btn.textContent='QRコードで登録したい方はこちら';
+      return;
+    }
+    area.style.display='block';
+    btn.textContent='QRコードを隠す';
+  }else{
+    area.style.display='none';
+    btn.textContent='QRコードで登録したい方はこちら';
+  }
+}
+
 async function startSetup(){
   showOnly('mfaSetup');
+  guide('ios');
+  var secBox=document.getElementById('secretBox');
   var area=document.getElementById('qrArea');
   var err=document.getElementById('serr');
   err.textContent='';
-  area.innerHTML='<div class="empty">準備中...</div>';
+  area.style.display='none';
+  area.innerHTML='';
+  secBox.textContent='読み込み中...';
 
   // 途中でやめた登録が残っていると新しく作れないため、先に片づける
   try{
@@ -289,94 +362,49 @@ async function startSetup(){
 
   var r=await DB.auth.mfa.enroll({factorType:'totp',friendlyName:'nomigo-admin'});
   if(r.error||!r.data){
-    area.innerHTML='';
+    secBox.textContent='—';
     err.textContent='設定を開始できませんでした。ページを開き直してお試しください。';
     return;
   }
   SETUP_FACTOR=r.data.id;
   var qr=r.data.totp&&r.data.totp.qr_code?r.data.totp.qr_code:'';
-  var secret=r.data.totp&&r.data.totp.secret?r.data.totp.secret:'';
+  SETUP_SECRET=r.data.totp&&r.data.totp.secret?r.data.totp.secret:'';
 
-  // QRコードの中身は、環境によって次の2つの形で返ってきます。
-  //   ① data:image/svg+xml;... で始まる画像のアドレス
-  //   ② <svg ...> から始まる画像そのもの
-  // ②を <img src="..."> に入れると、中に含まれる引用符でタグが壊れます。
-  // そのため形を見分けて、文字をつなげずに組み立てます。
-  area.innerHTML='';
+  secBox.textContent=SETUP_SECRET||'—';
 
-  var box=document.createElement('div');
-  box.className='qrbox';
-  box.style.display='none';   // QRは既定では隠しておく（ボタンで開く）
-
-  if(qr && qr.indexOf('<svg')>=0){
-    // 画像そのものが返ってきた場合は、そのまま置く
-    box.innerHTML=qr;
-    var svg=box.querySelector('svg');
-    if(svg){
-      svg.setAttribute('width','190');
-      svg.setAttribute('height','190');
-      svg.style.display='block';
-      svg.style.margin='0 auto';
+  // QRコードは、別の端末で読み取れる場合のみ使う。
+  // 中身は環境によって「画像そのもの(<svg…>)」と「画像のアドレス(data:…)」の
+  // 2つの形があるため、文字をつなげずに組み立てる。
+  if(qr){
+    var box=document.createElement('div');
+    box.className='qrbox';
+    if(qr.indexOf('<svg')>=0){
+      box.innerHTML=qr;
+      var svg=box.querySelector('svg');
+      if(svg){
+        svg.setAttribute('width','190');
+        svg.setAttribute('height','190');
+        svg.style.display='block';
+        svg.style.margin='0 auto';
+      }
+    }else{
+      var img=document.createElement('img');
+      img.setAttribute('src',qr);
+      img.setAttribute('alt','QRコード');
+      box.appendChild(img);
     }
     area.appendChild(box);
-  }else if(qr){
-    // 画像のアドレスが返ってきた場合。
-    // setAttribute を使うことで、中身に引用符が含まれていても壊れません。
-    var img=document.createElement('img');
-    img.setAttribute('src',qr);
-    img.setAttribute('alt','QRコード');
-    box.appendChild(img);
-    area.appendChild(box);
-  }
-
-  if(secret){
-    // 登録キーは、コピーして別の端末へ運ぶのがいちばん確実です。
-    // そのため、まずコピーのボタンを出します。
-    var sec=document.createElement('div');
-    sec.className='secret';
-    sec.textContent=secret;
-    area.appendChild(sec);
-
-    var btn=document.createElement('button');
-    btn.className='btn-copy';
-    btn.textContent='登録キーをコピー';
-    btn.onclick=function(){copySecret(secret,btn);};
-    area.appendChild(btn);
 
     var note=document.createElement('div');
-    note.className='qrnote';
-    note.textContent='コピーしたキーを、別の端末の認証アプリに貼り付けてください。';
+    note.className='note';
+    note.style.textAlign='center';
+    note.textContent='別の端末の認証アプリのカメラで読み取ってください。この画面を見ている端末自身では読み取れません。';
     area.appendChild(note);
   }
+}
 
-  // QRコードは「読み取れる別の端末がある場合」のみ使うため、折りたたんでおく。
-  // この画面を見ている端末自身のカメラでは、自分の画面は読み取れません。
-  if(qr){
-    var fold=document.createElement('button');
-    fold.className='foldbtn';
-    fold.textContent='QRコードで登録する場合はこちら';
-    fold.onclick=function(){
-      if(box.style.display==='none'){
-        box.style.display='';
-        fold.textContent='QRコードを隠す';
-      }else{
-        box.style.display='none';
-        fold.textContent='QRコードで登録する場合はこちら';
-      }
-    };
-    area.appendChild(fold);
-
-    var qnote=document.createElement('div');
-    qnote.className='qrnote';
-    qnote.textContent='別の端末の認証アプリのカメラで読み取ってください。この画面を見ている端末自身では読み取れません。';
-    area.appendChild(qnote);
-  }
-
-  if(!qr && !secret){
-    area.innerHTML='<div class="err">設定用の情報を取得できませんでした。ページを開き直してお試しください。</div>';
-  }
-
-  document.getElementById('setupCode').focus();
+function onCopy(){
+  copySecret(SETUP_SECRET,document.getElementById('copyBtn'));
 }
 
 // 登録キーをコピーする。
@@ -401,7 +429,7 @@ function copySecret(secret,btn){
 }
 
 function selectSecret(){
-  var el=document.querySelector('#qrArea .secret');
+  var el=document.getElementById('secretBox');
   if(!el)return;
   try{
     var range=document.createRange();
