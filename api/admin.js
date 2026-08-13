@@ -34,6 +34,32 @@ const ADMIN_PAGE_URL = 'https://nomi-go.jp/admin.html';
 // 身分証を保存しているバケット名。ブラウザからは指定させない
 const ID_BUCKET = 'id_photos';
 
+// ログイン証明（トークン）の中身から「2段階認証を済ませたか」を読み取る。
+//
+// 【なぜ必要か】
+//  画面側で6桁の番号を確認しても、この窓口を直接呼ばれてしまえば意味がありません。
+//  そのため、2段階認証を通ったログインかどうかをサーバー側でも必ず確かめます。
+//
+//  Supabaseのトークンには aal という項目が入っており、
+//    aal1 … メールアドレスとパスワードだけでログインした状態
+//    aal2 … さらに6桁の番号を入力して確認が済んだ状態
+//  を表します。運営ページの操作はすべて aal2 でなければ受け付けません。
+//
+//  なお、このトークンが本物かどうかは、この関数の前に
+//  Supabaseへ問い合わせて確認済みです。ここでは中身を読むだけです。
+function getAal(token) {
+  try {
+    const part = String(token).split('.')[1];
+    if (!part) return null;
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const json = Buffer.from(b64, 'base64').toString('utf8');
+    const payload = JSON.parse(json);
+    return payload && payload.aal ? String(payload.aal) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // 運営権限でデータベースを読み書きする共通処理
 async function db(path, options) {
   const opt = options || {};
@@ -185,6 +211,15 @@ module.exports = async (req, res) => {
       return;
     }
     const myId = (await me.json()).id;
+
+    // ── 2段階認証を済ませたログインかを確認する ──────────────
+    // 認証アプリの6桁を入力していないログインでは、ここから先へ進めません。
+    // 画面側の確認だけに頼らず、この窓口でも必ず確かめます。
+    const token = auth.slice('Bearer '.length);
+    if (getAal(token) !== 'aal2') {
+      res.status(403).json({ success: false, error: 'mfa_required' });
+      return;
+    }
 
     const adminRows = await db(
       `admin_users?user_id=eq.${myId}&enabled=is.true&select=user_id,label,can_verify,can_reply`
