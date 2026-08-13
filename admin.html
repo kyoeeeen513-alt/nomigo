@@ -50,6 +50,10 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 .qrbox img,.qrbox svg{width:190px;height:190px;display:block;margin:0 auto;}
 .secret{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:1px;background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:11px;text-align:center;word-break:break-all;margin-top:8px;}
 .code{letter-spacing:8px;text-align:center;font-size:22px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.btn-copy{background:var(--gold);color:#2a0a12;width:100%;margin-top:8px;}
+.btn-copy.done{background:var(--ok);color:#fff;}
+.foldbtn{background:#4a1c28;color:var(--text);width:100%;margin-top:10px;font-size:13px;}
+.qrnote{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.7;}
 .link{background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:8px 0;width:100%;}
 </style>
 </head>
@@ -84,9 +88,14 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 
       <div class="warn">
         <b>いちばん大事なこと</b><br>
-        下のQRコードは、<b>この一度しか表示されません</b>。<br>
-        スマートフォンとパソコンなど、<b>複数の端末で今のうちに読み取ってください</b>。<br>
-        1台しか登録していないと、その端末を失ったときにログインできなくなります。
+        下の登録キーは、<b>この一度しか表示されません</b>。<br>
+        画面を閉じる前に、<b>2台以上の端末に登録してください</b>。<br>
+        1台だけだと、その端末を失ったときにログインできなくなります。
+      </div>
+
+      <div class="step">
+        <b>この画面を見ている端末とは別の端末</b>（お手持ちのスマートフォンなど）で登録します。<br>
+        下の「登録キーをコピー」を押し、そのキーを別の端末の認証アプリに貼り付けてください。
       </div>
 
       <div id="qrArea"></div>
@@ -297,6 +306,7 @@ async function startSetup(){
 
   var box=document.createElement('div');
   box.className='qrbox';
+  box.style.display='none';   // QRは既定では隠しておく（ボタンで開く）
 
   if(qr && qr.indexOf('<svg')>=0){
     // 画像そのものが返ってきた場合は、そのまま置く
@@ -320,15 +330,46 @@ async function startSetup(){
   }
 
   if(secret){
-    var hint=document.createElement('div');
-    hint.className='hint';
-    hint.textContent='QRコードを読み取れない場合は、この文字列をアプリに手入力してください。';
-    area.appendChild(hint);
-
+    // 登録キーは、コピーして別の端末へ運ぶのがいちばん確実です。
+    // そのため、まずコピーのボタンを出します。
     var sec=document.createElement('div');
     sec.className='secret';
     sec.textContent=secret;
     area.appendChild(sec);
+
+    var btn=document.createElement('button');
+    btn.className='btn-copy';
+    btn.textContent='登録キーをコピー';
+    btn.onclick=function(){copySecret(secret,btn);};
+    area.appendChild(btn);
+
+    var note=document.createElement('div');
+    note.className='qrnote';
+    note.textContent='コピーしたキーを、別の端末の認証アプリに貼り付けてください。';
+    area.appendChild(note);
+  }
+
+  // QRコードは「読み取れる別の端末がある場合」のみ使うため、折りたたんでおく。
+  // この画面を見ている端末自身のカメラでは、自分の画面は読み取れません。
+  if(qr){
+    var fold=document.createElement('button');
+    fold.className='foldbtn';
+    fold.textContent='QRコードで登録する場合はこちら';
+    fold.onclick=function(){
+      if(box.style.display==='none'){
+        box.style.display='';
+        fold.textContent='QRコードを隠す';
+      }else{
+        box.style.display='none';
+        fold.textContent='QRコードで登録する場合はこちら';
+      }
+    };
+    area.appendChild(fold);
+
+    var qnote=document.createElement('div');
+    qnote.className='qrnote';
+    qnote.textContent='別の端末の認証アプリのカメラで読み取ってください。この画面を見ている端末自身では読み取れません。';
+    area.appendChild(qnote);
   }
 
   if(!qr && !secret){
@@ -336,6 +377,42 @@ async function startSetup(){
   }
 
   document.getElementById('setupCode').focus();
+}
+
+// 登録キーをコピーする。
+// クリップボードの機能が使えない環境もあるため、その場合は
+// 文字を選択した状態にして、長押しからコピーできるようにする。
+function copySecret(secret,btn){
+  function done(){
+    btn.textContent='コピーしました';
+    btn.className='btn-copy done';
+    setTimeout(function(){
+      btn.textContent='登録キーをコピー';
+      btn.className='btn-copy';
+    },2500);
+  }
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(secret).then(done,function(){selectSecret();});
+      return;
+    }
+  }catch(e){}
+  selectSecret();
+}
+
+function selectSecret(){
+  var el=document.querySelector('#qrArea .secret');
+  if(!el)return;
+  try{
+    var range=document.createRange();
+    range.selectNodeContents(el);
+    var sel=window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    alert('キーを選択しました。長押しして「コピー」を選んでください。');
+  }catch(e){
+    alert('お手数ですが、キーを長押ししてコピーしてください。');
+  }
 }
 
 async function verifySetup(){
