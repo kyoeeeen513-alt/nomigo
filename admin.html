@@ -12,6 +12,7 @@
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text);}
 .wrap{max-width:720px;margin:0 auto;padding:16px;}
 h1{font-size:18px;margin:0 0 4px;color:var(--gold);}
+h2{font-size:15px;margin:0 0 10px;color:var(--gold);}
 .sub{font-size:12px;color:var(--muted);margin-bottom:16px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
 label{display:block;font-size:13px;margin:10px 0 4px;color:var(--muted);}
@@ -42,12 +43,20 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 .replied{background:#1e0710;border-left:3px solid var(--gold);padding:9px 11px;margin-top:8px;border-radius:0 6px 6px 0;font-size:13px;white-space:pre-wrap;line-height:1.6;}
 .replied b{color:var(--gold);}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;}
+/* 2段階認証の画面 */
+.step{font-size:13.5px;line-height:1.9;margin:0 0 12px;}
+.warn{background:#1e0710;border-left:3px solid var(--gold);padding:11px 13px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.9;margin:12px 0;}
+.qrbox{background:#fff;padding:14px;border-radius:10px;text-align:center;margin:12px 0;}
+.qrbox img{width:190px;height:190px;display:block;margin:0 auto;}
+.secret{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:1px;background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:11px;text-align:center;word-break:break-all;margin-top:8px;}
+.code{letter-spacing:8px;text-align:center;font-size:22px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.link{background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:8px 0;width:100%;}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- ログイン画面 -->
+  <!-- ① ログイン画面 -->
   <div id="login">
     <h1>Nomi Go 運営管理</h1>
     <div class="sub">運営者専用ページです</div>
@@ -61,7 +70,64 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
     </div>
   </div>
 
-  <!-- 管理画面 -->
+  <!-- ② 2段階認証の初回設定 -->
+  <div id="mfaSetup" class="hide">
+    <h1>Nomi Go 運営管理</h1>
+    <div class="sub">2段階認証の設定</div>
+    <div class="card">
+      <h2>認証アプリを登録してください</h2>
+      <div class="step">
+        運営ページでは、お客様の身分証をお預かりしています。<br>
+        万が一パスワードが漏れても入られないよう、
+        ログイン時に認証アプリの6桁の番号を入力する設定を行います。
+      </div>
+
+      <div class="warn">
+        <b>いちばん大事なこと</b><br>
+        下のQRコードは、<b>この一度しか表示されません</b>。<br>
+        スマートフォンとパソコンなど、<b>複数の端末で今のうちに読み取ってください</b>。<br>
+        1台しか登録していないと、その端末を失ったときにログインできなくなります。
+      </div>
+
+      <div id="qrArea"></div>
+
+      <div class="step" style="margin-top:14px">
+        読み取ったら、アプリに表示された6桁の番号を入力してください。
+      </div>
+      <input id="setupCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+      <button class="btn-main" onclick="verifySetup()">設定を完了する</button>
+      <div id="serr" class="err"></div>
+      <button class="link" onclick="doLogout()">ログイン画面に戻る</button>
+    </div>
+
+    <div class="card">
+      <h2>認証アプリとは</h2>
+      <div class="step">
+        6桁の番号を30秒ごとに作るアプリです。無料で使えます。<br><br>
+        <b>スマートフォン</b>：Google Authenticator、Microsoft Authenticator など<br>
+        <b>パソコン</b>：1Password、Bitwarden、Authy など<br><br>
+        普段パソコンで作業される場合は、パソコン側にも必ず登録しておいてください。
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ ログイン時の6桁入力 -->
+  <div id="mfaCode" class="hide">
+    <h1>Nomi Go 運営管理</h1>
+    <div class="sub">2段階認証</div>
+    <div class="card">
+      <div class="step">認証アプリに表示されている6桁の番号を入力してください。</div>
+      <input id="loginCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+      <button class="btn-main" onclick="verifyLogin()">確認する</button>
+      <div id="cerr" class="err"></div>
+      <button class="link" onclick="doLogout()">ログイン画面に戻る</button>
+      <div class="hint" style="margin-top:10px">
+        端末を紛失して番号が分からない場合は、奈良までご連絡ください。設定を解除できます。
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 管理画面 -->
   <div id="app" class="hide">
     <div class="top">
       <div>
@@ -94,6 +160,7 @@ var DB=supabase.createClient(SB_URL,SB_KEY,{
 });
 var CUR='verify';
 var ME={can_verify:true,can_reply:true,label:''};
+var SETUP_FACTOR=null;   // 初回設定中の認証アプリの登録ID
 
 // ---------- サーバー窓口の呼び出し ----------
 // 承認・返信はサーバー側で処理する。LINEの送り先と文面もサーバーが決める。
@@ -109,6 +176,15 @@ async function api(payload){
   }catch(e){return {success:false,error:'通信に失敗しました'};}
 }
 
+// ---------- 画面の出し分け ----------
+function showOnly(id,msg){
+  ['login','mfaSetup','mfaCode','app'].forEach(function(k){
+    document.getElementById(k).className=(k===id)?'':'hide';
+  });
+  if(id==='login'&&msg)document.getElementById('lerr').textContent=msg;
+}
+function showLogin(msg){showOnly('login',msg);}
+
 // ---------- ログイン ----------
 async function doLogin(){
   var em=document.getElementById('em').value.trim();
@@ -118,6 +194,7 @@ async function doLogin(){
   if(!em||!pw){err.textContent='メールアドレスとパスワードを入力してください';return;}
   var r=await DB.auth.signInWithPassword({email:em,password:pw});
   if(r.error){err.textContent='ログインできませんでした。入力内容をご確認ください。';return;}
+  document.getElementById('pw').value='';
   checkAdmin();
 }
 
@@ -126,20 +203,51 @@ async function doLogout(){
   location.reload();
 }
 
+// ---------- 入場の判定 ----------
+//
+// 順番はこうです。
+//   1. ログインしているか
+//   2. 認証アプリを登録済みか → 未登録なら設定画面へ
+//   3. 6桁の番号を入力済みか   → 未入力なら入力画面へ
+//   4. 運営として登録された人か（サーバー側で判定）
+//
+// 2と3を飛ばして4に進むことはありません。
+// またサーバー側でも同じ確認をしているため、画面を書き換えても通れません。
 async function checkAdmin(){
   var s=await DB.auth.getSession();
   var u=s.data.session?s.data.session.user:null;
   if(!u){showLogin();return;}
-  // 運営かどうかの判定はサーバー側（admin_users テーブル）で行う
+
+  var lv=await DB.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(lv.error){showLogin('確認に失敗しました。もう一度お試しください。');return;}
+  var cur=lv.data.currentLevel;
+  var next=lv.data.nextLevel;
+
+  if(cur!=='aal2'){
+    if(next==='aal2'){
+      // 認証アプリは登録済み。6桁の入力だけが残っている
+      showOnly('mfaCode');
+      document.getElementById('loginCode').focus();
+    }else{
+      // まだ認証アプリを登録していない
+      startSetup();
+    }
+    return;
+  }
+
+  // ここから先は2段階認証を通った状態
   var chk=await api({action:'whoami'});
   if(!chk.success){
+    if(chk.error==='mfa_required'){
+      showOnly('mfaCode');
+      return;
+    }
     await DB.auth.signOut();
     showLogin('このアカウントには管理権限がありません。');
     return;
   }
   ME=chk;
-  document.getElementById('login').className='hide';
-  document.getElementById('app').className='';
+  showOnly('app');
   document.getElementById('who').textContent=(ME.label||u.email);
   // 担当外のタブは画面から消す。className では .tab の指定に負けて
   // 消えないことがあるため、style で直接指定する。
@@ -150,10 +258,81 @@ async function checkAdmin(){
   if(ME.can_reply)loadInq();
 }
 
-function showLogin(msg){
-  document.getElementById('login').className='';
-  document.getElementById('app').className='hide';
-  if(msg)document.getElementById('lerr').textContent=msg;
+// ---------- 2段階認証：初回設定 ----------
+async function startSetup(){
+  showOnly('mfaSetup');
+  var area=document.getElementById('qrArea');
+  var err=document.getElementById('serr');
+  err.textContent='';
+  area.innerHTML='<div class="empty">準備中...</div>';
+
+  // 途中でやめた登録が残っていると新しく作れないため、先に片づける
+  try{
+    var fl=await DB.auth.mfa.listFactors();
+    if(fl.data&&fl.data.all){
+      for(var i=0;i<fl.data.all.length;i++){
+        if(fl.data.all[i].status!=='verified'){
+          await DB.auth.mfa.unenroll({factorId:fl.data.all[i].id});
+        }
+      }
+    }
+  }catch(e){}
+
+  var r=await DB.auth.mfa.enroll({factorType:'totp',friendlyName:'nomigo-admin'});
+  if(r.error||!r.data){
+    area.innerHTML='';
+    err.textContent='設定を開始できませんでした。ページを開き直してお試しください。';
+    return;
+  }
+  SETUP_FACTOR=r.data.id;
+  var qr=r.data.totp&&r.data.totp.qr_code?r.data.totp.qr_code:'';
+  var secret=r.data.totp&&r.data.totp.secret?r.data.totp.secret:'';
+
+  var h='';
+  if(qr)h+='<div class="qrbox"><img src="'+qr+'" alt="QRコード"></div>';
+  if(secret){
+    h+='<div class="hint">QRコードを読み取れない場合は、この文字列をアプリに手入力してください。</div>';
+    h+='<div class="secret">'+esc(secret)+'</div>';
+  }
+  area.innerHTML=h;
+  document.getElementById('setupCode').focus();
+}
+
+async function verifySetup(){
+  var code=document.getElementById('setupCode').value.trim();
+  var err=document.getElementById('serr');
+  err.textContent='';
+  if(!/^\d{6}$/.test(code)){err.textContent='6桁の数字を入力してください';return;}
+  if(!SETUP_FACTOR){err.textContent='設定をやり直してください';return;}
+
+  var r=await DB.auth.mfa.challengeAndVerify({factorId:SETUP_FACTOR,code:code});
+  if(r.error){
+    err.textContent='番号が一致しませんでした。アプリの表示を確認して、もう一度お試しください。';
+    document.getElementById('setupCode').value='';
+    return;
+  }
+  alert('2段階認証の設定が完了しました。\n次回のログインからは、6桁の番号の入力が必要になります。\n\n複数の端末で読み取っていない場合は、いったんログアウトして設定し直してください。');
+  checkAdmin();
+}
+
+// ---------- 2段階認証：ログイン時の確認 ----------
+async function verifyLogin(){
+  var code=document.getElementById('loginCode').value.trim();
+  var err=document.getElementById('cerr');
+  err.textContent='';
+  if(!/^\d{6}$/.test(code)){err.textContent='6桁の数字を入力してください';return;}
+
+  var fl=await DB.auth.mfa.listFactors();
+  var f=(fl.data&&fl.data.totp&&fl.data.totp.length>0)?fl.data.totp[0]:null;
+  if(!f){err.textContent='認証アプリの登録が見つかりません。ログインし直してください。';return;}
+
+  var r=await DB.auth.mfa.challengeAndVerify({factorId:f.id,code:code});
+  if(r.error){
+    err.textContent='番号が一致しませんでした。アプリの表示を確認して、もう一度お試しください。';
+    document.getElementById('loginCode').value='';
+    return;
+  }
+  checkAdmin();
 }
 
 // ---------- タブ ----------
@@ -344,6 +523,20 @@ function fmtDate(s){
 function esc(s){
   return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+// 6桁の入力欄は数字だけを受け付ける
+['setupCode','loginCode'].forEach(function(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.addEventListener('input',function(){
+    this.value=this.value.replace(/[^0-9]/g,'').slice(0,6);
+  });
+  el.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){
+      if(id==='setupCode')verifySetup();else verifyLogin();
+    }
+  });
+});
 
 // 起動時：ログイン済みか確認
 checkAdmin();
