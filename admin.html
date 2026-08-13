@@ -47,7 +47,7 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 .step{font-size:13.5px;line-height:1.9;margin:0 0 12px;}
 .warn{background:#1e0710;border-left:3px solid var(--gold);padding:11px 13px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.9;margin:12px 0;}
 .qrbox{background:#fff;padding:14px;border-radius:10px;text-align:center;margin:12px 0;}
-.qrbox img{width:190px;height:190px;display:block;margin:0 auto;}
+.qrbox img,.qrbox svg{width:190px;height:190px;display:block;margin:0 auto;}
 .secret{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:1px;background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:11px;text-align:center;word-break:break-all;margin-top:8px;}
 .code{letter-spacing:8px;text-align:center;font-size:22px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .link{background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:8px 0;width:100%;}
@@ -288,13 +288,53 @@ async function startSetup(){
   var qr=r.data.totp&&r.data.totp.qr_code?r.data.totp.qr_code:'';
   var secret=r.data.totp&&r.data.totp.secret?r.data.totp.secret:'';
 
-  var h='';
-  if(qr)h+='<div class="qrbox"><img src="'+qr+'" alt="QRコード"></div>';
-  if(secret){
-    h+='<div class="hint">QRコードを読み取れない場合は、この文字列をアプリに手入力してください。</div>';
-    h+='<div class="secret">'+esc(secret)+'</div>';
+  // QRコードの中身は、環境によって次の2つの形で返ってきます。
+  //   ① data:image/svg+xml;... で始まる画像のアドレス
+  //   ② <svg ...> から始まる画像そのもの
+  // ②を <img src="..."> に入れると、中に含まれる引用符でタグが壊れます。
+  // そのため形を見分けて、文字をつなげずに組み立てます。
+  area.innerHTML='';
+
+  var box=document.createElement('div');
+  box.className='qrbox';
+
+  if(qr && qr.indexOf('<svg')>=0){
+    // 画像そのものが返ってきた場合は、そのまま置く
+    box.innerHTML=qr;
+    var svg=box.querySelector('svg');
+    if(svg){
+      svg.setAttribute('width','190');
+      svg.setAttribute('height','190');
+      svg.style.display='block';
+      svg.style.margin='0 auto';
+    }
+    area.appendChild(box);
+  }else if(qr){
+    // 画像のアドレスが返ってきた場合。
+    // setAttribute を使うことで、中身に引用符が含まれていても壊れません。
+    var img=document.createElement('img');
+    img.setAttribute('src',qr);
+    img.setAttribute('alt','QRコード');
+    box.appendChild(img);
+    area.appendChild(box);
   }
-  area.innerHTML=h;
+
+  if(secret){
+    var hint=document.createElement('div');
+    hint.className='hint';
+    hint.textContent='QRコードを読み取れない場合は、この文字列をアプリに手入力してください。';
+    area.appendChild(hint);
+
+    var sec=document.createElement('div');
+    sec.className='secret';
+    sec.textContent=secret;
+    area.appendChild(sec);
+  }
+
+  if(!qr && !secret){
+    area.innerHTML='<div class="err">設定用の情報を取得できませんでした。ページを開き直してお試しください。</div>';
+  }
+
   document.getElementById('setupCode').focus();
 }
 
