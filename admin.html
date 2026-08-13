@@ -46,8 +46,6 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 /* 2段階認証の画面 */
 .step{font-size:13.5px;line-height:1.9;margin:0 0 12px;}
 .warn{background:#1e0710;border-left:3px solid var(--gold);padding:11px 13px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.9;margin:12px 0;}
-.qrbox{background:#fff;padding:14px;border-radius:10px;text-align:center;margin:12px 0;}
-.qrbox img,.qrbox svg{width:190px;height:190px;display:block;margin:0 auto;}
 .secret{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:1px;background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:11px;text-align:center;word-break:break-all;margin-top:8px;}
 .code{letter-spacing:8px;text-align:center;font-size:22px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .btn-copy{background:var(--gold);color:#2a0a12;width:100%;margin-top:8px;}
@@ -57,13 +55,17 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 .note{font-size:12px;color:var(--muted);line-height:1.8;margin-top:8px;}
 .tiny{font-size:11.5px;color:var(--muted);line-height:1.7;}
 .howto{margin:0;padding-left:20px;}
-.howto li{font-size:13.5px;line-height:1.9;margin-bottom:9px;}
+.howto li{font-size:13.5px;line-height:1.9;margin-bottom:13px;}
+.fields{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.f{display:flex;border-bottom:1px solid var(--line);}
+.f:last-child{border-bottom:none;}
+.fl{width:88px;flex:none;padding:9px 10px;background:#1e0710;font-size:12px;color:var(--gold);font-weight:700;}
+.fv{padding:9px 10px;font-size:12.5px;line-height:1.7;color:var(--text);}
 .tabs2{display:flex;gap:6px;margin-bottom:12px;}
 .tab2{flex:1;text-align:center;padding:9px 4px;border-radius:8px;background:#1e0710;border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;}
 .tab2.on{background:var(--line);color:var(--text);}
 .btn-copy.done{background:var(--ok);color:#fff;}
 .foldbtn{background:#4a1c28;color:var(--text);width:100%;margin-top:10px;font-size:13px;}
-.qrnote{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.7;}
 .link{background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:8px 0;width:100%;}
 </style>
 </head>
@@ -122,30 +124,63 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
       <div id="guide-ios">
         <ol class="howto">
           <li>ホーム画面で「<b>パスワード</b>」アプリを開く<br>
-              <span class="tiny">見つからないときは、ホーム画面を下にスワイプして「パスワード」と検索</span></li>
-          <li>一覧から <b>nomi-go.jp</b> を選ぶ<br>
-              <span class="tiny">ない場合は右下の「＋」で作る。ユーザ名はログイン用のメールアドレス</span></li>
-          <li>「<b>コードを設定</b>」を押す</li>
-          <li>「<b>セットアップキーを入力</b>」を選ぶ</li>
-          <li>手順1でコピーしたキーを<b>貼り付け</b>て保存</li>
+              <span class="tiny">カラフルな鍵のアイコンです。見つからないときは、ホーム画面の中央を下にスワイプして「パスワード」と検索してください。設定アプリの中ではなく、独立したアプリです。</span></li>
+
+          <li>一覧に <b>nomi-go.jp</b> があるか探す<br>
+              <span class="tiny">あった場合は、それを選んで手順4へ進んでください。</span></li>
+
+          <li>ない場合は、右下の「<b>＋</b>」を押して作る<br>
+              <div class="fields">
+                <div class="f"><span class="fl">Webサイト</span><span class="fv">nomi-go.jp</span></div>
+                <div class="f"><span class="fl">ユーザ名</span><span class="fv">この運営ページに<br>ログインするときのメールアドレス</span></div>
+                <div class="f"><span class="fl">パスワード</span><span class="fv">この運営ページに<br>ログインするときのパスワード</span></div>
+              </div>
+              <span class="tiny">入力したら右上の「保存」を押します。「すでに存在します」と出た場合は、すでに登録済みです。キャンセルして一覧から選んでください。</span></li>
+
+          <li>作った（または選んだ）<b>nomi-go.jp</b> をもう一度開く</li>
+
+          <li>「<b>コードを設定</b>」を押す<br>
+              <span class="tiny">パスワードの欄の下にあります。</span></li>
+
+          <li>「<b>セットアップキーを入力</b>」を選ぶ<br>
+              <span class="tiny">「QRコードをスキャン」ではないほうです。</span></li>
+
+          <li>手順1でコピーしたキーを<b>貼り付け</b>て、右上の「保存」<br>
+              <span class="tiny">入力欄を長押しして「ペースト」を選びます。</span></li>
         </ol>
-        <div class="note">iPhoneで登録すると、iPadにも自動で入ります。</div>
+        <div class="note">
+          登録できると、6桁の番号が表示されます。<br>
+          iPhoneで登録すれば、同じApple IDのiPadにも自動で入ります。
+        </div>
       </div>
 
       <div id="guide-app" class="hide">
         <ol class="howto">
-          <li>「<b>Google Authenticator</b>」をインストールして開く</li>
+          <li>「<b>Google Authenticator</b>」をインストールして開く<br>
+              <span class="tiny">App Store または Google Play で検索します。無料です。</span></li>
+
+          <li>最初の案内は「使ってみる」で進める</li>
+
           <li>右下の「<b>＋</b>」を押す</li>
+
           <li>「<b>セットアップキーを入力</b>」を選ぶ<br>
-              <span class="tiny">「QRコードをスキャン」ではないほう</span></li>
-          <li>アカウント名に <b>Nomi Go 運営</b> と入れる</li>
-          <li>キーの欄に、手順1でコピーしたキーを<b>貼り付け</b>て追加</li>
+              <span class="tiny">「QRコードをスキャン」ではないほうです。</span></li>
+
+          <li>2つの欄を埋める
+              <div class="fields">
+                <div class="f"><span class="fl">アカウント</span><span class="fv">あとで見て分かる名前<br>（例：Nomi Go 運営）</span></div>
+                <div class="f"><span class="fl">キー</span><span class="fv">手順1でコピーしたキーを<br>貼り付け</span></div>
+              </div>
+              <span class="tiny">「時間ベース」の設定はそのままで構いません。</span></li>
+
+          <li>「<b>追加</b>」を押す</li>
         </ol>
-        <div class="note">紛失に備え、2台目にも同じキーで登録しておくと安心です。</div>
+        <div class="note">
+          登録できると、6桁の番号が表示されます。<br>
+          紛失に備え、2台目の端末にも同じキーで登録しておくと安心です。
+        </div>
       </div>
 
-      <button class="foldbtn" id="qrFold" onclick="toggleQr()">QRコードで登録したい方はこちら</button>
-      <div id="qrArea"></div>
     </div>
 
     <!-- 手順3 -->
@@ -320,32 +355,12 @@ function guide(which){
   document.getElementById('g2').className=(which==='app')?'tab2 on':'tab2';
 }
 
-// QRコードの表示・非表示
-function toggleQr(){
-  var area=document.getElementById('qrArea');
-  var btn=document.getElementById('qrFold');
-  if(area.style.display==='none'||area.style.display===''){
-    if(!area.innerHTML){
-      btn.textContent='QRコードで登録したい方はこちら';
-      return;
-    }
-    area.style.display='block';
-    btn.textContent='QRコードを隠す';
-  }else{
-    area.style.display='none';
-    btn.textContent='QRコードで登録したい方はこちら';
-  }
-}
-
 async function startSetup(){
   showOnly('mfaSetup');
   guide('ios');
   var secBox=document.getElementById('secretBox');
-  var area=document.getElementById('qrArea');
   var err=document.getElementById('serr');
   err.textContent='';
-  area.style.display='none';
-  area.innerHTML='';
   secBox.textContent='読み込み中...';
 
   // 途中でやめた登録が残っていると新しく作れないため、先に片づける
@@ -367,40 +382,10 @@ async function startSetup(){
     return;
   }
   SETUP_FACTOR=r.data.id;
-  var qr=r.data.totp&&r.data.totp.qr_code?r.data.totp.qr_code:'';
   SETUP_SECRET=r.data.totp&&r.data.totp.secret?r.data.totp.secret:'';
 
   secBox.textContent=SETUP_SECRET||'—';
 
-  // QRコードは、別の端末で読み取れる場合のみ使う。
-  // 中身は環境によって「画像そのもの(<svg…>)」と「画像のアドレス(data:…)」の
-  // 2つの形があるため、文字をつなげずに組み立てる。
-  if(qr){
-    var box=document.createElement('div');
-    box.className='qrbox';
-    if(qr.indexOf('<svg')>=0){
-      box.innerHTML=qr;
-      var svg=box.querySelector('svg');
-      if(svg){
-        svg.setAttribute('width','190');
-        svg.setAttribute('height','190');
-        svg.style.display='block';
-        svg.style.margin='0 auto';
-      }
-    }else{
-      var img=document.createElement('img');
-      img.setAttribute('src',qr);
-      img.setAttribute('alt','QRコード');
-      box.appendChild(img);
-    }
-    area.appendChild(box);
-
-    var note=document.createElement('div');
-    note.className='note';
-    note.style.textAlign='center';
-    note.textContent='別の端末の認証アプリのカメラで読み取ってください。この画面を見ている端末自身では読み取れません。';
-    area.appendChild(note);
-  }
 }
 
 function onCopy(){
