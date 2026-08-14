@@ -280,7 +280,7 @@ const FAQ_QA=[
   {keywords:['ペナルティ','違約金'],answer:'マッチ成立後に連絡なく不参加となった場合、男性は消費したチケットが返還されません。女性はキャンセル料3,980円（税込）のご負担が生じることがあります。判断方法と異議申立ては利用規約第9条の2に定めています。'},
   {keywords:['エリア','場所','地域'],answer:'現在対応しているエリアは、すすきの・新宿の2か所です。上野・梅田は近日公開予定です。'},
   {keywords:['時間','何時','営業時間'],answer:'募集できる時間は「今すぐ」「19:00」「20:00」「21:00」「22:00」から選べます。'},
-  {keywords:['2対2','2:2','2v2','友達'],answer:'2対2は、友達と一緒に参加して、同じく2人組の相手とマッチする仕組みです。1対1と2対2は別々にマッチングされます。'},
+  {keywords:['2対2','2:2','2v2','友達','招待'],answer:'2対2は、友達1人と一緒に参加して、同じく2人組の相手とマッチする仕組みです。ご一緒される方にも、アプリの登録と本人確認をお願いしています。人数選択で「2対2で飲む」を選ぶと招待リンクを作れますので、LINEなどで友達に送ってください。友達の参加が確定すると募集を開始できます。招待リンクの有効期限は24時間です。1対1と2対2は別々にマッチングされます。'},
   {keywords:['1対1','1:1','1v1'],answer:'1対1は、あなた1人と、お相手1人とのマッチです。'},
   {keywords:['マッチ','マッチング','相手','見つから'],answer:'条件に合うお相手が見つかり次第、自動でマッチが成立します。すぐに見つからない場合は、条件を変えてみるのもおすすめです。'},
   {keywords:['年齢','年上','年下'],answer:'募集の際に、許容できる年齢の範囲（例：23〜30歳）を入力するか、「何歳でもいい」を選べます。お互いの範囲に収まる相手とマッチングされます。'},
@@ -426,7 +426,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,pair_invite:pairInviteH,pair_accept:pairAcceptH};
   var app=document.getElementById('app');
   app.innerHTML=(map[S.screen]||loadingH)();
   if(_animateNext&&app.firstElementChild){app.firstElementChild.classList.add('anim-in');}
@@ -649,7 +649,27 @@ async function init(){
     var r=await Promise.race([DB.auth.getSession(),new Promise(function(res){setTimeout(function(){res({data:{session:null}});},5000);})]);
     if(S._recovering)return;
     var sess=r.data&&r.data.session;
-    if(sess&&sess.user){S.user=sess.user;await loadProfile();routeAfterLoad();}
+    if(sess&&sess.user){S.user=sess.user;await loadProfile();}
+
+    // お友だちからの招待リンク（?pair=...）で開かれた場合は、招待の画面を先に出す。
+    // ログインしていない場合や本人確認が済んでいない場合も、
+    // 画面側で「次に何をすればよいか」を案内する。
+    var _pairToken=null;
+    try{
+      var _params=new URLSearchParams(_q);
+      _pairToken=_params.get('pair');
+    }catch(e){
+      var _m=_q.match(/[?&]pair=([^&]+)/);
+      if(_m)_pairToken=decodeURIComponent(_m[1]);
+    }
+    if(_pairToken){
+      try{ window.history.replaceState({},'',window.location.pathname); }catch(e){}
+      await openPairInviteByToken(_pairToken);
+      loadStats();
+      return;
+    }
+
+    if(sess&&sess.user){routeAfterLoad();}
     else{go('splash');}
     loadStats();
   }catch(e){go('splash');}
@@ -706,6 +726,11 @@ async function loadProfile(){
     await loadMatchMembers();
     return;
   }
+
+  // 2対2の組の状態も読み込む。
+  // これを読まないと、アプリを閉じて開き直したときに
+  // 「お友だちの参加が確定していない」と誤って表示されてしまう。
+  await loadPairStatus();
 
   var reg=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
   if(reg.data){
@@ -1572,12 +1597,261 @@ function areaSelectH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">現在は「新宿」「すすきの」でご利用いただけます。その他のエリアは近日公開予定です。</div></div></div>';
 }
 
+// ===== 2対2の招待 =====
+// 一緒に来るお友だちにも、法律上、身分証による年齢確認が必要になる。
+// そのため「年齢を選ぶ」方式をやめ、お友だちにも登録と本人確認を
+// 済ませていただいたうえで、招待リンクから参加を確定してもらう形にした。
+// 招待リンクの有効期限は発行から24時間。期限はサーバー側が決めるため、
+// 利用者が延ばすことはできない。
+
+// 自分の組の状態を読み込む
+async function loadPairStatus(){
+  S._pair=null;
+  try{
+    var res=await DB.rpc('my_pair_status');
+    var row=res.data&&res.data[0];
+    if(!row)return;
+    S._pair={
+      token:row.out_token,
+      role:row.out_my_role,
+      status:row.out_status,
+      expiresAt:row.out_expires_at,
+      partnerUserId:row.out_partner_user_id,
+      partnerNickname:row.out_partner_nickname,
+      partnerAge:row.out_partner_age,
+      partnerPhotoUrl:row.out_partner_photo_url,
+      partnerVerified:row.out_partner_verified===true
+    };
+  }catch(e){}
+}
+
+async function goPairInvite(){
+  showBusy();
+  try{ await loadPairStatus(); }finally{ hideBusy(); }
+  go('pair_invite');
+}
+
+// 招待リンクを発行する
+var _pairIssuing=false;
+async function issuePairInvite(){
+  if(_pairIssuing)return;
+  _pairIssuing=true;
+  showBusy();
+  try{
+    var res=await DB.rpc('create_pair_invite');
+    if(res.error){
+      alert(friendlyError(res.error,'招待リンクを作成できませんでした。'));
+      return;
+    }
+    await loadPairStatus();
+    re('pair_invite');
+  }catch(e){
+    alert(friendlyError(e,'招待リンクを作成できませんでした。'));
+  }finally{
+    _pairIssuing=false;hideBusy();
+  }
+}
+
+function pairInviteUrl(){
+  if(!S._pair||!S._pair.token)return '';
+  return window.location.origin+'/?pair='+S._pair.token;
+}
+
+function copyPairInviteUrl(){
+  var url=pairInviteUrl();
+  if(!url)return;
+  var done=function(){alert('招待リンクをコピーしました。LINEなどでお友だちに送ってください。');};
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(done,function(){fallbackCopy(url,done);});
+    }else{ fallbackCopy(url,done); }
+  }catch(e){ fallbackCopy(url,done); }
+}
+function fallbackCopy(text,cb){
+  try{
+    var ta=document.createElement('textarea');
+    ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    cb();
+  }catch(e){ alert('コピーできませんでした。リンクを長押しして選択してください。'); }
+}
+
+// 組を解除する
+async function cancelPair(){
+  if(!confirm('お友だちとの組を解除しますか？\n解除すると、もう一度招待からやり直しになります。'))return;
+  showBusy();
+  try{
+    var res=await DB.rpc('cancel_pair_invite');
+    var row=res.data&&res.data[0];
+    if(res.error||!row||!row.out_ok){
+      alert((row&&row.out_message)||friendlyError(res.error,'解除できませんでした。'));
+      return;
+    }
+    await loadPairStatus();
+    re('pair_invite');
+  }finally{ hideBusy(); }
+}
+
+function pairInviteH(){
+  var p=S._pair;
+  var body='';
+
+  if(!p){
+    // まだ招待していない
+    body='<div style="font-size:14px;color:var(--cream);line-height:1.9">'
+      +'2対2は、お友だち1人と一緒に参加する飲み方です。'
+      +'<br><br>お相手の安全のため、ご一緒される方にも'
+      +'<b>アプリの登録と本人確認</b>をお願いしています。'
+      +'<br><br>下のボタンで招待リンクを作り、LINEなどでお友だちに送ってください。'
+      +'</div>'
+      +'<div style="margin-top:18px;padding:14px 16px;background:rgba(244,233,220,.04);border:1px solid var(--border2);border-radius:12px">'
+      +'<div style="font-size:12px;color:var(--muted);line-height:1.9">'
+      +'・招待リンクの有効期限は24時間です<br>'
+      +'・お友だちが登録と本人確認を終えると、参加が確定します<br>'
+      +'・お二人とも確定してから、募集を開始できます'
+      +'</div></div>'
+      +'<button class="btn btn-wine" style="margin-top:20px" onclick="issuePairInvite()">招待リンクを作る →</button>';
+  }else if(p.status==='pending'){
+    // 招待済み・返事待ち
+    var url=pairInviteUrl();
+    body='<div style="font-size:14px;color:var(--cream);line-height:1.9">'
+      +'招待リンクができました。<br>LINEなどでお友だちに送ってください。</div>'
+      +'<div style="margin-top:14px;padding:14px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;word-break:break-all;font-size:12.5px;color:var(--gold-bright)">'
+      +escapeHtml(url)+'</div>'
+      +'<button class="btn btn-wine" style="margin-top:12px" onclick="copyPairInviteUrl()">リンクをコピーする</button>'
+      +'<div style="margin-top:18px;padding:14px 16px;background:rgba(244,233,220,.04);border:1px solid var(--border2);border-radius:12px;font-size:12px;color:var(--muted);line-height:1.9">'
+      +'・お友だちがリンクを開いて参加を確定すると、この画面が切り替わります<br>'
+      +'・有効期限は24時間です。切れた場合は作り直してください'
+      +'</div>'
+      +'<button class="btn" style="margin-top:14px;background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="goPairInvite()">状況を確認する</button>'
+      +'<div style="text-align:center;margin-top:6px"><button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:10px" onclick="cancelPair()">招待を取り消す</button></div>';
+  }else{
+    // 参加が確定している
+    var photo=p.partnerPhotoUrl
+      ?'<img src="'+p.partnerPhotoUrl+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover">'
+      :'<div style="width:56px;height:56px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted)">👤</div>';
+    body='<div style="padding:16px;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);border-radius:14px;display:flex;align-items:center;gap:14px">'
+      +photo
+      +'<div><div style="font-size:15px;font-weight:800;color:var(--cream)">'+escapeHtml(p.partnerNickname||'お友だち')+(p.partnerAge?'（'+p.partnerAge+'歳）':'')+'</div>'
+      +'<div style="font-size:12px;color:'+(p.partnerVerified?'var(--green)':'var(--red)')+';margin-top:4px;font-weight:700">'
+      +(p.partnerVerified?'✓ 本人確認まで完了しています':'本人確認が完了していません')+'</div></div></div>';
+
+    if(p.partnerVerified){
+      body+='<div style="margin-top:18px;font-size:13px;color:var(--muted);line-height:1.9">お二人とも準備が整いました。次の画面で今夜の条件を選んでください。</div>'
+        +'<button class="btn btn-wine" style="margin-top:16px" onclick="go(\'recruit\')">条件を選ぶ →</button>';
+    }else{
+      body+='<div style="margin-top:18px;font-size:13px;color:var(--muted);line-height:1.9">お友だちの本人確認が終わると、募集を開始できます。しばらくお待ちください。</div>'
+        +'<button class="btn" style="margin-top:16px;background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="goPairInvite()">状況を確認する</button>';
+    }
+    body+='<div style="text-align:center;margin-top:6px"><button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:10px" onclick="cancelPair()">組を解除する</button></div>';
+  }
+
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button>'
+    +'<div class="hdr-info"><div class="hdr-step">2対2の準備</div><div class="hdr-title">お友だちを招待する</div></div></div>'
+    +'<div class="body" style="padding:24px">'+body+'</div></div>';
+}
+
+// ===== 招待リンクを開いた側の画面 =====
+async function openPairInviteByToken(token){
+  S._inviteToken=token;
+  S._invitePeek=null;
+  showBusy();
+  try{
+    var res=await DB.rpc('peek_pair_invite',{p_token:token});
+    var row=res.data&&res.data[0];
+    if(row){
+      S._invitePeek={
+        hostNickname:row.out_host_nickname,
+        hostAge:row.out_host_age,
+        hostPhotoUrl:row.out_host_photo_url,
+        expiresAt:row.out_expires_at,
+        status:row.out_status,
+        canAccept:row.out_can_accept===true,
+        reason:row.out_reason
+      };
+    }
+  }catch(e){}finally{ hideBusy(); }
+  go('pair_accept');
+}
+
+var _pairAccepting=false;
+async function acceptPairInvite(){
+  if(_pairAccepting)return;
+  _pairAccepting=true;
+  showBusy();
+  try{
+    var res=await DB.rpc('accept_pair_invite',{p_token:S._inviteToken});
+    var row=res.data&&res.data[0];
+    if(res.error||!row||!row.out_ok){
+      alert((row&&row.out_message)||friendlyError(res.error,'参加できませんでした。'));
+      return;
+    }
+    S._inviteToken=null;S._invitePeek=null;
+    alert('参加が確定しました。お友だちが募集を始めるとマッチングが始まります。');
+    go('splash');
+  }finally{ _pairAccepting=false;hideBusy(); }
+}
+
+function pairAcceptH(){
+  var v=S._invitePeek;
+  if(!v){
+    return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-title">お友だちからの招待</div></div></div>'
+      +'<div class="body" style="padding:40px 24px;text-align:center"><div style="font-size:40px">🔗</div>'
+      +'<div style="font-size:15px;color:var(--cream);margin-top:14px">この招待は読み込めませんでした。</div></div>'
+      +'<div class="ftr"><button class="btn btn-wine" onclick="go(\'splash\')">トップへ</button></div></div>';
+  }
+  var photo=v.hostPhotoUrl
+    ?'<img src="'+v.hostPhotoUrl+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover">'
+    :'<div style="width:72px;height:72px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--muted)">👤</div>';
+
+  var main='<div style="text-align:center">'+photo
+    +'<div style="font-size:19px;font-weight:800;color:var(--cream);margin-top:12px">'
+    +escapeHtml(v.hostNickname||'お友だち')+(v.hostAge?'（'+v.hostAge+'歳）':'')+'さん</div>'
+    +'<div style="font-size:14px;color:var(--muted);margin-top:6px">から、2対2の飲み会に誘われています</div></div>';
+
+  var action;
+  if(v.canAccept){
+    action='<div style="margin-top:22px;padding:14px 16px;background:rgba(244,233,220,.04);border:1px solid var(--border2);border-radius:12px;font-size:12px;color:var(--muted);line-height:1.9">'
+      +'・参加すると、お友だちと2人組として募集に参加します<br>'
+      +'・お相手も2人組で、合計4人での飲み会になります<br>'
+      +'・男性はマッチが成立するとチケットを1枚使います'
+      +'</div>'
+      +'<button class="btn btn-wine" style="margin-top:20px" onclick="acceptPairInvite()">参加する →</button>'
+      +'<div style="text-align:center"><button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:12px" onclick="go(\'splash\')">今回は参加しない</button></div>';
+  }else{
+    var next='';
+    if(!S.user){
+      next='<button class="btn btn-wine" style="margin-top:18px" onclick="go(\'email\')">登録・ログインする →</button>';
+    }else if(!S.profile){
+      next='<button class="btn btn-wine" style="margin-top:18px" onclick="goRecruit()">プロフィールを登録する →</button>';
+    }else if(S.profile.id_verify_status!=='approved'){
+      next='<button class="btn btn-wine" style="margin-top:18px" onclick="go(\'id_verify\')">本人確認をする →</button>';
+    }else{
+      next='<button class="btn" style="margin-top:18px;background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="go(\'splash\')">トップへ</button>';
+    }
+    action='<div style="margin-top:22px;padding:16px;background:var(--red-bg);border:1px solid rgba(255,138,108,.3);border-radius:12px;font-size:13px;color:var(--red);line-height:1.8">'
+      +escapeHtml(v.reason||'この招待は利用できません')+'</div>'+next;
+  }
+
+  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">お友だちからの招待</div><div class="hdr-title">2対2に参加する</div></div></div>'
+    +'<div class="body" style="padding:28px 24px">'+main+action+'</div></div>';
+}
+
 function selectMode(m,el){
+  // 2対2は、お友だちの参加が確定していないと募集できない。
+  // 法律上、一緒に来る方にも身分証による年齢確認が必要なため、
+  // お友だちにもアプリに登録して本人確認を済ませていただく。
+  function go2(){
+    S.form.mode=m;
+    if(m==='2v2'){goPairInvite();}else{go('recruit');}
+  }
   if(el){
     el.classList.add('card-selected');
-    setTimeout(function(){S.form.mode=m;go('recruit');},220);
+    setTimeout(go2,220);
   }else{
-    S.form.mode=m;go('recruit');
+    go2();
   }
 }
 
@@ -1603,8 +1877,15 @@ async function startRecruit(){
   if(_isSubmitting)return;
   var f=S.form;
   if(!f.area||!f.slot||!f.drink_style||!f.purpose){S.error='すべて選択してください';re('recruit');return;}
-  if(f.mode==='2v2'&&!f.partner_age){S.error='すべて選択してください';re('recruit');return;}
-  if(f.mode==='2v2'&&!(parseInt(f.partner_age)>=20&&parseInt(f.partner_age)<=99)){S.error='Nomi Goは20歳以上の方がご利用いただけます。もう1人の年齢をご確認ください';re('recruit');return;}
+  // 2対2は、お友だちの参加が確定していないと募集できない。
+  // 以前は年齢を選ぶだけだったが、それでは一緒に来る方の年齢を確かめたことにならない。
+  // 本人確認まで済ませた登録者どうしでなければ組めない仕組みに変えた。
+  if(f.mode==='2v2'){
+    if(!S._pair||S._pair.status!=='accepted'||!S._pair.partnerVerified){
+      S.error='2対2は、お友だちの参加が確定してから募集できます';
+      re('recruit');return;
+    }
+  }
   if(S.profile&&S.profile.gender==='male'){
     if(!S.profile.ticket_count||S.profile.ticket_count<1){S.error='ticket_zero';re('recruit');return;}
   }
@@ -1778,7 +2059,6 @@ async function doRegister(){
       age:S.profile.age,
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
-      partner_age:(S.form.mode==='2v2'&&parseInt(S.form.partner_age)>=20&&parseInt(S.form.partner_age)<=99)?parseInt(S.form.partner_age):null,
       status:'waiting'
     }).select(REG_COLS).single();
     if(timeoutFlag.hit)return;
@@ -1882,6 +2162,33 @@ async function tryMatch(){
   dbgLog('S4: 条件通過'+filtered.length+'件');
   if(filtered.length===0){return false;}
 
+  // 2対2では、相手も2人組で参加している。
+  // そのまま並べると同じ組の2人が別々の候補として出てしまい、
+  // 「どちらと飲むか」の選択肢に同じ組の2人が並んでしまう。
+  // 組ごとに1件だけ残し、さらに2人そろっている組だけを候補にする。
+  if((R.mode||'1v1')==='2v2'){
+    var byPair={};
+    filtered.forEach(function(c){
+      if(!c.pair_id)return;
+      if(!byPair[c.pair_id])byPair[c.pair_id]=[];
+      byPair[c.pair_id].push(c);
+    });
+    var pairFiltered=[];
+    Object.keys(byPair).forEach(function(pid){
+      // 2人そろっていない組は、4人での飲み会が成立しないので候補にしない
+      if(byPair[pid].length>=2){
+        // 組を代表する1件だけを候補にする（募集した本人を優先）
+        var host=byPair[pid].filter(function(x){return x.pair_role==='host';})[0];
+        pairFiltered.push(host||byPair[pid][0]);
+      }else{
+        dbgLog('  除外(組が揃っていない) pair='+pid.slice(0,8));
+      }
+    });
+    filtered=pairFiltered;
+    dbgLog('S4b: 組に整理 '+filtered.length+'組');
+    if(filtered.length===0){return false;}
+  }
+
   // 目的一致・年齢の近さで並べ替え
   filtered.sort(function(a,b){return candidateScore(b)-candidateScore(a);});
 
@@ -1918,44 +2225,44 @@ async function tryMatch(){
 }
 
 // ===== マッチ確定処理（選ばれた相手と成立させ、選ばれなかった相手は募集中に戻す）=====
+// ===== マッチの成立 =====
+// 【重要】成立の処理はすべてサーバー側の関数 finalize_match が行う。
+//   理由は2つ。
+//   ① 2対2では男性が2人いる。以前の作りは「1マッチにつき1枚」しか消費できず、
+//      2人目のチケットが引かれないまま飲み会が成立してしまう状態だった。
+//   ② 途中で失敗したとき、マッチだけできてチケットが引かれない、
+//      といった中途半端な状態が残らないようにするため。
+//   サーバー側では、参加者全員が本人確認済みであることと、
+//   男性全員がチケットを持っていることを最後にもう一度確かめている。
 async function finalizeMatchWith(bestReg,otherReg){
-  var p=S.profile;
-  var prof;
-  if(bestReg.profileData){prof={data:bestReg.profileData};}
-  else{var pfr=await DB.rpc('get_candidate_profile',{p_user_id:bestReg.user_id});prof={data:(pfr.data&&pfr.data[0])||null};}
-  bestReg.profileData=prof.data||{};
-
-  var RG=S.registration;
-  var matchRes=await DB.from('matches').insert({
-    area_id:RG.area_id||S.form.area,
-    slot:RG.slot||S.form.slot,
-    mode:'1v1',
-    timing:RG.timing||S.form.timing,
-    status:'confirmed'
-  }).select().single();
-  if(matchRes.error){
-    dbgLog('S6err: matches作成失敗 '+matchRes.error.message);
-    await DB.from('registrations').update({status:'waiting'}).eq('id',bestReg.id).eq('status','processing');
+  var res=await DB.rpc('finalize_match',{p_partner_reg_id:bestReg.id});
+  if(res.error){
+    dbgLog('S6err: 成立失敗 '+res.error.message);
+    // 選ばれなかった候補は募集中に戻す（本人には何も通知されない）
+    if(otherReg)await DB.from('registrations').update({status:'waiting'}).eq('id',otherReg.id).eq('status','processing');
+    S.error=friendlyError(res.error,'マッチの成立に失敗しました。もう一度お試しください。');
+    return false;
+  }
+  var row=res.data&&res.data[0];
+  if(!row||!row.out_match_id){
     if(otherReg)await DB.from('registrations').update({status:'waiting'}).eq('id',otherReg.id).eq('status','processing');
     return false;
   }
-  S.match=matchRes.data;
+  var matchId=row.out_match_id;
+  dbgLog('S8: マッチ成立 '+matchId.slice(0,8));
 
-  var u1=await DB.from('registrations').update({status:'matched',match_id:matchRes.data.id}).eq('id',S.registration.id);
-  var u2=await DB.from('registrations').update({status:'matched',match_id:matchRes.data.id}).eq('id',bestReg.id);
-  // 選ばれなかった候補は募集中に戻す（本人には何も通知されない）
+  // 選ばれなかった候補を募集中に戻す
   if(otherReg)await DB.from('registrations').update({status:'waiting'}).eq('id',otherReg.id).eq('status','processing');
-  if(u1.error||u2.error){dbgLog('S7err: 状態更新失敗 '+((u1.error&&u1.error.message)||'')+' / '+((u2.error&&u2.error.message)||''));return false;}
-  dbgLog('S8: マッチ成立 '+matchRes.data.id.slice(0,8));
 
-  S.registration.status='matched';
-  S.registration.match_id=matchRes.data.id;
+  var m=await DB.from('matches').select('*').eq('id',matchId).single();
+  if(m.data)S.match=m.data;
 
-  var maleUserId=(p.gender==='male')?S.user.id:bestReg.user_id;
-  await consumeTicket(matchRes.data.id,maleUserId);
+  var reg=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('match_id',matchId).single();
+  if(reg.data)S.registration=reg.data;
+
   await syncUserState();
   await loadMatchMembers();
-  sendMatchLineNotify(matchRes.data.id);
+  sendMatchLineNotify(matchId);
   render();
   return true;
 }
@@ -2776,7 +3083,8 @@ function recruitH(){
   var defaultMax=myAgeNum+5;
   if(f.age_min==null||f.age_min===''){f.age_min=defaultMin;}
   if(f.age_max==null||f.age_max===''){f.age_max=defaultMax;}
-  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||(parseInt(f.partner_age)>=20&&parseInt(f.partner_age)<=99));
+  // 2対2の条件は、お友だちの参加が確定しているかどうか（年齢の入力は廃止した）
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||!!(S._pair&&S._pair.status==='accepted'&&S._pair.partnerVerified));
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
   SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
@@ -2800,9 +3108,24 @@ function recruitH(){
   var ageCeil=99;
   html+='<div class="sec-label">④ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">✨ 何歳でもいい</span></label>'+(f.age_any?'':'<div style="display:flex;align-items:center;gap:10px"><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="下限" style="max-width:130px" value="'+(f.age_min||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_min=this.value" onblur="this.value=clampAgeMin(this.value,'+defaultMin+');S.form.age_min=this.value;updateRecruitSubmitBtn()"><span style="color:var(--muted)">〜</span><input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="上限" style="max-width:130px" value="'+(f.age_max||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_max=this.value" onblur="this.value=clampAgeMax(this.value,'+defaultMax+');S.form.age_max=this.value;updateRecruitSubmitBtn()"></div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">※初期設定はご自身の年齢の上下5歳（最低20歳）です。数字を変えれば、さらに範囲を広げることもできます。範囲内で、より年齢が近い相手が優先的にマッチします。</div></div>';
   if(isPair){
-    var partnerOpts='<option value="">選択してください</option>';
-    for(var _pa=20;_pa<=99;_pa++){partnerOpts+='<option value="'+_pa+'"'+(parseInt(f.partner_age)===_pa?' selected':'')+'>'+_pa+'歳</option>';}
-    html+='<div class="sec-label">⑤ もう1人の年齢</div><div style="padding:0 20px"><select class="inp'+(f.partner_age?' filled':'')+'" style="max-width:160px" onchange="S.form.partner_age=this.value;updateRecruitSubmitBtn()">'+partnerOpts+'</select></div><div style="padding:8px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">2対2で一緒に参加するお相手の年齢を選んでください。Nomi Goは20歳以上の方のみご利用いただけます。</div>';
+    // 以前は「もう1人の年齢」を選ぶだけだったが、それでは一緒に来る方の年齢を
+    // 確かめたことにならないため廃止した。いまは本人確認まで済ませた
+    // 登録者どうしでなければ組めない。ここでは確定したお友だちを表示するだけ。
+    var pp=S._pair;
+    if(pp&&pp.status==='accepted'&&pp.partnerVerified){
+      var ppPhoto=pp.partnerPhotoUrl
+        ?'<img src="'+pp.partnerPhotoUrl+'" style="width:44px;height:44px;border-radius:50%;object-fit:cover">'
+        :'<div style="width:44px;height:44px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted)">👤</div>';
+      html+='<div class="sec-label">⑤ 一緒に行くお友だち</div><div style="padding:0 20px">'
+        +'<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);border-radius:12px">'
+        +ppPhoto
+        +'<div><div style="font-size:14.5px;font-weight:800;color:var(--cream)">'+escapeHtml(pp.partnerNickname||'お友だち')+(pp.partnerAge?'（'+pp.partnerAge+'歳）':'')+'</div>'
+        +'<div style="font-size:11.5px;color:var(--green);font-weight:700;margin-top:3px">✓ 本人確認まで完了しています</div></div></div></div>';
+    }else{
+      html+='<div class="sec-label">⑤ 一緒に行くお友だち</div><div style="padding:0 20px">'
+        +'<div style="padding:14px 16px;background:var(--red-bg);border:1px solid rgba(255,138,108,.3);border-radius:12px;font-size:13px;color:var(--red);line-height:1.8">お友だちの参加がまだ確定していません。</div>'
+        +'<button class="btn btn-wine" style="padding:13px;font-size:14px;margin-top:10px" onclick="goPairInvite()">お友だちを招待する →</button></div>';
+    }
   }
   html+='<div style="padding:12px 20px 0;font-size:11px;color:var(--muted);line-height:1.6">※飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。<br>※募集は'+(f.slot==='今すぐ'?'60分で':'選んだ時間の30分後に')+'自動的に終了します。時間が経ちすぎたお相手とマッチしないための仕組みです。</div>';
   if(S.ticketPurchaseSuccess){
@@ -3058,7 +3381,8 @@ function updateRecruitSubmitBtn(){
   if(!btn)return;
   var f=S.form;
   var isPair=f.mode==='2v2';
-  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||(parseInt(f.partner_age)>=20&&parseInt(f.partner_age)<=99));
+  // 2対2の条件は、お友だちの参加が確定しているかどうか（年齢の入力は廃止した）
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||!!(S._pair&&S._pair.status==='accepted'&&S._pair.partnerVerified));
   btn.disabled=!(allOk&&!_isSubmitting);
 }
 
