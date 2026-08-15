@@ -426,7 +426,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,pair_invite:pairInviteH,pair_accept:pairAcceptH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
   var app=document.getElementById('app');
   app.innerHTML=(map[S.screen]||loadingH)();
   if(_animateNext&&app.firstElementChild){app.firstElementChild.classList.add('anim-in');}
@@ -1897,7 +1897,10 @@ async function goBuyTicket(){
   if(!S.user){go('email');return;}
   var registered=await isCardRegistered();
   if(registered){
-    buyTicketConfirm();
+    // 決済ページへ進む前に、必ず個人情報の提供に関する同意画面を通す。
+    // 同意の記録はサーバー側（/api/credix-start）で行うため、
+    // この画面を飛ばして決済へ進む経路は作らないこと。
+    go('payconsent');
   }else{
     // 以前は文言を代入するだけで画面を描き直しておらず、押しても何も起きなかった
     alert('チケットの購入にはカードの登録が必要です。');
@@ -1949,14 +1952,74 @@ async function confirmCardRegister(){
 
 var _ticketPurchasing=false;
 
-// チケット購入の確認。
-// CREDIXでは、カード番号の入力はCREDIXの決済ページで行われるため、
-// アプリ側でカード情報を扱うことは一切ありません。
-function buyTicketConfirm(){
-  if(_ticketPurchasing)return;
-  if(confirm('チケットを購入しますか？\n決済ページへ移動し、3,980円（税込）のお支払い手続きを行います。')){
-    chargeForTicket();
+// ===== 決済前の個人情報の同意 =====
+//
+// 決済ページへ進む前に、決済代行事業者へ個人情報を提供することについて
+// 本人の同意を取得します。
+//
+// 【設計の理由】
+//  画面のチェックボックスだけで済ませると、あとから「同意を取った証拠」が
+//  どこにも残りません。そこで同意の記録はサーバー（/api/credix-start）が行い、
+//  記録できなければ決済セッションを発行しない作りにしています。
+//  これにより、同意なしで決済に到達する経路が構造的に存在しなくなります。
+//
+// 【文面の版】
+//  画面から文面そのものを送ると、ブラウザ側で書き換えられます。
+//  そのため送るのは版の番号だけで、保存する文面はサーバーが持ちます。
+//  文面を変えたときは、必ずこの版の番号とサーバー側の番号を同時に上げること。
+//
+// 【決済代行事業者の名称について】
+//  本契約の確定前のため、現時点では会社名を伏せた表記としています。
+//  確定後に、この文面とサーバー側の文面の両方へ社名を入れること（No.65）。
+var PAY_CONSENT_VERSION='pc-2026-08-15';
+
+function payConsentH(){
+  return '<div class="screen">'
+  +'<div class="head"><button class="back" onclick="go(\'splash\')">←</button><div class="head-title">お支払いの前に</div></div>'
+  +'<div class="body" style="padding:20px">'
+  +'<div style="font-size:17px;font-weight:900;margin-bottom:6px">個人情報の提供について</div>'
+  +'<div style="font-size:12.5px;color:var(--lgray);line-height:1.7;margin-bottom:16px">チケットのお支払いは、外部の決済代行事業者の画面で行われます。お手続きにあたり、次の内容をご確認ください。</div>'
+  +'<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:16px;font-size:12.5px;line-height:1.85;margin-bottom:16px">'
+    +'<div style="font-weight:800;color:var(--cream);margin-bottom:6px">1. 提供する先</div>'
+    +'<div style="margin-bottom:12px">当サービスが委託する決済代行事業者（クレジットカード決済の処理を行う会社）</div>'
+    +'<div style="font-weight:800;color:var(--cream);margin-bottom:6px">2. 提供する情報</div>'
+    +'<div style="margin-bottom:12px">お客様を識別するための番号、ご購入の金額、ご購入の日時、通信に関する記録</div>'
+    +'<div style="font-weight:800;color:var(--cream);margin-bottom:6px">3. 提供する目的</div>'
+    +'<div style="margin-bottom:12px">クレジットカード決済の処理、決済結果の照合、および不正利用の防止</div>'
+    +'<div style="font-weight:800;color:var(--cream);margin-bottom:6px">4. カード情報の取扱い</div>'
+    +'<div style="margin-bottom:12px">クレジットカード番号、有効期限、セキュリティコードは、決済代行事業者が直接お預かりします。当サービスがこれらを受け取ること、保存することはありません。</div>'
+    +'<div style="font-weight:800;color:var(--cream);margin-bottom:6px">5. 記録の保存</div>'
+    +'<div>お支払いに関する記録は、法令に基づき7年間保存します。詳しくはプライバシーポリシーをご確認ください。</div>'
+  +'</div>'
+  +'<div style="font-size:12px;color:var(--muted);margin-bottom:16px;text-align:center"><span style="text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'payconsent\';go(\'privacy\')">プライバシーポリシーを読む</span></div>'
+  +'<label style="display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer">'
+    +'<input type="checkbox" id="payconsent-check" onchange="updatePayConsentBtn()" style="width:18px;height:18px;margin-top:1px;flex-shrink:0">'
+    +'<span style="font-size:13px;line-height:1.6;color:var(--cream)">上記の内容を確認し、決済代行事業者への個人情報の提供に同意します</span>'
+  +'</label>'
+  +'<div id="payconsent-err" style="font-size:12.5px;color:var(--red);line-height:1.6;margin:8px 0;min-height:0"></div>'
+  +'<div style="font-size:12.5px;color:var(--lgray);line-height:1.7;margin:12px 0">同意して進むと、決済ページへ移動し、3,980円（税込）のお支払い手続きを行います。</div>'
+  +'<button class="btn btn-wine" id="payconsent-btn" disabled style="opacity:.45" onclick="proceedPayConsent()">同意して決済へ進む →</button>'
+  +'<button class="btn" style="margin-top:10px;background:transparent;border:1px solid var(--border2);color:var(--lgray)" onclick="go(\'splash\')">やめる</button>'
+  +'</div></div>';
+}
+
+function updatePayConsentBtn(){
+  var c=document.getElementById('payconsent-check');
+  var b=document.getElementById('payconsent-btn');
+  if(!c||!b)return;
+  b.disabled=!c.checked;
+  b.style.opacity=c.checked?'1':'.45';
+}
+
+function proceedPayConsent(){
+  var c=document.getElementById('payconsent-check');
+  var errEl=document.getElementById('payconsent-err');
+  if(errEl)errEl.textContent='';
+  if(!c||!c.checked){
+    if(errEl)errEl.textContent='同意のチェックを入れてください。';
+    return;
   }
+  chargeForTicket();
 }
 
 // チケット購入の開始。
@@ -1989,7 +2052,10 @@ async function chargeForTicket(){
     var res=await fetch('/api/credix-start',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({})
+      // 同意した事実と、同意した文面の版を伝える。
+      // 文面そのものは送らない（書き換えられるため）。
+      // サーバーは同じ版の文面を保存し、保存できた場合だけ決済へ進ませる。
+      body:JSON.stringify({consent:true,consent_version:PAY_CONSENT_VERSION})
     });
     var data=null;
     try{ data=await res.json(); }catch(e){ data=null; }
@@ -1999,6 +2065,11 @@ async function chargeForTicket(){
       var msg='現在チケットを購入できません。時間をおいてお試しください。';
       if(data&&data.error==='not_male'){msg='チケットのご購入は男性の方のみとなります。';}
       if(data&&data.error==='unauthorized'){msg='ログインの有効期限が切れています。もう一度ログインしてください。';}
+      // 同意が届いていない、または同意の記録に失敗した場合。
+      // この場合は決済へ進ませない（同意の記録がないまま決済されるのを防ぐため）。
+      if(data&&data.error==='consent_required'){msg='個人情報の提供への同意が確認できませんでした。もう一度お試しください。';}
+      if(data&&data.error==='consent_version_mismatch'){msg='同意いただく内容が更新されています。画面を再読み込みしてから、もう一度お試しください。';}
+      if(data&&data.error==='consent_save_failed'){msg='同意の記録に失敗したため、決済を中止しました。時間をおいてお試しください。';}
       alert(msg);
       return;
     }
