@@ -1901,6 +1901,7 @@ async function goBuyTicket(){
     // 同意の記録はサーバー側（/api/credix-start）で行うため、
     // この画面を飛ばして決済へ進む経路は作らないこと。
     go('payconsent');
+    resetPayConsentScroll();
   }else{
     // 以前は文言を代入するだけで画面を描き直しておらず、押しても何も起きなかった
     alert('チケットの購入にはカードの登録が必要です。');
@@ -1995,7 +1996,7 @@ function payConsentH(){
   +'<div style="font-size:12px;color:var(--muted);margin-bottom:6px">個人情報の提供について（下にスクロールできます）</div>'
 
   // 同意事項。内容は削らず、枠内スクロールで表示する
-  +'<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:12px;line-height:1.75;margin-bottom:14px;max-height:168px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
+  +'<div id="payconsent-scroll" style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:12px;line-height:1.75;margin-bottom:14px;max-height:168px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">1. 提供する先</div>'
     +'<div style="margin-bottom:10px">当サービスが委託する決済代行事業者（クレジットカード決済の処理を行う会社）</div>'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">2. 提供する情報</div>'
@@ -2019,8 +2020,21 @@ function payConsentH(){
   +'</div></div>';
 }
 
-function updatePayConsentBtn(){
-  var c=document.getElementById('payconsent-check');
+// 画面を開いたとき、同意事項の枠が途中から表示されることがあるため、
+// 描画の直後に必ず先頭（「1. 提供する先」）へ戻す。
+// 冒頭が切れた状態で見えると、1番を見落としたまま同意されてしまう。
+// あわせてチェックも外す（前回の状態が残らないようにするため）。
+function resetPayConsentScroll(){
+  setTimeout(function(){
+    var el=document.getElementById('payconsent-scroll');
+    if(el)el.scrollTop=0;
+    var c=document.getElementById('payconsent-check');
+    if(c)c.checked=false;
+    updatePayConsentBtn();
+  },0);
+}
+
+function updatePayConsentBtn(){  var c=document.getElementById('payconsent-check');
   var b=document.getElementById('payconsent-btn');
   if(!c||!b)return;
   b.disabled=!c.checked;
