@@ -678,10 +678,36 @@ async function init(){
   }catch(e){go('splash');}
 }
 
+// 2つのアドレス欄が一致しているかを、入力のたびに確かめて画面に出す。
+// 画面を作り直すと入力中の文字が消えるため、文言だけを差し替えている。
+function checkEmailMatch(){
+  var a=document.getElementById('einp');
+  var b=document.getElementById('einp2');
+  var msg=document.getElementById('email-match-msg');
+  if(!a||!b||!msg)return;
+  var v1=a.value.trim(), v2=b.value.trim();
+  if(!v2){msg.textContent='';return;}
+  if(v1.toLowerCase()===v2.toLowerCase()){
+    msg.style.color='#7BE090';
+    msg.textContent='✓ 一致しています';
+  }else{
+    msg.style.color='var(--red)';
+    msg.textContent='メールアドレスが一致していません';
+  }
+}
+
 async function doSignUp(){
   var email=document.getElementById('einp').value.trim();
+  var emailEl2=document.getElementById('einp2');
+  var email2=emailEl2?emailEl2.value.trim():'';
   var pass=document.getElementById('pinp').value;
   if(!email||!pass){S.error='メールとパスワードを入力してください';re('email');return;}
+  // 確認用の欄と一致しない場合は登録させない。
+  // 間違ったアドレスで登録されると確認コードが届かず、詰んでしまうため。
+  if(emailEl2){
+    if(!email2){S.error='確認のため、メールアドレスをもう一度入力してください';re('email');return;}
+    if(email.toLowerCase()!==email2.toLowerCase()){S.error='メールアドレスが一致していません。もう一度ご確認ください';re('email');return;}
+  }
   if(pass.length<6){S.error='パスワードは6文字以上です';re('email');return;}
   go('loading');
   var res=await DB.auth.signUp({email:email,password:pass});
@@ -2937,7 +2963,16 @@ function splashH(){
 function emailH(){
   var isReg=S.authTab!=='login';
   var forgotLink=isReg?'':'<div style="text-align:right;font-size:12px;color:var(--muted);text-decoration:underline;cursor:pointer" onclick="go(\'forgot_password\')">パスワードを忘れた方はこちら</div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">新規登録 / ログイン</div></div></div><div class="body" style="padding:24px;gap:14px;display:flex;flex-direction:column"><div style="display:flex;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border2)"><button class="tab-btn" style="background:'+(isReg?'var(--wine)':'transparent')+';color:'+(isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'register\';re(\'email\')">新規登録</button><button class="tab-btn" style="background:'+(!isReg?'var(--wine)':'transparent')+';color:'+(!isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'login\';re(\'email\')">ログイン</button></div><input class="inp" id="einp" type="email" placeholder="メールアドレス"><input class="inp" id="pinp" type="password" placeholder="パスワード（6文字以上）">'+forgotLink+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="'+(isReg?'doSignUp':'doSignIn')+'()">'+(isReg?'登録して始める →':'ログイン →')+'</button></div></div>';
+  // 【新規登録のときだけ、確認用のアドレス欄を出す 8/15】
+  // アドレスを間違えて登録すると確認コードが届かず、登録を完了できなくなる。
+  // 2度入力してもらうことで、打ち間違いによる事故を防ぐ。
+  // ※コピー＆ペーストや思い込みによる間違いは防げないため、
+  //   メール確認画面に脱出口（アドレスを間違えた場合はこちら）を併設している。
+  var emailConfirmField=isReg
+    ? '<input class="inp" id="einp2" type="email" placeholder="メールアドレス（確認のため再入力）" oninput="checkEmailMatch()">'
+      +'<div id="email-match-msg" style="font-size:12px;line-height:1.6;margin-top:-6px"></div>'
+    : '';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">新規登録 / ログイン</div></div></div><div class="body" style="padding:24px;gap:14px;display:flex;flex-direction:column"><div style="display:flex;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border2)"><button class="tab-btn" style="background:'+(isReg?'var(--wine)':'transparent')+';color:'+(isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'register\';re(\'email\')">新規登録</button><button class="tab-btn" style="background:'+(!isReg?'var(--wine)':'transparent')+';color:'+(!isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'login\';re(\'email\')">ログイン</button></div><input class="inp" id="einp" type="email" placeholder="メールアドレス" '+(isReg?'oninput="checkEmailMatch()"':'')+'>'+emailConfirmField+'<input class="inp" id="pinp" type="password" placeholder="パスワード（6文字以上）">'+forgotLink+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="'+(isReg?'doSignUp':'doSignIn')+'()">'+(isReg?'登録して始める →':'ログイン →')+'</button></div></div>';
 }
 
 function forgotPasswordH(){
@@ -3083,7 +3118,28 @@ function emailVerifyH(){
     +'<div id="everify-err" class="err-msg"></div>'
     +'<button class="btn btn-wine" onclick="submitEmailVerify()">確認する →</button>'
     +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="confirmResendEmailCode()">コードを再送する</button>'
+    // 【脱出口 8/15】
+    //  アドレスを間違えて登録すると確認コードが永久に届かず、
+    //  再送しても同じ間違ったアドレスへ送られるため、抜け出せなくなる。
+    //  プロフィール作成前はログアウトのメニューも出ないため、
+    //  ここに登録画面へ戻る導線を置いている。
+    +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:12px;text-decoration:underline;cursor:pointer;padding:4px 8px 8px" onclick="restartSignUpWithNewEmail()">メールアドレスを間違えた場合はこちら</button>'
     +'</div></div>';
+}
+
+// 間違ったアドレスで登録してしまった人を、登録画面へ戻す。
+// アドレスの変更ではなくログアウトして最初からやり直す形にしている。
+// 認証情報の書き換えは複数の場所を同時に更新する必要があり、
+// 失敗するとアカウントに入れなくなるため、確実さを優先した。
+async function restartSignUpWithNewEmail(){
+  if(!confirm('別のメールアドレスで登録し直します。\n\n入力中の内容は破棄され、最初の画面に戻ります。よろしいですか？'))return;
+  showBusy();
+  try{ await DB.auth.signOut(); }catch(e){}
+  S.user=null;S.profile=null;S.registration=null;S.match=null;
+  S.error='';S.info='';
+  S.authTab='register';
+  hideBusy();
+  go('email');
 }
 
 function confirmResendEmailCode(){
