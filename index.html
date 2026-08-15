@@ -831,10 +831,11 @@ async function routeAfterLoad(){
     go('splash');
     return;
   }
-  if(!S.profile.stripe_customer_id){
-    go('cardregister');
-    return;
-  }
+  // 【カード登録の関門を撤去 8/15】
+  // 以前はここで、カード未登録の利用者をログインのたびに
+  // カード登録画面へ強制的に送っていた。PAY.JPを使う前提の名残であり、
+  // CREDIXではカード番号の入力を決済ページ側で行うため不要。
+  // 残しておくと動かない画面から先へ進めなくなる。
   if(S.registration&&S.registration.status==='waiting'){
     startPolling();
     go('waiting');
@@ -1048,7 +1049,11 @@ async function saveProfile(){
   await DB.from('user_stats').upsert({user_id:S.user.id});
   S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:freeTicket};
   if(p.gender==='male'){S._freeTicketGranted=true;}
-  go('cardregister');
+  // 【カード登録の関門を撤去 8/15】
+  // 以前はプロフィール登録の直後にカード登録画面へ送っていたが、
+  // PAY.JP前提の画面であり、CREDIXでは不要。
+  // 登録の次にやるべきことは年齢確認なので、本人確認画面へ進む。
+  go('id_verify');
 }
 
 function handleIdPhotoSelect(inputEl){
@@ -1578,7 +1583,14 @@ async function goRecruit(){
     }
     var d=(!me.error&&me.data)?me.data:{};
 
-    if(!d.stripe_customer_id){go('cardregister');return;}
+    // 【カード登録の関門を撤去 8/15】
+    // 以前はここで「カードが登録されていなければ cardregister へ送る」判定があり、
+    // 募集を始める前にカード登録を必須にしていた。
+    // これはPAY.JPを使う前提で作られたもので、CREDIXでは成立しない。
+    // CREDIXではカード番号の入力を決済ページ側で行うため、
+    // 募集の前にカードを登録させる理由がなく、この関門があると
+    // 利用者全員が動かない画面で詰んでしまう。
+    // カードの取得はチケット購入時にCREDIX側で行われる（No.56で導線を作り直す）。
 
     var idStatus=!d.id_photo_url?'none':(d.id_verify_status||'pending');
     if(idStatus!=='approved'){
@@ -1947,18 +1959,15 @@ async function startRecruit(){
 
 async function goBuyTicket(){
   if(!S.user){go('email');return;}
-  var registered=await isCardRegistered();
-  if(registered){
-    // 決済ページへ進む前に、必ず個人情報の提供に関する同意画面を通す。
-    // 同意の記録はサーバー側（/api/credix-start）で行うため、
-    // この画面を飛ばして決済へ進む経路は作らないこと。
-    go('payconsent');
-    resetPayConsentScroll();
-  }else{
-    // 以前は文言を代入するだけで画面を描き直しておらず、押しても何も起きなかった
-    alert('チケットの購入にはカードの登録が必要です。');
-    go('cardregister');
-  }
+  // 【カード登録の事前確認を撤去 8/15】
+  // 以前はカードが登録済みかを確認し、未登録ならカード登録画面へ送っていた。
+  // PAY.JPを使う前提の作りであり、CREDIXではカード番号の入力を
+  // CREDIXの決済ページ側で行うため、事前の登録は不要。
+  // 決済ページへ進む前に、必ず個人情報の提供に関する同意画面を通す。
+  // 同意の記録はサーバー側（/api/credix-start）で行うため、
+  // この画面を飛ばして決済へ進む経路は作らないこと。
+  go('payconsent');
+  resetPayConsentScroll();
 }
 
 // 本人確認 承認後の共通の行き先。LINE未連携なら必ず連携画面へ
