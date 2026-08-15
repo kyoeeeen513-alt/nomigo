@@ -394,6 +394,22 @@ function ageMatches(isAny,minAge,maxAge,otherAge){
   return otherAge>=minAge&&otherAge<=maxAge;
 }
 
+// ===== 日本語を意味の区切りで折り返すための部品 =====
+//
+// 日本語は単語の間にスペースがないため、ブラウザは
+// 「どこで切ってよいか」を判断できず、文字の途中どこでも改行する。
+// その結果「ご入力くださ／い。」のように語が割れて読みにくくなる。
+//
+// CSSの line-break や text-wrap では、この「文節で切る」制御はできない
+// （それを行う word-break:auto-phrase は一部のブラウザにしか実装がない）。
+//
+// そこで、割りたくない塊を display:inline-block で囲む。
+// inline-block は中身が入りきる限り内部で改行されないため、
+// 塊ごとに折り返されるようになる。
+// 長すぎる塊を渡すと結局その中で折り返されるので、
+// 20文字前後を目安に区切って使うこと。
+function nb(t){return '<span style="display:inline-block">'+t+'</span>';}
+
 function escapeHtml(str){
   if(str==null)return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -948,104 +964,24 @@ function handlePhotoSelect(inputEl,screenName){
       S.pf.photoFile=smallFile||file;
       S.pf.photoPreview=dataUrl;
       S.error='';
-      S._photoFaceWarn='';
       re(screenName);
-      // プレビューを出したあとで顔の判定を始める。
-      // 待たせないため、画面の描き直しより後に走らせる。
-      checkPhotoHasFace(dataUrl,screenName);
     }else{
       // 読み込めない形式・壊れた画像の場合。画面は必ず動かし続ける
       S.pf.photoFile=null;
       S.pf.photoPreview=null;
-      S._photoFaceWarn='';
       S.error='この写真は読み込めませんでした。別の写真を選ぶか、その場で撮影してください。';
       re(screenName);
     }
   });
 }
 
-// ===== プロフィール写真に人の顔が写っているかの判定 =====
-//
-// 【目的】
-//  風景・イラスト・キャラクターなど、明らかに本人の写真でないものを
-//  アイコンに設定されるのを減らす。なりすましそのものは、
-//  あとの本人確認（身分証と自撮りの照合）で防ぐ設計のため、
-//  ここでは「明らかに人間ではない」ものを止められれば十分とする。
-//
-// 【どこで判定しているか】
-//  判定は利用者の端末の中だけで行う。写真を外部のサービスへ送ることはない。
-//  費用は発生せず、運営側の確認作業も発生しない。
-//
-// 【失敗したときは通す】
-//  読み込みに失敗した場合や、判定の仕組みが動かない環境では、
-//  警告を出さずにそのまま通す。判定のせいで登録できなくなるほうが、
-//  本人の写真でないアイコンが1件通るより損害が大きいため。
-var _faceApiLoading=false;
-var _faceDetector=null;
-
-function loadFaceLib(cb){
-  // すでに読み込み済み
-  if(_faceDetector){cb(_faceDetector);return;}
-  // 読み込み中なら、終わるまで待つ
-  if(_faceApiLoading){
-    var waited=0;
-    var t=setInterval(function(){
-      waited+=200;
-      if(_faceDetector){clearInterval(t);cb(_faceDetector);}
-      else if(waited>15000){clearInterval(t);cb(null);}
-    },200);
-    return;
-  }
-  _faceApiLoading=true;
-  var done=false;
-  function finish(d){if(done)return;done=true;cb(d);}
-  // 15秒で見切りをつける（通信が遅い環境で登録を止めないため）
-  setTimeout(function(){if(!_faceDetector)finish(null);},15000);
-  try{
-    var sc=document.createElement('script');
-    sc.src='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.min.js';
-    sc.onerror=function(){finish(null);};
-    sc.onload=function(){
-      try{
-        var faceapi=window.faceapi;
-        if(!faceapi){finish(null);return;}
-        var modelUrl='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
-        faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl).then(function(){
-          _faceDetector=faceapi;
-          finish(faceapi);
-        }).catch(function(){finish(null);});
-      }catch(e){finish(null);}
-    };
-    document.head.appendChild(sc);
-  }catch(e){finish(null);}
-}
-
-function checkPhotoHasFace(dataUrl,screenName){
-  loadFaceLib(function(faceapi){
-    // 判定できない環境では何もしない（通す）
-    if(!faceapi)return;
-    try{
-      var img=new Image();
-      img.onerror=function(){};
-      img.onload=function(){
-        try{
-          var opts=new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.35});
-          faceapi.detectAllFaces(img,opts).then(function(dets){
-            // 判定が終わるまでに別の写真へ差し替えられていたら、結果は捨てる
-            if(S.pf.photoPreview!==dataUrl)return;
-            if(!dets||dets.length===0){
-              S._photoFaceWarn='この写真からは顔を確認できませんでした。ご本人の顔がはっきり写った写真をお選びください。';
-            }else{
-              S._photoFaceWarn='';
-            }
-            if(S.screen===screenName)re(screenName);
-          }).catch(function(){});
-        }catch(e){}
-      };
-      img.src=dataUrl;
-    }catch(e){}
-  });
-}
+// 【顔の自動判定は撤去 8/15】
+// プロフィール写真に人の顔が写っているかを端末上で判定する仕組みを一度入れたが、
+// 判定用のプログラムとモデルの読み込みに時間がかかり、その間ほかの項目にも
+// 触れなくなった。初めて使う人にはバグと受け取られるため撤去した。
+// プロフィール写真は一次的なものであり、本人性の確認は
+// 身分証と自撮りの照合（永澤による目視承認）が担う。
+// 体験を損なってまでここで判定する必要はないと判断した。
 
 async function uploadProfilePhoto(userId,file){
   if(!file)return null;
@@ -1463,10 +1399,10 @@ function idVerifyH(){
       +'<div style="font-size:18px;line-height:1.2;flex-shrink:0">🔒</div>'
       +'<div>'
         +'<div style="font-size:14px;font-weight:900;color:var(--cream);margin-bottom:4px">写真は他の利用者には公開されません</div>'
-        +'<div style="font-size:12px;color:var(--lgray);line-height:1.65">年齢確認は法律で義務づけられています。安全な場に保つための手続きです。お預かりした写真は運営が確認のためだけに使用し、他の利用者に見られることはありません。</div>'
+        +'<div style="font-size:12px;color:var(--lgray);line-height:1.65">'+nb('年齢確認は法律で')+nb('義務づけられています。')+nb('安全な場に保つための')+nb('手続きです。')+nb('お預かりした写真は')+nb('運営が確認のためだけに')+nb('使用し、')+nb('他の利用者に')+nb('見られることは')+nb('ありません。')+'</div>'
       +'</div>'
     +'</div>'
-    +'<div style="font-size:13px;color:var(--cream);line-height:1.75">Nomi Go は20歳以上限定です。生年月日が確認できる身分証（運転免許証・マイナンバーカード・パスポートなど）と、ご本人の顔写真を1枚ずつご用意ください。</div>'
+    +'<div style="font-size:13px;color:var(--cream);line-height:1.75">'+nb('Nomi Go は')+nb('20歳以上限定です。')+nb('生年月日が確認できる')+nb('身分証（運転免許証・')+nb('マイナンバーカード・')+nb('パスポートなど）と、')+nb('ご本人の顔写真を')+nb('1枚ずつ')+nb('ご用意ください。')+'</div>'
     +'<div class="sec-label" style="padding:0">① 身分証の写真</div>'
     +preview
     +'<label style="padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center">'+(S._idPhotoPreview?'別の写真を選び直す':'身分証の写真を選ぶ')+'<input type="file" accept="image/*" style="display:none" onchange="handleIdPhotoSelect(this)"></label>'
@@ -2146,7 +2082,7 @@ function payConsentH(){
     +'<div style="font-size:18px;line-height:1.2;flex-shrink:0">🔒</div>'
     +'<div>'
       +'<div style="font-size:14px;font-weight:900;color:var(--cream);margin-bottom:4px">カード情報はお預かりしません</div>'
-      +'<div style="font-size:12px;color:var(--lgray);line-height:1.65">安全のため、カード番号の入力は専門の決済会社の画面で行います。Nomi Go がカード情報を受け取ることはありません。</div>'
+      +'<div style="font-size:12px;color:var(--lgray);line-height:1.65">'+nb('安全のため、')+nb('カード番号の入力は')+nb('専門の決済会社の')+nb('画面で行います。')+nb('Nomi Go が')+nb('カード情報を')+nb('受け取ることは')+nb('ありません。')+'</div>'
     +'</div>'
   +'</div>'
 
@@ -2155,21 +2091,21 @@ function payConsentH(){
   // 同意事項。内容は削らず、枠内スクロールで表示する
   +'<div id="payconsent-scroll" style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:12px;line-height:1.75;margin-bottom:14px;max-height:168px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">1. 提供する先</div>'
-    +'<div style="margin-bottom:10px">当サービスが委託する決済代行事業者（クレジットカード決済の処理を行う会社）</div>'
+    +'<div style="margin-bottom:10px">'+nb('当サービスが委託する')+nb('決済代行事業者')+nb('（クレジットカード決済の')+nb('処理を行う会社）')+'</div>'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">2. 提供する情報</div>'
-    +'<div style="margin-bottom:10px">お客様を識別するための番号、ご購入の金額、ご購入の日時、通信に関する記録</div>'
+    +'<div style="margin-bottom:10px">'+nb('お客様を識別するための')+nb('番号、')+nb('ご購入の金額、')+nb('ご購入の日時、')+nb('通信に関する記録')+'</div>'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">3. 提供する目的</div>'
-    +'<div style="margin-bottom:10px">クレジットカード決済の処理、決済結果の照合、および不正利用の防止</div>'
+    +'<div style="margin-bottom:10px">'+nb('クレジットカード決済の')+nb('処理、')+nb('決済結果の照合、')+nb('および不正利用の防止')+'</div>'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">4. カード情報の取扱い</div>'
-    +'<div style="margin-bottom:10px">クレジットカード番号、有効期限、セキュリティコードは、決済代行事業者が直接お預かりします。当サービスがこれらを受け取ること、保存することはありません。</div>'
+    +'<div style="margin-bottom:10px">'+nb('クレジットカード番号、')+nb('有効期限、')+nb('セキュリティコードは、')+nb('決済代行事業者が')+nb('直接お預かりします。')+nb('当サービスがこれらを')+nb('受け取ること、')+nb('保存することは')+nb('ありません。')+'</div>'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">5. 記録の保存</div>'
-    +'<div style="margin-bottom:10px">お支払いに関する記録は、法令に基づき7年間保存します。詳しくはプライバシーポリシーをご確認ください。</div>'
+    +'<div style="margin-bottom:10px">'+nb('お支払いに関する記録は、')+nb('法令に基づき')+nb('7年間保存します。')+nb('詳しくは')+nb('プライバシーポリシーを')+nb('ご確認ください。')+'</div>'
     +'<div style="text-align:center;padding-top:2px"><span style="font-size:12px;color:var(--muted);text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'payconsent\';go(\'privacy\')">プライバシーポリシーを読む</span></div>'
   +'</div>'
 
   +'<label style="display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:10px;padding:13px;margin-bottom:6px;cursor:pointer">'
     +'<input type="checkbox" id="payconsent-check" onchange="updatePayConsentBtn()" style="width:18px;height:18px;margin-top:1px;flex-shrink:0">'
-    +'<span style="font-size:13px;line-height:1.6;color:var(--cream)">上記の内容を確認し、決済代行事業者への個人情報の提供に同意します</span>'
+    +'<span style="font-size:13px;line-height:1.6;color:var(--cream)">'+nb('上記の内容を確認し、')+nb('決済代行事業者への')+nb('個人情報の提供に')+nb('同意します')+'</span>'
   +'</label>'
   +'<div id="payconsent-err" style="font-size:12.5px;color:var(--red);line-height:1.6;margin:6px 0 0"></div>'
   +'<button class="btn btn-wine" id="payconsent-btn" disabled style="opacity:.45;margin-top:10px" onclick="proceedPayConsent()">同意して決済へ進む（3,980円）→</button>'
@@ -3364,12 +3300,12 @@ function profileNewH(){
   var genderUnset=!p.gender;
   var photoLabel=genderUnset?'プロフィール写真':(isMalePf?'プロフィール写真（男性は必須）':'プロフィール写真（任意）');
   var photoNote=genderUnset
-    ?'※男性は本人の顔写真の登録が必須です（下の「性別」を選ぶと表示が変わります）'
+    ?'※'+nb('男性は本人の顔写真の')+nb('登録が必須です')+nb('（下の「性別」を選ぶと')+nb('表示が変わります）')
     :(isMalePf
-      ?'ご本人の顔がはっきり写った写真を登録してください（加工・マスク・複数人の写真は承認されません）。本人確認の顔写真と同一人物か、運営が確認します。'
-      :'写真を登録すると、マッチが早くなる傾向があります。');
-  var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+photoLabel+(isMalePf?'<span style="color:var(--red);margin-left:4px">*必須</span>':'')+'</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を選ぶ<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></label></div>'+(S._photoFaceWarn?'<div style="margin-top:8px;padding:10px 12px;background:var(--red-bg);border:1px solid var(--red);border-radius:8px;font-size:11.5px;color:var(--red);line-height:1.6">'+S._photoFaceWarn+'</div>':'')+'<div style="font-size:11px;color:'+(genderUnset?'var(--gold)':'var(--muted)')+';margin-top:6px;line-height:1.6">'+photoNote+'</div></div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','あなたのことを教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7"><div style="display:flex;gap:7px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">・</span><span><span style="color:var(--cream);font-weight:700">本名と生年月日はお相手に表示されません。</span></span></div><div style="display:flex;gap:7px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">・</span><span>本人確認（年齢確認）のためだけに使います。</span></div><div style="display:flex;gap:7px"><span style="color:var(--gold);flex-shrink:0">・</span><span><span style="color:var(--cream);font-weight:700">あとで提出する身分証と同じ内容を</span>ご入力ください。一致しないと年齢確認が完了しません。</span></div></div>'+photoSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（身分証と同じ表記で）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日（身分証と同じもの）</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;var _a=calcAgeFromBirthdate(this.value);if(_a){S.pf.age=String(_a);}sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);re(\'profile_new\')"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div>'+(p.birthdate&&p.age?'<div style="font-size:11px;color:var(--muted);margin-top:2px">※生年月日から自動入力されました。違う場合は修正してください。</div>':'')+'</div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
+      ?nb('ご本人の顔がはっきり')+nb('写った写真を')+nb('登録してください。')+nb('加工・マスク・')+nb('複数人の写真は')+nb('承認されません。')+nb('本人確認の顔写真と')+nb('同一人物かどうか、')+nb('運営が確認します。')
+      :nb('写真を登録すると、')+nb('マッチが早くなる')+nb('傾向があります。'));
+  var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+photoLabel+(isMalePf?'<span style="color:var(--red);margin-left:4px">*必須</span>':'')+'</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を選ぶ<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></label></div><div style="font-size:11px;color:'+(genderUnset?'var(--gold)':'var(--muted)')+';margin-top:6px;line-height:1.6">'+photoNote+'</div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','あなたのことを教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7"><div style="display:flex;gap:7px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">・</span><span><span style="color:var(--cream);font-weight:700">'+nb('本名と生年月日は')+nb('お相手に表示されません。')+'</span></span></div><div style="display:flex;gap:7px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">・</span><span>'+nb('本人確認（年齢確認）の')+nb('ためだけに使います。')+'</span></div><div style="display:flex;gap:7px"><span style="color:var(--gold);flex-shrink:0">・</span><span><span style="color:var(--cream);font-weight:700">'+nb('あとで提出する身分証と')+nb('同じ内容を')+'</span>'+nb('ご入力ください。')+nb('一致しないと')+nb('年齢確認が完了しません。')+'</span></div></div>'+photoSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（身分証と同じ表記で）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日（身分証と同じもの）</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;var _a=calcAgeFromBirthdate(this.value);if(_a){S.pf.age=String(_a);}sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);re(\'profile_new\')"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div>'+(p.birthdate&&p.age?'<div style="font-size:11px;color:var(--muted);margin-top:2px">※生年月日から自動入力されました。違う場合は修正してください。</div>':'')+'</div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
 }
 
 function profileEditH(){
