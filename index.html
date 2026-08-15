@@ -52,8 +52,7 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
 .screen{flex:1;display:flex;flex-direction:column}
 /* 画面遷移のときだけ演出する。選択のたびに再生すると重く感じるため */
 .anim-in{animation:fadeUp .32s cubic-bezier(.2,.8,.2,1) both}
-.hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:rgba(29,13,16,.85);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+.hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:#241016;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 .hdr-back{background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:13px;color:var(--muted);padding:4px 0;font-weight:600;flex-shrink:0;transition:color .2s}
 .hdr-back:active{color:var(--gold-bright)}
 .hdr-info{flex:1}
@@ -61,13 +60,17 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
 .hdr-title{font-size:20px;font-weight:800;letter-spacing:.01em;font-family:'Shippori Mincho',serif}
 .body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 .body::-webkit-scrollbar{width:0}
-.ftr{padding:14px 20px 30px;flex-shrink:0;border-top:1px solid var(--border2);background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.ftr{padding:14px 20px 30px;flex-shrink:0;border-top:1px solid var(--border2);background:#241016}
 .btn{display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;
   font-weight:900;border-radius:999px;transition:transform .18s,box-shadow .25s,opacity .2s;font-size:16px;padding:16px 20px;width:100%;letter-spacing:.04em}
+/* 【動作の軽量化 8/15】
+   以前はボタンの影を3.2秒周期で明滅させ（glowSoft）、光沢を3.4秒周期で
+   横切らせていた（shine）。box-shadow と left のアニメーションは描画コストが高く、
+   画面に何もしていない間もブラウザが計算し続けるため、
+   画面切替の処理が後回しになり「押してから反応が遅い」原因になっていた。
+   見た目の金色と影はそのまま残し、動き続ける部分だけを止めている。 */
 .btn-wine{position:relative;overflow:hidden;color:var(--night);background:linear-gradient(135deg,var(--gold-bright),var(--gold));
-  box-shadow:0 8px 30px rgba(201,160,99,.28);animation:glowSoft 3.2s ease-in-out infinite}
-.btn-wine::after{content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;
-  background:linear-gradient(105deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 3.4s infinite}
+  box-shadow:0 8px 30px rgba(201,160,99,.28)}
 .btn:active{transform:scale(.96)}
 .btn:disabled{opacity:.45;cursor:not-allowed;animation:none;box-shadow:none}
 .btn:disabled::after{display:none}
@@ -118,7 +121,7 @@ input[type=date].inp{color-scheme:dark}
 .msg-bubble{padding:11px 14px;border-radius:18px;font-size:14px;max-width:210px;line-height:1.6}
 .msg-row.mine .msg-bubble{background:linear-gradient(135deg,#7A2230,var(--wine-true)) !important;color:#fff !important;border-bottom-right-radius:6px;box-shadow:0 3px 12px rgba(107,26,36,.4)}
 .msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px;border:1px solid var(--border2)}
-.chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;background:rgba(29,13,16,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0}
+.chat-input{padding:12px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;background:#241016;flex-shrink:0}
 .chat-inp{flex:1 1 auto;min-width:0;padding:12px 16px;border-radius:24px;border:1.5px solid var(--border);background:rgba(244,233,220,.06);color:var(--cream);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
 .chat-inp:focus{border-color:var(--gold)}
 .chat-send{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;font-size:18px;flex-shrink:0;
@@ -1325,8 +1328,18 @@ function idVerifyH(){
   var facePreview=S._facePhotoPreview?'<img src="'+S._facePhotoPreview+'" style="width:100%;border-radius:12px;display:block;object-fit:cover">':'<div style="width:100%;aspect-ratio:1.6;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">顔写真がここに表示されます</div>';
   var bothReady=!!(S._idPhotoFile&&S._facePhotoFile);
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','年齢の確認')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
-    +'<div style="font-size:14px;color:var(--cream);line-height:1.8">募集を始めるには、年齢確認が必要です。Nomi Goは20歳以上限定のサービスです。運転免許証・マイナンバーカード・パスポートなど、生年月日が確認できる身分証の写真と、ご本人の顔写真を1枚ずつアップロードしてください。</div>'
-    +'<div style="font-size:12px;color:var(--muted);line-height:1.7">※アップロードされた写真は本人確認の目的のみに使用し、運営以外には公開されません。</div>'
+    // 【UIの方針】決済の同意画面（payConsentH）と同じ考え方。
+    //  手続きが増える理由（法律上の義務）と、写真の扱いの安全性を最初に示し、
+    //  「面倒」ではなく「必要なこと」として受け取ってもらう。
+    //  説明の分量は増やさず、長文2ブロックを枠1つに集約している。
+    +'<div style="display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px">'
+      +'<div style="font-size:18px;line-height:1.2;flex-shrink:0">🔒</div>'
+      +'<div>'
+        +'<div style="font-size:14px;font-weight:900;color:var(--cream);margin-bottom:4px">写真は他の利用者には公開されません</div>'
+        +'<div style="font-size:12px;color:var(--lgray);line-height:1.65">年齢確認は法律で義務づけられています。安全な場に保つための手続きです。お預かりした写真は運営が確認のためだけに使用し、他の利用者に見られることはありません。</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="font-size:13px;color:var(--cream);line-height:1.75">Nomi Go は20歳以上限定です。生年月日が確認できる身分証（運転免許証・マイナンバーカード・パスポートなど）と、ご本人の顔写真を1枚ずつご用意ください。</div>'
     +'<div class="sec-label" style="padding:0">① 身分証の写真</div>'
     +preview
     +'<label style="padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center">'+(S._idPhotoPreview?'別の写真を選び直す':'身分証の写真を選ぶ')+'<input type="file" accept="image/*" style="display:none" onchange="handleIdPhotoSelect(this)"></label>'
