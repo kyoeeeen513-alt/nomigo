@@ -1501,6 +1501,19 @@ function hideBusy(){
   if(d&&d.parentNode)d.parentNode.removeChild(d);
 }
 
+// 【外部サイトから戻ってきたときの後始末 8/15】
+// CREDIXの決済ページへ移るとき、ぐるぐる（showBusy）を出したまま画面を離れる。
+// ブラウザの「戻る」で復帰すると、ブラウザは離脱直前の状態をそのまま復元するため、
+// ぐるぐるが出っぱなしになり、操作できなくなっていた。
+// 復帰を検知して、必ず後始末をする。
+window.addEventListener('pageshow',function(ev){
+  // persisted は「保存されていた状態から復元された」ことを示す。
+  // 通常の読み込みでも念のため後始末しておく（出ていなければ何も起きない）。
+  hideBusy();
+  _ticketPurchasing=false;
+  _isSubmitting=false;
+});
+
 var _goRecruitBusy=false;
 async function goRecruit(){
   if(_goRecruitBusy)return;
