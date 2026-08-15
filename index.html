@@ -3064,24 +3064,40 @@ function lineConnectH(){
 
 // 確認コードはサーバーが作り、サーバーが本人のメールアドレスへ送る。
 // 画面側はコードの中身を一切受け取らない。
+// 【動作の軽量化 8/15】
+// 以前はメールの送信が終わるのを待ってから画面を切り替えていた。
+// メール送信は外部のサーバーを経由するため数秒かかり、
+// その間ずっとローディングのままで「重い」と感じる原因になっていた。
+// 先に画面を出し、送信は裏側で進める形に変更した。
+// 利用者はメールが届くまでどのみち待つので、画面を止めておく理由がない。
 async function goEmailVerify(){
+  go('email_verify');
   try{
     var s=await DB.auth.getSession();
     var token=s&&s.data&&s.data.session?s.data.session.access_token:null;
     if(token){
-      await fetch('/api/send-email',{method:'POST',
+      // await を付けない（送信の完了を待たない）
+      fetch('/api/send-email',{method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body:JSON.stringify({action:'verify_code'})});
+        body:JSON.stringify({action:'verify_code'})}).catch(function(){});
     }
   }catch(e){}
-  go('email_verify');
 }
 
+var _everifyChecking=false;
 async function submitEmailVerify(){
+  if(_everifyChecking)return;
   var inp=document.getElementById('everify-inp');
   var errEl=document.getElementById('everify-err');
+  var btn=document.getElementById('everify-btn');
   var code=inp?inp.value.trim():'';
   if(!code){if(errEl)errEl.textContent='コードを入力してください';return;}
+  // 【押した瞬間に反応を返す 8/15】
+  // 以前はボタンを押しても見た目が変わらず、通信が終わるまで無反応だったため、
+  // 押せていないのかと思って待つことになっていた。
+  _everifyChecking=true;
+  if(btn){btn.disabled=true;btn.style.opacity='.55';btn.textContent='確認中…';}
+  if(errEl)errEl.textContent='';
   // 照合はサーバー側で行う。画面側は正解のコードを持たない
   var ok=false;
   try{
@@ -3093,8 +3109,12 @@ async function submitEmailVerify(){
       body:JSON.stringify({action:'verify_check',code:code})});
     var vj=await vr.json();
     ok=!!(vj&&vj.success);
-    if(!ok&&vj&&vj.error==='expired'){if(errEl)errEl.textContent='コードの有効期限が切れました。もう一度お送りします';await goEmailVerify();return;}
-  }catch(e){if(errEl)errEl.textContent='通信に失敗しました。もう一度お試しください';return;}
+    if(!ok&&vj&&vj.error==='expired'){_everifyChecking=false;if(errEl)errEl.textContent='コードの有効期限が切れました。もう一度お送りします';await goEmailVerify();return;}
+  }catch(e){
+    _everifyChecking=false;
+    if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='確認する →';}
+    if(errEl)errEl.textContent='通信に失敗しました。もう一度お試しください';return;
+  }
   if(ok){
     markEmailVerified();
     if(S.profile){
@@ -3106,6 +3126,8 @@ async function submitEmailVerify(){
       go('profile_new');
     }
   }else{
+    _everifyChecking=false;
+    if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='確認する →';}
     if(errEl)errEl.textContent='コードが違います';
   }
 }
@@ -3116,7 +3138,7 @@ function emailVerifyH(){
     +'<div style="font-size:11px;color:var(--muted);line-height:1.6">※メールが届かない場合は、迷惑メールフォルダに入っていないかご確認ください。</div>'
     +'<input class="inp" id="everify-inp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="例：123456" maxlength="6" oninput="digitsOnly(this)">'
     +'<div id="everify-err" class="err-msg"></div>'
-    +'<button class="btn btn-wine" onclick="submitEmailVerify()">確認する →</button>'
+    +'<button class="btn btn-wine" id="everify-btn" onclick="submitEmailVerify()">確認する →</button>'
     +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="confirmResendEmailCode()">コードを再送する</button>'
     // 【脱出口 8/15】
     //  アドレスを間違えて登録すると確認コードが永久に届かず、
@@ -3242,7 +3264,7 @@ function profileNewH(){
       ?'ご本人の顔がはっきり写った写真を登録してください（加工・マスク・複数人の写真は承認されません）。本人確認の顔写真と同一人物か、運営が確認します。'
       :'写真を登録すると、マッチが早くなる傾向があります。');
   var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+photoLabel+(isMalePf?'<span style="color:var(--red);margin-left:4px">*必須</span>':'')+'</div><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<label style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer">写真を選ぶ<input type="file" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></label></div><div style="font-size:11px;color:'+(genderUnset?'var(--gold)':'var(--muted)')+';margin-top:6px;line-height:1.6">'+photoNote+'</div></div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','あなたのことを教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7">下の<span style="color:var(--gold);font-weight:700">本名・生年月日</span>は、本人確認（年齢確認）のためだけに使います。<span style="color:var(--cream);font-weight:700">お相手には表示されません。</span></div>'+photoSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（相手には表示されません）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;var _a=calcAgeFromBirthdate(this.value);if(_a){S.pf.age=String(_a);}sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);re(\'profile_new\')"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div>'+(p.birthdate&&p.age?'<div style="font-size:11px;color:var(--muted);margin-top:2px">※生年月日から自動入力されました。違う場合は修正してください。</div>':'')+'</div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','あなたのことを教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7">下の<span style="color:var(--gold);font-weight:700">本名・生年月日</span>は、本人確認（年齢確認）のためだけに使います。<span style="color:var(--cream);font-weight:700">お相手には表示されません。</span><br><span style="color:var(--cream);font-weight:700">あとで提出する身分証と同じ内容をご入力ください。</span>一致しない場合、年齢確認が完了せず、募集を始められません。</div>'+photoSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（身分証と同じ表記で）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日（身分証と同じもの）</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" oninput="S.pf.birthdate=this.value;var _a=calcAgeFromBirthdate(this.value);if(_a){S.pf.age=String(_a);}sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);re(\'profile_new\')"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div>'+(p.birthdate&&p.age?'<div style="font-size:11px;color:var(--muted);margin-top:2px">※生年月日から自動入力されました。違う場合は修正してください。</div>':'')+'</div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div><div class="sec-label">職業</div><div style="padding:0 20px"><select class="inp'+(p.job?' filled':'')+'" onchange="saveInputs();S.pf.job=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+JOBS.map(function(j){return '<option value="'+j+'"'+(p.job===j?' selected':'')+'>'+j+'</option>';}).join('')+'</select></div><div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
 }
 
 function profileEditH(){
