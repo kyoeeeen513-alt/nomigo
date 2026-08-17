@@ -3193,7 +3193,21 @@ async function submitEmailVerify(){
 function emailVerifyH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(1,'メールの確認','届いた番号を入力')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
     +'<div style="font-size:14px;color:var(--cream);line-height:1.7">'+(S.user?S.user.email:'')+' 宛に確認コードを送りました。届いた6桁の番号を入力してください。</div>'
-    +'<div style="font-size:11px;color:var(--muted);line-height:1.6">※メールが届かない場合は、迷惑メールフォルダに入っていないかご確認ください。</div>'
+    // 【待たせる案内 8/17】
+    //  8/17、永澤がiCloudのアドレスで登録した際、メールの到着まで数分かかり
+    //  「届かない」と判断される事象が発生した。実際には遅れて届いていた。
+    //  従来の案内は迷惑メールフォルダの確認のみで、時間がかかることに触れていなかったため、
+    //  利用者は「壊れている」と受け取って離脱する。
+    //  iCloudやキャリアメールでは配送に数分を要することがあるため、
+    //  「待てばよい」と分かる形で先に伝える。
+    +'<div style="display:flex;align-items:flex-start;gap:8px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:10px;padding:12px">'
+      +'<div style="font-size:15px;line-height:1.3;flex-shrink:0">📩</div>'
+      +'<div style="font-size:12px;color:var(--lgray);line-height:1.7">'
+        +nb('メールが届くまで')+nb('数分かかることがあります。')
+        +'<br>'
+        +nb('しばらく経っても')+nb('届かない場合は、')+nb('迷惑メールフォルダを')+nb('ご確認ください。')
+      +'</div>'
+    +'</div>'
     +'<input class="inp" id="everify-inp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="例：123456" maxlength="6" oninput="digitsOnly(this)">'
     +'<div id="everify-err" class="err-msg"></div>'
     +'<button class="btn btn-wine" id="everify-btn" onclick="submitEmailVerify()">確認する →</button>'
