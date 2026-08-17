@@ -1,13 +1,25 @@
 // CREDIXから決済結果が届く窓口です。
 //
 // 【いちばん大事な決まり】
-//   どんな場合でも必ず HTTP 200 と本文 ok を返します。
+//   どんな場合でも必ず HTTP 200 と本文 successok を返します。
 //   404 や 500 を返すと、CREDIXは再送を行いません（仕様書に明記）。
 //   通知が失われると「入金済みなのにチケットが付かない」事故になります。
-//   したがって、条件を満たさない通知であっても、拒否ではなく ok を返し、
+//   したがって、条件を満たさない通知であっても、拒否ではなく successok を返し、
 //   付与しなかった理由を credix_notify_logs に記録します。
-//   なお仕様書に「返答は ok / ng 等の簡潔な内容にし、htmlは記述しないこと」との
-//   指示があるため、本文は ok の文字だけを返します。
+//
+// 【返す文字列について（2026/8/16 修正）】
+//   仕様書P.21に「レスポンス『successok』の文字列を出力してください」との
+//   記載があるため、successok を返します。
+//   それ以前は ok を返していましたが、これではCREDIX側で
+//   「通知の受信に失敗した」と判定される可能性がありました。
+//   なお仕様書に「返答は簡潔な内容にし、htmlは記述しないこと」との
+//   指示があるため、本文は successok の文字だけを返します。
+//
+//   ※チケットを付けたかどうかにかかわらず、常に successok を返します。
+//     この文字列は「通知を受け取った」という意味であり、
+//     「決済が成功した」という意味ではないためです。
+//     条件を満たさない通知に対して別の文字列を返すと、
+//     CREDIXが再送を繰り返すことになります。
 //
 // 【届き方】
 //   GET形式で、次の値がURLに付いて届きます（CREDIXの実送信で確認済み）。
@@ -59,14 +71,14 @@ function getSourceIp(req) {
   return '';
 }
 
-// 必ず ok だけを返す
+// 必ず successok だけを返す（仕様書P.21）
 function replyOk(res) {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.status(200).send('ok');
+  res.status(200).send('successok');
 }
 
 module.exports = async (req, res) => {
-  // 何が起きても ok を返せるよう、全体を囲む
+  // 何が起きても successok を返せるよう、全体を囲む
   try {
     // GETで届く仕様だが、POSTで届いても受け取れるようにしておく
     const q = (req.query && Object.keys(req.query).length > 0) ? req.query : (req.body || {});
@@ -95,7 +107,7 @@ module.exports = async (req, res) => {
     }
 
     if (!SUPABASE_URL || !SERVICE_KEY) {
-      // 設定漏れでもCREDIXには ok を返す（再送が止まると通知が失われるため）。
+      // 設定漏れでもCREDIXには successok を返す（再送が止まると通知が失われるため）。
       // 記録は残らないため、CREDIXの決済結果通知メールから手動で復旧する。
       console.error('credix-notify: server_not_configured');
       replyOk(res);
