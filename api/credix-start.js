@@ -215,8 +215,14 @@ async function issueRepeaterSession(row, sendpoint) {
   params.set('sendpoint', sendpoint);
   // セキュリティコードの入力欄を出す。不正利用を防ぐため必ず有効にする。
   params.set('use_seccode', 'yes');
-  // リダイレクトは使わない。決済後の画面は利用者が自分でリンクを押して戻る。
-  params.set('redirect_type', '0');
+  // 決済が終わったら自動でアプリへ戻す（成功・失敗のどちらでも）。
+  // 以前は 0（戻らない）にしていたが、それだと利用者が完了画面のリンクを
+  // 自分で押す必要があり、押し方が分からないまま離脱する恐れがあった。
+  // 3秒あれば「完了しました」の表示は読めるため、redirect_sec は 3 とする。
+  // ※利用者のブラウザによっては自動で戻らない場合があると仕様書に注記があるため、
+  //   戻り先のリンク（success_url / failure_url）も併せて必ず送る。
+  params.set('redirect_type', '1');
+  params.set('redirect_sec', '3');
   params.set('success_url', 'https://www.nomi-go.jp/');
   params.set('failure_url', 'https://www.nomi-go.jp/');
   // ※success_str / failure_str（リンクに表示する文字）は送らない。
