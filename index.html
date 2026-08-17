@@ -2203,7 +2203,24 @@ async function chargeForTicket(){
     form.method='POST';
     form.action=data.action;
     form.style.display='none';
-    var fields={clientip:data.clientip,money:data.money,sendid:data.sendid,sendpoint:data.sendpoint};
+    // 【2つの決済方式に対応する 2026/8/17】
+    // サーバーが「どちらの方式で進めるか」を決めて mode で教えてくれる。
+    //
+    //   repeater … 2回目以降。CREDIXが保存しているカード情報を使うため、
+    //              カード番号の入力が不要。送るのは clientip と sid だけ。
+    //              金額もカードIDもCREDIX側がセッションとして持っている。
+    //   first    … 初回、またはカードの有効期限が切れている場合。
+    //              カード番号の入力画面へ進むため、金額などを送る。
+    //
+    // どちらになるかを画面側で判断してはいけない。
+    // カードが保存されているかどうかを正しく知っているのはCREDIXだけであり、
+    // 画面側で推測すると実態とずれて購入できなくなる。
+    var fields;
+    if(data.mode==='repeater'&&data.sid){
+      fields={clientip:data.clientip,sid:data.sid};
+    }else{
+      fields={clientip:data.clientip,money:data.money,sendid:data.sendid,sendpoint:data.sendpoint};
+    }
     Object.keys(fields).forEach(function(k){
       var input=document.createElement('input');
       input.type='hidden';
