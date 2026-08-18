@@ -6,9 +6,35 @@
 <title>Nomi Go</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+
+<!-- 【起動を速くするための書き方 2026/8/18】
+     以前はここで普通に読み込んでいたため、日本語フォント3書体（計11の太さ）の
+     ダウンロードが終わるまで画面が一切表示されず、
+     iPhoneのホーム画面から開くと6秒ほど何も出ない状態だった。
+
+     media="print" を付けると、ブラウザは「印刷用だから今すぐは要らない」と判断し、
+     画面の表示を止めずに裏側で読み込む。読み終わった時点で onload により
+     media を all に戻し、フォントを適用する。
+     これにより見た目は最終的に同じまま、表示までの待ち時間だけがなくなる。
+
+     フォントの種類・太さは一切減らしていない。見た目は変わらない。
+     ただし読み込みが終わるまでの一瞬だけ、端末の標準フォントで表示される。 -->
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet"></noscript>
+
+<!-- 【Supabaseの部品：defer を付けてはいけない 2026/8/18】
+     ページの一番下にある init() が supabase を直接使っており、
+     defer を付けるとこの読み込みが後回しになって init() が先に走り、
+     supabase が未定義のままアプリが起動しなくなる。
+     ここは従来どおり同期的に読み込むこと。
+     （将来 init() の呼び出しを DOMContentLoaded まで遅らせる形に直せば、
+       defer を付けて更に速くできる余地がある） -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://js.pay.jp/v2/pay.js"></script>
+
+<!-- 【PAY.JP の読み込みを削除 2026/8/18】
+     決済はCREDIXへ移行しており、PAY.JPは使っていない。
+     2026/8/15にカード登録画面への導線もすべて撤去済み（No.56）。
+     読み込むだけ起動が遅くなるため削除した。 -->
 <style>
 /* ===== デザイントークン（LPと統一） ===== */
 :root{
@@ -639,6 +665,11 @@ async function syncTicketCount(){
 function re(sc){S.screen=sc;sessionStorage.setItem('ngo_screen',sc);sessionStorage.setItem('ngo_pf',JSON.stringify(S.pf));render();}
 
 function mountPayjp(){
+  // 【2026/8/18】PAY.JPの読み込みを削除したため、この関数は動作しない。
+  // 決済はCREDIXへ移行済みで、この画面への導線もすべて撤去してある（No.56）。
+  // 万一どこかから呼ばれても画面が壊れないよう、ここで抜ける。
+  // zkey受領後のカード登録導線の作り直しの際、この関数ごと削除すること。
+  if(typeof Payjp==='undefined')return;
   if(_payjpCardEl)return;
   var el=document.getElementById('payjp-card-el');
   if(!el)return;
