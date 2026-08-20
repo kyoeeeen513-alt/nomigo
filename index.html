@@ -283,21 +283,35 @@ input[type=date].inp{color-scheme:dark}
 </style>
 </head>
 <body>
-<!-- 【最初に見える画面 2026/8/18】
+<!-- 【最初に見える画面 2026/8/18／2026/8/20更新】
      ここはHTMLに直接書いてあるため、JavaScriptが動き出す前から表示される。
      以前はぐるぐる（spinner）だけだったので、
      ホーム画面から開いた直後の数秒間、画面に何も説明がなく、
      利用者からは不具合が起きているように見えていた。
-     JavaScript側の起動画面（loadingH）にも同じ文言とバーがあるが、
+     JavaScript側の起動画面（loadingH）にも同じ見た目のものがあるが、
      そちらは読み込みが済んでからでないと描画されないため、
      ここにも同じものを置いて切れ目をなくす。
      文言と見た目は loadingH と揃えること。片方だけ変えると、
-     切り替わる瞬間に表示が変わってちらついて見える。 -->
+     切り替わる瞬間に表示が変わってちらついて見える。
+
+     【8/20の事故】起動画面をグラスの演出に変えた際、loadingH だけを変更して
+     ここを変え忘れ、本番でグラスが一度も表示されない状態になった。
+     起動が速いため loadingH に到達する前に本画面へ切り替わり、
+     実際に利用者が目にするのは常にこちらである。
+     起動画面を変えるときは、必ずこの2箇所を同時に変えること。 -->
 <div id="app"><div class="loading">
-  <div class="spinner"></div>
-  <div style="font-size:13.5px;color:var(--cream);margin-top:14px;font-weight:700">Nomi Go を開いています</div>
-  <div style="font-size:11.5px;color:var(--muted);margin-top:5px">少しお待ちください</div>
-  <div style="width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:99px;margin-top:16px;overflow:hidden">
+  <div class="nl-glow"></div>
+  <div class="nl-cup">
+    <div class="nl-glass">
+      <div class="nl-liquid"><div class="nl-wave"></div></div>
+      <div class="nl-shine"></div>
+    </div>
+    <div class="nl-stem"></div>
+    <div class="nl-foot"></div>
+  </div>
+  <div class="nl-brand">Nomi Go</div>
+  <div style="font-size:11.5px;color:var(--muted);letter-spacing:.02em">今夜の飲み相手を探しています</div>
+  <div style="width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden">
     <!-- 読み込みの進み具合は正確には測れないため、
          一定の速さで右へ進み、9割の位置で止まるアニメーションにしている。
          残りは実際に読み込みが終わった時点で埋まる。
