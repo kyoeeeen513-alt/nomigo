@@ -1596,6 +1596,14 @@ function waitFeedCardH(){
 
 // エリアごとの現在募集中の人数を取得する（エリア選択画面で「今このエリアで◯人が募集中」を出すため）
 async function loadAreaStats(){
+  // 期限切れの募集の後片付け。
+  // 期限切れで自動終了する処理は本人がアプリを開いている間しか動かないため、
+  // 募集したまま閉じられた行が waiting のまま残り続ける。表示は各所で除外して
+  // いるので利用者には見えないが、集計値が狂い、将来どこか1箇所で除外を
+  // 書き忘れた際に実在しない待機者が表示される事故につながる。
+  // エリア選択画面は誰かがアプリを使うたびに必ず開かれるため、ここで片付ける。
+  // 失敗しても人数表示は続行させる（片付けは表示の前提条件ではない）。
+  try{await DB.rpc('expire_stale_registrations');}catch(e){}
   try{
     var res=await DB.from('registrations').select('area_id').eq('status','waiting').gt('expires_at',new Date().toISOString());
     var counts={};
