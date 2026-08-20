@@ -139,6 +139,9 @@ input[type=date].inp{color-scheme:dark}
 .err-msg{font-size:12px;color:var(--red);padding:4px 0;text-align:center}
 .loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
+/* 起動時のバー。JavaScriptが動く前から進むよう、CSSだけで動かす。
+   9割で止め、残りは実際に読み込みが完了した時点で画面が切り替わることで埋まる。 */
+@keyframes bootbar{0%{width:8%}35%{width:55%}70%{width:78%}100%{width:90%}}
 .drow{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-bottom:1px solid var(--border2)}
 .drow-k{font-size:12px;color:var(--lgray);letter-spacing:.04em}
 .drow-v{font-size:14.5px;font-weight:800;color:var(--cream)}
@@ -251,7 +254,29 @@ input[type=date].inp{color-scheme:dark}
 </style>
 </head>
 <body>
-<div id="app"><div class="loading"><div class="spinner"></div></div></div>
+<!-- 【最初に見える画面 2026/8/18】
+     ここはHTMLに直接書いてあるため、JavaScriptが動き出す前から表示される。
+     以前はぐるぐる（spinner）だけだったので、
+     ホーム画面から開いた直後の数秒間、画面に何も説明がなく、
+     利用者からは不具合が起きているように見えていた。
+     JavaScript側の起動画面（loadingH）にも同じ文言とバーがあるが、
+     そちらは読み込みが済んでからでないと描画されないため、
+     ここにも同じものを置いて切れ目をなくす。
+     文言と見た目は loadingH と揃えること。片方だけ変えると、
+     切り替わる瞬間に表示が変わってちらついて見える。 -->
+<div id="app"><div class="loading">
+  <div class="spinner"></div>
+  <div style="font-size:13.5px;color:var(--cream);margin-top:14px;font-weight:700">Nomi Go を開いています</div>
+  <div style="font-size:11.5px;color:var(--muted);margin-top:5px">少しお待ちください</div>
+  <div style="width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:99px;margin-top:16px;overflow:hidden">
+    <!-- 読み込みの進み具合は正確には測れないため、
+         一定の速さで右へ進み、9割の位置で止まるアニメーションにしている。
+         残りは実際に読み込みが終わった時点で埋まる。
+         最後まで一気に進めてしまうと、進み切ったのに開かない状態になり、
+         かえって止まっているように見えるため。 -->
+    <div style="width:8%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright));border-radius:99px;animation:bootbar 3.5s ease-out forwards"></div>
+  </div>
+</div></div>
 <script>
 var _payjp=null,_payjpElements=null,_payjpCardEl=null;
 var _sbReady=false;
@@ -483,6 +508,10 @@ function render(){
   app.innerHTML=(map[S.screen]||loadingH)();
   if(_animateNext&&app.firstElementChild){app.firstElementChild.classList.add('anim-in');}
   _animateNext=false;
+  // 【起動中のバー 2026/8/18】
+  // 読み込み画面のときだけバーを進め、他の画面へ移ったら止める。
+  // ここで面倒を見ることで、画面を切り替える側は何も意識しなくてよい。
+  if(S.screen==='loading'){startLoadBar();}else{stopLoadBar();}
 }
 
 // ===== 待機画面の演出用タイマー =====
@@ -3008,7 +3037,62 @@ async function submitInquiry(){
   S._inquiryDone=true;re('inquiry');
 }
 
-function loadingH(){return '<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:var(--muted);margin-top:8px">読み込み中...</div></div>';}
+// 【起動中の画面 2026/8/18】
+//  以前はぐるぐる回るだけで「読み込み中...」と出るのみだった。
+//  奈良より「バグに見える。開いていることが分かる文言と、
+//  進み具合が見えるバーが欲しい」との指摘を受けて作り替えた。
+//
+//  【なぜ進み具合を見せるのか】
+//   ぐるぐるは回り続けるだけで、進んでいるのか止まっているのかが分からない。
+//   人は「終わりが見えない待ち」を実際より長く感じる。
+//   バーが右へ進んでいれば、同じ待ち時間でも「動いている」と受け取れる。
+//
+//  【このバーは実際の進捗ではない】
+//   ブラウザの読み込み状況を正確に取る手段がないため、
+//   時間の経過に応じて進む見せかけのバーである。
+//   ただし嘘にならないよう、90%で止めて完了までは到達させない。
+//   実際に準備が終わった時点で画面が切り替わる。
+//   もし処理が長引いても、バーだけが先に100%になって
+//   「終わったはずなのに進まない」という状態にはならない。
+function loadingH(){
+  // 描き直されるたびに最初から進み直さないよう、開始時刻は一度だけ記録する
+  if(!S._loadStartedAt)S._loadStartedAt=Date.now();
+  return '<div class="loading">'
+    +'<div class="spinner"></div>'
+    +'<div style="font-size:13.5px;color:var(--cream);margin-top:14px;font-weight:700">Nomi Go を開いています</div>'
+    +'<div style="font-size:11.5px;color:var(--muted);margin-top:5px">少しお待ちください</div>'
+    +'<div style="width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:99px;margin-top:16px;overflow:hidden">'
+      +'<div id="load-bar" style="width:8%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright));border-radius:99px;transition:width .45s ease-out"></div>'
+    +'</div>'
+  +'</div>';
+}
+
+// バーを少しずつ右へ進める。
+// 最初は速く、あとになるほど遅くする（残りが少ないほど慎重に見える）。
+// 90%で止め、実際に読み込みが終わった時点で画面が切り替わる。
+var _loadBarTimer=null;
+function startLoadBar(){
+  if(_loadBarTimer)return;
+  var pct=8;
+  _loadBarTimer=setInterval(function(){
+    var el=document.getElementById('load-bar');
+    if(!el){
+      // 読み込み画面から離れたら止める
+      clearInterval(_loadBarTimer);_loadBarTimer=null;return;
+    }
+    if(pct<90){
+      // 進むほど1回あたりの increment を小さくする
+      pct+=Math.max(1,(90-pct)*0.18);
+      if(pct>90)pct=90;
+      el.style.width=pct.toFixed(1)+'%';
+    }
+  },400);
+}
+
+function stopLoadBar(){
+  if(_loadBarTimer){clearInterval(_loadBarTimer);_loadBarTimer=null;}
+  S._loadStartedAt=null;
+}
 
 
 
