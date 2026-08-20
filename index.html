@@ -139,6 +139,35 @@ input[type=date].inp{color-scheme:dark}
 .err-msg{font-size:12px;color:var(--red);padding:4px 0;text-align:center}
 .loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
+/* ===== 起動画面（グラスが満ちる演出） ===== */
+/* 画像を使わずCSSのみで描く。起動を遅くしないための制約。 */
+.nl-glow{position:absolute;width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle,rgba(201,160,99,.20) 0%,rgba(201,160,99,0) 68%);
+  animation:nlGlow 3.2s ease-in-out infinite}
+.nl-cup{display:flex;flex-direction:column;align-items:center;gap:0}
+.nl-glass{position:relative;width:62px;height:52px;
+  border:2px solid rgba(201,160,99,.55);border-top:none;
+  border-radius:6px 6px 30px 30px;overflow:hidden;
+  background:rgba(255,255,255,.03)}
+.nl-liquid{position:absolute;left:0;right:0;bottom:0;height:12%;
+  background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+  animation:nlFill 2.6s ease-in-out infinite}
+.nl-wave{position:absolute;top:-4px;left:-25%;width:150%;height:8px;
+  border-radius:50%;background:var(--gold-bright);opacity:.85;
+  animation:nlWave 1.9s ease-in-out infinite}
+.nl-shine{position:absolute;top:6px;left:9px;width:7px;height:26px;
+  border-radius:99px;background:rgba(255,255,255,.16)}
+.nl-stem{width:2.5px;height:22px;background:rgba(201,160,99,.5)}
+.nl-foot{width:38px;height:3px;border-radius:99px;background:rgba(201,160,99,.5)}
+.nl-brand{font-size:19px;font-weight:900;color:var(--cream);
+  letter-spacing:.02em}
+@keyframes nlFill{0%{height:12%}55%{height:76%}100%{height:12%}}
+@keyframes nlWave{0%,100%{transform:translateX(-8%)}50%{transform:translateX(8%)}}
+@keyframes nlGlow{0%,100%{opacity:.5}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .nl-liquid,.nl-wave,.nl-glow{animation:none}
+  .nl-liquid{height:60%}
+}
 /* 起動時のバー。JavaScriptが動く前から進むよう、CSSだけで動かす。
    9割で止め、残りは実際に読み込みが完了した時点で画面が切り替わることで埋まる。 */
 @keyframes bootbar{0%{width:8%}35%{width:55%}70%{width:78%}100%{width:90%}}
@@ -3066,11 +3095,22 @@ async function submitInquiry(){
 function loadingH(){
   // 描き直されるたびに最初から進み直さないよう、開始時刻は一度だけ記録する
   if(!S._loadStartedAt)S._loadStartedAt=Date.now();
+  // 起動画面はサービスの第一印象になるため、汎用的な回転する輪ではなく
+  // 「グラスが満ちていく」演出にしている。飲み会を待つ時間そのものを表す。
+  // 画像やフォントは一切読み込まず、CSSのみで描くこと（起動を遅くしないため）。
   return '<div class="loading">'
-    +'<div class="spinner"></div>'
-    +'<div style="font-size:13.5px;color:var(--cream);margin-top:14px;font-weight:700">Nomi Go を開いています</div>'
-    +'<div style="font-size:11.5px;color:var(--muted);margin-top:5px">少しお待ちください</div>'
-    +'<div style="width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:99px;margin-top:16px;overflow:hidden">'
+    +'<div class="nl-glow"></div>'
+    +'<div class="nl-cup">'
+      +'<div class="nl-glass">'
+        +'<div class="nl-liquid"><div class="nl-wave"></div></div>'
+        +'<div class="nl-shine"></div>'
+      +'</div>'
+      +'<div class="nl-stem"></div>'
+      +'<div class="nl-foot"></div>'
+    +'</div>'
+    +'<div class="nl-brand">Nomi Go</div>'
+    +'<div style="font-size:11.5px;color:var(--muted);letter-spacing:.02em">今夜の飲み相手を探しています</div>'
+    +'<div style="width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden">'
       +'<div id="load-bar" style="width:8%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright));border-radius:99px;transition:width .45s ease-out"></div>'
     +'</div>'
   +'</div>';
@@ -3818,7 +3858,7 @@ function termsH(){
 
 function tokushohoH(){
   var body='<div style="font-size:13px;color:var(--cream);line-height:2.1">'
-+'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売事業者</div><div>TRP</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">運営責任者</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">所在地</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">電話番号</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">メールアドレス</div><div>info@nomi-go.jp</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お問い合わせ受付時間</div><div>11:00〜23:00<br>お問い合わせは、本サービス内のお問い合わせ機能にて受け付けます。いただいた順に、順次回答いたします。受付時間外のお問い合わせは、翌日以降の回答となります。内容の確認に時間を要する場合、回答までに日数をいただくことがあります。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">開示のご請求方法</div><div>上記メールアドレス宛にご連絡ください。所在地および電話番号を含む表示事項を記載した電子メールを、遅滞なくお送りします。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売価格</div><div>男性：チケット1枚 3,980円（税込）<br>女性：無料<br>価格は購入画面に表示されます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">商品代金以外の必要料金</div><div>インターネット接続料金等の通信費は、お客様のご負担となります。実際の飲み会にかかる飲食代等は、本サービスの料金に含まれません。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い方法</div><div>クレジットカード決済</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い時期</div><div>チケットの購入手続きが完了した時点で決済されます。マッチ成立時は、保有しているチケットが1枚消費されるのみで、追加の決済は発生しません。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">サービス提供時期</div><div>決済の完了後、直ちにチケットが付与され、ご利用いただけます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">チケットの有効期限</div><div>購入日から180日。期限を過ぎた未使用のチケットは失効します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">無断キャンセル料</div><div>マッチ成立後に連絡なく不参加となった場合、女性ユーザーにはキャンセル料3,980円（税込）をご負担いただきます。これは、お相手の男性ユーザーにチケット1枚を再付与するために生じる費用に相当する額です。男性ユーザーが無断キャンセルした場合は、消費したチケットが返還されません。いずれの場合も、無断キャンセルをされた側の男性ユーザーにはチケット1枚を再付与します。判断方法および異議申立ての手続きは、利用規約第9条の2に定めます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">返品・キャンセル</div><div>デジタルサービスの性質上、お客様のご都合による返金は承っておりません。<br>当サービスのシステム不具合により正常にご利用いただけなかった場合は、内容を確認のうえ、チケットの再付与または返金にて対応いたします。<br>当サービスを終了する場合、終了時点で有効期限内にある未使用のチケットについては、購入金額に相当する額を返金いたします。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">動作環境</div><div>インターネットに接続されたスマートフォンおよびウェブブラウザ</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">ご利用条件</div><div>満20歳以上の方に限ります。</div></div>'
++'<div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売事業者</div><div>TRP</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">運営責任者</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">所在地</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">電話番号</div><div>ご請求があれば、電子メールにて遅滞なく開示します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">メールアドレス</div><div>info@nomi-go.jp</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お問い合わせ<br>受付時間</div><div>11:00〜23:00<br>お問い合わせは、本サービス内のお問い合わせ機能にて受け付けます。いただいた順に、順次回答いたします。受付時間外のお問い合わせは、翌日以降の回答となります。内容の確認に時間を要する場合、回答までに日数をいただくことがあります。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">開示のご請求方法</div><div>上記メールアドレス宛にご連絡ください。所在地および電話番号を含む表示事項を記載した電子メールを、遅滞なくお送りします。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">販売価格</div><div>男性：チケット1枚 3,980円（税込）<br>女性：無料<br>価格は購入画面に表示されます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">商品代金以外の必要料金</div><div>インターネット接続料金等の通信費は、お客様のご負担となります。実際の飲み会にかかる飲食代等は、本サービスの料金に含まれません。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い方法</div><div>クレジットカード決済</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">お支払い時期</div><div>チケットの購入手続きが完了した時点で決済されます。マッチ成立時は、保有しているチケットが1枚消費されるのみで、追加の決済は発生しません。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">サービス提供時期</div><div>決済の完了後、直ちにチケットが付与され、ご利用いただけます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">チケットの有効期限</div><div>購入日から180日。期限を過ぎた未使用のチケットは失効します。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">無断キャンセル料</div><div>マッチ成立後に連絡なく不参加となった場合、女性ユーザーにはキャンセル料3,980円（税込）をご負担いただきます。これは、お相手の男性ユーザーにチケット1枚を再付与するために生じる費用に相当する額です。男性ユーザーが無断キャンセルした場合は、消費したチケットが返還されません。いずれの場合も、無断キャンセルをされた側の男性ユーザーにはチケット1枚を再付与します。判断方法および異議申立ての手続きは、利用規約第9条の2に定めます。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">返品・キャンセル</div><div>デジタルサービスの性質上、お客様のご都合による返金は承っておりません。<br>当サービスのシステム不具合により正常にご利用いただけなかった場合は、内容を確認のうえ、チケットの再付与または返金にて対応いたします。<br>当サービスを終了する場合、終了時点で有効期限内にある未使用のチケットについては、購入金額に相当する額を返金いたします。</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">動作環境</div><div>インターネットに接続されたスマートフォンおよびウェブブラウザ</div></div><div style="display:flex;border-bottom:1px solid var(--border2);padding:10px 0"><div style="width:110px;color:var(--muted);flex-shrink:0">ご利用条件</div><div>満20歳以上の方に限ります。</div></div>'
 +'</div>';
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">\u2190 \u623b\u308b</button><div class="hdr-info"><div class="hdr-title">\u7279\u5b9a\u5546\u53d6\u5f15\u6cd5\u306b\u57fa\u3065\u304f\u8868\u8a18</div></div></div><div class="body" style="padding:20px">'+body+'</div></div>';
 }
