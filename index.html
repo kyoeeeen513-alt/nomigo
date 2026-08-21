@@ -2177,7 +2177,7 @@ var _ticketPurchasing=false;
 // 【決済代行事業者の名称について】
 //  本契約の確定前のため、現時点では会社名を伏せた表記としています。
 //  確定後に、この文面とサーバー側の文面の両方へ社名を入れること（No.65）。
-var PAY_CONSENT_VERSION='pc-2026-08-15';
+var PAY_CONSENT_VERSION='pc-2026-08-21';
 
 function payConsentH(){
   // 【UIの方針】
@@ -2209,7 +2209,7 @@ function payConsentH(){
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">3. 提供する目的</div>'
     +'<div style="margin-bottom:10px">'+nb('クレジットカード決済の')+nb('処理、')+nb('決済結果の照合、')+nb('および不正利用の防止')+'</div>'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">4. カード情報の取扱い</div>'
-    +'<div style="margin-bottom:10px">'+nb('クレジットカード番号、')+nb('有効期限、')+nb('セキュリティコードは、')+nb('決済代行事業者が')+nb('直接お預かりします。')+nb('当サービスがこれらを')+nb('受け取ること、')+nb('保存することは')+nb('ありません。')+'</div>'
+    +'<div style="margin-bottom:10px">'+nb('クレジットカード番号、')+nb('有効期限、')+nb('セキュリティコードは、')+nb('決済代行事業者が')+nb('直接お預かりします。')+nb('当サービスがこれらを')+nb('受け取ること、')+nb('保存することは')+nb('ありません。')+nb('なお、')+nb('決済代行事業者では、')+nb('カード業界の')+nb('安全基準にもとづき、')+nb('退会後も一定の期間')+nb('カード情報が')+nb('保管されます。')+'</div>'
     +'<div style="font-weight:800;color:var(--cream);margin-bottom:4px">5. 記録の保存</div>'
     +'<div style="margin-bottom:10px">'+nb('お支払いに関する記録は、')+nb('法令に基づき')+nb('7年間保存します。')+nb('詳しくは')+nb('プライバシーポリシーを')+nb('ご確認ください。')+'</div>'
     +'<div style="text-align:center;padding-top:2px"><span style="font-size:12px;color:var(--muted);text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'payconsent\';go(\'privacy\')">プライバシーポリシーを読む</span></div>'
