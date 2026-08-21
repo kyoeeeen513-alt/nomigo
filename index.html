@@ -168,6 +168,20 @@ input[type=date].inp{color-scheme:dark}
   .nl-liquid,.nl-wave,.nl-glow{animation:none}
   .nl-liquid{height:60%}
 }
+/* 待機画面のバー。
+   起動画面のバーは読み込みの進み具合に応じてJavaScriptが幅を伸ばすが、
+   待機画面はいつ終わるか分からないため、繰り返し流れる形にする。
+   幅で進捗を偽ると「もうすぐ終わる」と誤解させるため、あえて往復させている。 */
+.nl-busy-bar{width:40%;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--gold),var(--gold-bright));
+  animation:nlBusyBar 1.4s ease-in-out infinite}
+@keyframes nlBusyBar{
+  0%{transform:translateX(-110%)}
+  100%{transform:translateX(360%)}
+}
+@media(prefers-reduced-motion:reduce){
+  .nl-busy-bar{animation:none;width:100%;opacity:.5}
+}
 /* 起動時のバー。JavaScriptが動く前から進むよう、CSSだけで動かす。
    9割で止め、残りは実際に読み込みが完了した時点で画面が切り替わることで埋まる。 */
 @keyframes bootbar{0%{width:8%}35%{width:55%}70%{width:78%}100%{width:90%}}
@@ -1663,12 +1677,30 @@ async function loadAreaStats(){
 
 // 押した直後に必ず反応を返すための簡易インジケーター。
 // 画面全体を作り直さないので即座に出る。
+// 【2026/8/21 起動画面と同じ見た目に統一】
+//   以前は灰色の輪（spinner）だけだった。待機中に何も説明がないと、
+//   利用者は「押せていない」と感じて何度も押したり離脱したりする。
+//   とくに決済へ進む場面では外部サイトへ移るまでに間があるため影響が大きい。
+//   起動画面（body直下のHTML直書き版・loadingH）と同じ構造にしてあるので、
+//   グラス・ブランド名・バーの並びまで揃う。
+//   見た目を変えるときは3箇所すべてを同時に直すこと。
 function showBusy(){
   if(document.getElementById('ngo-busy'))return;
   var d=document.createElement('div');
   d.id='ngo-busy';
-  d.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(21,10,12,.45);backdrop-filter:blur(1px)';
-  d.innerHTML='<div class="spinner"></div>';
+  d.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex';
+  d.innerHTML='<div class="loading">'
+    +'<div class="nl-glow"></div>'
+    +'<div class="nl-cup">'
+      +'<div class="nl-glass"><div class="nl-liquid"><div class="nl-wave"></div></div><div class="nl-shine"></div></div>'
+      +'<div class="nl-stem"></div><div class="nl-foot"></div>'
+    +'</div>'
+    +'<div class="nl-brand">Nomi Go</div>'
+    +'<div style="font-size:11.5px;color:var(--muted);letter-spacing:.02em">少しお待ちください</div>'
+    +'<div style="width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden">'
+      +'<div class="nl-busy-bar"></div>'
+    +'</div>'
+  +'</div>';
   document.body.appendChild(d);
 }
 function hideBusy(){
