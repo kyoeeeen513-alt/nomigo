@@ -14,8 +14,17 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#3A0E14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
+  /* デジタル時計の7セグメント書体。Google Fontsには無いためCDNから直接読み込む。
+     読み込めなかった場合は Share Tech Mono → 等幅 の順で代替される。 */
+  @font-face{
+    font-family:'DSEG7';
+    src:url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2'),
+        url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff') format('woff');
+    font-weight:700;font-style:normal;font-display:swap;
+  }
   :root{
     --wine-deep:#3A0E14;
     --wine:#6B1A24;
@@ -26,6 +35,8 @@
     --gold-bright:#F3D9A4;
     --cream:#F4E9DC;
     --cream-dim:#C4B2A1;
+    --led:#E02A22;
+    --led-dim:rgba(224,42,34,0.13);
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -157,72 +168,165 @@
     border:1px solid rgba(244,233,220,0.15);font-size:12.5px;font-weight:300;color:var(--cream-dim);}
   .slot .n{color:var(--gold-soft);font-weight:700;margin-right:4px;}
 
-  /* ===== 正式スタートのカウントダウン（2026/8/22 追加） =====
+  /* ===== 正式スタートのカウントダウン（2026/8/22 追加・8/22 改訂） =====
      9月1日0:00をゴールに、残り時間を秒単位で表示する。
      従来この位置にあった「今夜のマッチング状況」は、募集中の人が0人の
      現在は「LIVE・すぐに会える」という表示が実態と食い違うため差し替えた。
-     9月1日を過ぎるとJS側が自動で従来のマッチング状況パネルへ切り替える。 */
-  .countdown-panel{max-width:600px;margin:46px auto 0;
-    background:linear-gradient(180deg, rgba(90,22,32,0.5), rgba(58,14,20,0.5));
-    border:1px solid rgba(201,160,99,0.28);border-radius:22px;padding:28px 22px;
-    backdrop-filter:blur(6px);
+     9月1日を過ぎるとJS側が自動で従来のマッチング状況パネルへ切り替える。
+     ドラマ「24」のような緊迫感を出すため、等幅のデジタル書体で桁を揃え、
+     コロンを1秒ごとに点滅させている。横幅も画面いっぱいまで広げた。 */
+  .countdown-panel{max-width:860px;margin:44px auto 0;
+    position:relative;overflow:hidden;
+    background:linear-gradient(180deg, rgba(58,14,20,0.75), rgba(12,6,7,0.9));
+    border:1px solid rgba(201,160,99,0.34);border-radius:20px;padding:30px 20px 26px;
+    box-shadow:0 0 60px rgba(107,26,36,0.35), inset 0 1px 0 rgba(243,217,164,0.12);
     opacity:0;animation:fadeUp .9s 1.3s forwards;}
-  .cd-label{font-size:11px;font-weight:700;letter-spacing:0.22em;color:var(--gold-soft);margin-bottom:6px;}
-  .cd-date{font-family:'Shippori Mincho',serif;font-weight:800;font-size:clamp(26px,5.4vw,36px);
-    color:var(--gold-bright);letter-spacing:0.04em;margin-bottom:20px;line-height:1.3;}
-  .cd-date .yr{font-size:0.45em;color:var(--cream-dim);font-weight:500;letter-spacing:0.12em;
-    display:block;margin-bottom:2px;}
-  .cd-clock{display:flex;justify-content:center;align-items:flex-start;gap:6px;}
-  .cd-unit{flex:1;max-width:96px;padding:14px 4px 11px;border-radius:14px;
-    background:linear-gradient(160deg, rgba(201,160,99,0.22), rgba(201,160,99,0.05));
-    border:1px solid rgba(201,160,99,0.42);}
-  .cd-num{font-family:'Shippori Mincho',serif;font-weight:800;
-    font-size:clamp(24px,5.6vw,34px);line-height:1;color:var(--cream);
-    font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
-  .cd-cap{font-family:'Zen Kaku Gothic New',sans-serif;font-size:10px;font-weight:700;
-    letter-spacing:0.14em;color:var(--gold-soft);margin-top:8px;}
-  /* 秒だけ静かに脈打たせる。ここが動いていることで「今」動いていると伝わる */
-  .cd-unit.sec{background:linear-gradient(160deg, rgba(201,160,99,0.3), rgba(201,160,99,0.08));
-    border-color:rgba(243,217,164,0.6);animation:cdTick 1s steps(1) infinite;}
-  @keyframes cdTick{0%,100%{box-shadow:0 0 22px rgba(243,217,164,0.28);}50%{box-shadow:0 0 8px rgba(243,217,164,0.1);}}
-  .cd-foot{font-size:12.5px;font-weight:300;color:var(--cream-dim);margin-top:18px;line-height:1.75;}
+  /* 走査線。画面全体にうっすらかけて、モニターを覗いているような質感にする */
+  .countdown-panel::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(180deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 3px);}
+  .cd-label{display:flex;align-items:center;justify-content:center;gap:12px;
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:clamp(15px,3.6vw,23px);font-weight:900;letter-spacing:0.34em;
+    color:var(--gold-bright);margin-bottom:6px;text-indent:0.34em;
+    text-shadow:0 0 24px rgba(243,217,164,0.45);}
+  .cd-label .bar{flex:1;max-width:70px;height:1px;background:linear-gradient(90deg,transparent,var(--gold));}
+  .cd-label .bar.r{background:linear-gradient(270deg,transparent,var(--gold));}
+  .cd-date{font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:clamp(19px,4vw,27px);color:var(--cream);letter-spacing:0.1em;
+    margin-bottom:22px;line-height:1.4;}
+  .cd-date .yr{color:var(--cream-dim);font-weight:500;font-size:0.72em;letter-spacing:0.16em;margin-right:6px;}
 
-  /* ===== 先行登録キャンペーン（2026/8/22 追加） =====
+  /* 時計本体。7セグメントの書体を使い、実物のLED時計に寄せる。
+     消えているセグメントも「8」をうっすら重ねて見せることで、
+     数字が変わっても字が浮いたり沈んだりしない。 */
+  .cd-clock{display:flex;justify-content:center;align-items:center;gap:0;
+    font-family:'DSEG7','Share Tech Mono',monospace;}
+  .cd-unit{display:flex;flex-direction:column;align-items:center;padding:0 clamp(4px,1.6vw,14px);}
+  .cd-num{position:relative;display:inline-block;
+    font-size:clamp(34px,10.5vw,74px);line-height:1;color:var(--led);
+    letter-spacing:0.04em;
+    text-shadow:0 0 12px rgba(224,42,34,0.75), 0 0 34px rgba(224,42,34,0.4);}
+  /* 消灯しているセグメント。実物の液晶と同じで、うっすら形が残る */
+  .cd-num::before{content:"88";position:absolute;left:0;top:0;
+    color:var(--led-dim);text-shadow:none;pointer-events:none;}
+  .cd-cap{font-family:'Zen Kaku Gothic New',sans-serif;font-size:clamp(9px,2vw,12px);
+    font-weight:700;letter-spacing:0.24em;color:var(--gold-soft);margin-top:14px;text-indent:0.24em;}
+  /* コロンは1秒ごとに消える。ここが時計らしさの核 */
+  .cd-sep{position:relative;display:inline-block;
+    font-size:clamp(28px,8.6vw,60px);line-height:1;color:var(--led);
+    padding-bottom:30px;
+    text-shadow:0 0 12px rgba(224,42,34,0.75);
+    animation:cdBlink 1s steps(1) infinite;}
+  @keyframes cdBlink{0%,49%{opacity:1;}50%,100%{opacity:0.14;}}
+  /* 秒だけ少し強く光らせて、いま動いている桁だと分かるようにする */
+  .cd-unit.sec .cd-num{text-shadow:0 0 16px rgba(224,42,34,0.95), 0 0 44px rgba(224,42,34,0.55);}
+  .cd-foot{font-size:12.5px;font-weight:300;color:var(--cream-dim);margin-top:22px;line-height:1.75;}
+
+  /* ===== 先行登録キャンペーン（2026/8/22 追加・8/22 改訂） =====
      9月中に登録した男性へマッチング券1枚を無料で付与する施策の告知。
      LINEのあいさつメッセージと同じ内容を載せ、媒体間で食い違わないようにしている。
+     改訂の意図：一目で「キャンペーンだ」と分かるよう、角の斜めリボン、締切、
+     券そのものを模したチケット券面を足した。ミシン目と半券の切り欠きで
+     「券をもらえる」ことを形で伝える。
      ※10月1日にこのブロックを削除すること（project_status No.150） */
   .campaign{position:relative;z-index:1;padding:0 24px;}
-  .campaign-box{max-width:600px;margin:0 auto;position:relative;overflow:hidden;
-    border-radius:22px;padding:30px 26px;text-align:center;
-    background:linear-gradient(150deg, rgba(107,26,36,0.85), rgba(58,14,20,0.9));
+  .campaign-box{max-width:640px;margin:0 auto;position:relative;
+    border-radius:22px;padding:34px 26px 30px;text-align:center;
+    background:linear-gradient(150deg, rgba(107,26,36,0.9), rgba(40,10,15,0.94));
     border:1.5px solid var(--gold);
-    box-shadow:0 14px 44px rgba(0,0,0,0.45), inset 0 1px 0 rgba(243,217,164,0.18);}
-  .campaign-box::before{content:"";position:absolute;top:-50%;left:-60%;width:45%;height:200%;
-    background:linear-gradient(105deg, transparent, rgba(243,217,164,0.16), transparent);
-    animation:shine 4.5s infinite;}
-  .campaign-ribbon{display:inline-block;font-family:'Zen Kaku Gothic New',sans-serif;
-    font-size:11px;font-weight:900;letter-spacing:0.18em;color:var(--wine-deep);
-    background:linear-gradient(135deg, var(--gold-bright), var(--gold));
-    padding:6px 18px;border-radius:999px;margin-bottom:18px;
-    box-shadow:0 4px 14px rgba(201,160,99,0.45);}
+    box-shadow:0 14px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(243,217,164,0.2);}
+  /* 角の斜めリボン。ここで「キャンペーン」だと即座に伝える */
+  .campaign-corner{position:absolute;top:0;left:0;width:132px;height:132px;overflow:hidden;
+    border-radius:22px 0 0 0;pointer-events:none;}
+  .campaign-corner span{position:absolute;top:26px;left:-38px;width:170px;text-align:center;
+    transform:rotate(-45deg);
+    background:linear-gradient(135deg, var(--gold-bright), var(--gold));color:var(--wine-deep);
+    font-family:'Zen Kaku Gothic New',sans-serif;font-size:11.5px;font-weight:900;letter-spacing:0.16em;
+    padding:6px 0;text-indent:0.16em;
+    box-shadow:0 3px 12px rgba(0,0,0,0.4);}
+  .campaign-deadline{display:inline-flex;align-items:center;gap:8px;
+    font-family:'Zen Kaku Gothic New',sans-serif;font-size:12px;font-weight:900;
+    letter-spacing:0.1em;color:var(--gold-bright);margin-bottom:14px;
+    border:1px solid rgba(224,198,138,0.5);border-radius:999px;padding:5px 16px;}
+  .campaign-deadline .dot{width:6px;height:6px;border-radius:50%;background:var(--gold-bright);
+    animation:pulse 1.8s infinite;}
   .campaign-lead{font-family:'Shippori Mincho',serif;font-weight:700;
-    font-size:clamp(16px,3.2vw,20px);color:var(--cream);margin-bottom:14px;line-height:1.6;}
-  .campaign-price{display:flex;align-items:center;justify-content:center;gap:14px;
-    flex-wrap:wrap;margin-bottom:16px;}
-  .campaign-was{font-family:'Shippori Mincho',serif;font-size:clamp(21px,4vw,27px);font-weight:700;
-    color:var(--cream-dim);position:relative;}
-  .campaign-was::after{content:"";position:absolute;left:-4px;right:-4px;top:52%;height:2px;
-    background:var(--gold-soft);transform:rotate(-8deg);}
-  .campaign-arrow{color:var(--gold);font-size:18px;}
-  .campaign-now{font-family:'Shippori Mincho',serif;font-size:clamp(38px,8.5vw,58px);font-weight:800;
-    line-height:1;background:linear-gradient(180deg, var(--gold-bright), var(--gold));
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
-  .campaign-terms{display:flex;flex-direction:column;gap:7px;max-width:340px;margin:0 auto 4px;
+    font-size:clamp(15px,3vw,18px);color:var(--cream);margin-bottom:18px;line-height:1.6;}
+  .campaign-lead em{font-style:normal;color:var(--gold-bright);font-size:1.15em;}
+
+  /* チケットの券面。ミシン目で半券が付いた形にして「券」だと分かるようにする */
+  .ticket{position:relative;display:flex;align-items:stretch;max-width:440px;margin:0 auto 20px;
+    background:linear-gradient(160deg, rgba(243,217,164,0.97), rgba(201,160,99,0.92));
+    border-radius:14px;color:var(--wine-deep);overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,0.45);}
+  .ticket-main{flex:1;padding:18px 16px 16px;text-align:center;}
+  .ticket-kind{font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:900;
+    letter-spacing:0.2em;opacity:.72;text-indent:0.2em;}
+  .ticket-name{font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:clamp(19px,4.4vw,25px);line-height:1.3;margin:5px 0 9px;}
+  .ticket-price{display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap;}
+  .ticket-was{font-family:'Shippori Mincho',serif;font-size:clamp(16px,3.4vw,20px);font-weight:700;
+    opacity:.55;position:relative;}
+  .ticket-was::after{content:"";position:absolute;left:-3px;right:-3px;top:52%;height:2px;
+    background:var(--wine-deep);transform:rotate(-8deg);}
+  .ticket-now{font-family:'Shippori Mincho',serif;font-size:clamp(34px,8vw,46px);font-weight:800;line-height:1;}
+  .ticket-now small{font-size:0.4em;font-weight:700;margin-left:3px;}
+  /* ミシン目。上下の切り欠きと破線で「切り取れる券」に見せる */
+  .ticket-stub{width:74px;flex:none;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;position:relative;
+    border-left:2px dashed rgba(58,14,20,0.4);}
+  .ticket-stub::before,.ticket-stub::after{content:"";position:absolute;left:-9px;width:16px;height:16px;
+    border-radius:50%;background:var(--night);}
+  .ticket-stub::before{top:-8px;} .ticket-stub::after{bottom:-8px;}
+  .ticket-stub .n{font-family:'Shippori Mincho',serif;font-size:26px;font-weight:800;line-height:1;}
+  .ticket-stub .u{font-family:'Zen Kaku Gothic New',sans-serif;font-size:10px;font-weight:900;letter-spacing:0.12em;}
+
+  .campaign-terms{display:flex;flex-direction:column;gap:8px;max-width:360px;margin:0 auto;
     text-align:left;}
   .campaign-terms li{list-style:none;font-size:13px;font-weight:400;color:var(--cream);
-    display:flex;gap:9px;align-items:flex-start;line-height:1.7;}
+    display:flex;gap:10px;align-items:flex-start;line-height:1.7;}
   .campaign-terms li .tick{color:var(--gold-bright);flex:none;font-weight:900;}
-  .campaign-note{font-size:11.5px;font-weight:300;color:var(--cream-dim);margin-top:16px;line-height:1.7;}
+  .campaign-note{font-size:11.5px;font-weight:300;color:var(--cream-dim);margin-top:18px;line-height:1.7;
+    border-top:1px solid rgba(224,198,138,0.2);padding-top:14px;}
+  /* ===== 女性と男性の比較（2026/8/22 追加・8/22 第3版） =====
+     第2版は左右のカードに別々の項目を並べていたため、見比べられなかった。
+     奈良の指示により、同じ項目が必ず横一列に並ぶ表組みへ変更。
+     左が女性、右が男性で固定し、行ごとに違いを追える形にしている。
+     スマホでも2列を維持する。縦に積むと見比べるという目的が果たせないため。 */
+  .gender{position:relative;z-index:1;padding:20px 24px 0;}
+  .gender-in{max-width:640px;margin:0 auto;}
+  .gender-head{text-align:center;font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:clamp(17px,3.6vw,22px);color:var(--cream);margin-bottom:18px;line-height:1.5;}
+  .gtable{border:1px solid rgba(224,198,138,0.28);border-radius:18px;overflow:hidden;
+    background:rgba(0,0,0,0.2);}
+  .grow{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(244,233,220,0.08);}
+  .grow:first-child{border-top:none;}
+  .gcell{padding:14px 12px;text-align:center;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:3px;}
+  /* 左（女性）だけ淡く敷いて、どちらの列を見ればよいか一目で分かるようにする */
+  .gcell.f{background:rgba(224,198,138,0.07);border-right:1px solid rgba(224,198,138,0.22);}
+  /* 見出し行 */
+  .grow.head .gcell{padding:16px 12px;}
+  .ghead{font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:clamp(19px,4.4vw,24px);line-height:1.2;color:var(--cream);}
+  .gcell.f .ghead{color:var(--gold-bright);}
+  .ghead-en{font-family:'Zen Kaku Gothic New',sans-serif;font-size:10px;font-weight:900;
+    letter-spacing:0.2em;color:var(--gold-soft);text-indent:0.2em;opacity:.8;}
+  /* 項目名の行 */
+  .glabel{grid-column:1 / -1;text-align:center;
+    font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:900;
+    letter-spacing:0.16em;color:var(--gold-soft);text-indent:0.16em;
+    background:rgba(0,0,0,0.3);padding:7px 10px;}
+  .gval{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;
+    font-size:clamp(15px,3.4vw,19px);line-height:1.35;color:var(--cream);}
+  .gcell.f .gval{color:var(--gold-bright);}
+  .gval.big{font-family:'Shippori Mincho',serif;font-size:clamp(24px,5.6vw,32px);}
+  .gnote{font-size:11px;font-weight:300;color:var(--cream-dim);line-height:1.6;}
+  .gmk{font-size:15px;line-height:1;color:var(--gold-soft);}
+  .gcell.f .gmk{color:var(--gold-bright);}
+  .gender-foot{text-align:center;font-size:12px;font-weight:300;color:var(--cream-dim);
+    margin-top:16px;line-height:1.75;}
+
   .price-card.male{position:relative;}
   .price-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;
     font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:900;letter-spacing:0.08em;
@@ -433,6 +537,35 @@
   .btn-line:active{transform:scale(.96);}
   .line-cta-note{font-size:11.5px;font-weight:300;color:var(--cream-dim);margin-top:14px;}
 
+  /* ===== お知らせ（2026/8/22 追加） =====
+     機能の追加やキャンペーンを告知する欄。ページ最下部に置く。
+     更新するときは news-item を上に足し、古いものを下から消す。
+     4件程度に保つこと。多いと読まれない。
+     日付・見出し・本文の3点で1件。NEWバッジは新しい2件までに付ける。 */
+  .news{position:relative;z-index:1;padding:70px 24px 80px;
+    border-top:1px solid rgba(244,233,220,0.08);}
+  .news-in{max-width:640px;margin:0 auto;}
+  .news-head{display:flex;align-items:baseline;justify-content:center;gap:12px;margin-bottom:28px;}
+  .news-head .en{font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:0.3em;color:var(--gold);text-indent:0.3em;}
+  .news-head .ja{font-family:'Shippori Mincho',serif;font-weight:800;font-size:21px;color:var(--cream);}
+  .news-item{display:flex;gap:16px;padding:18px 4px;border-top:1px solid rgba(244,233,220,0.09);}
+  .news-item:first-of-type{border-top:none;}
+  .news-date{flex:none;width:82px;font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:12px;font-weight:700;color:var(--gold-soft);padding-top:2px;letter-spacing:0.04em;}
+  .news-body h4{font-family:'Zen Kaku Gothic New',sans-serif;font-size:14.5px;font-weight:900;
+    color:var(--cream);line-height:1.6;margin-bottom:4px;display:flex;align-items:center;gap:8px;
+    flex-wrap:wrap;}
+  .news-new{font-size:9.5px;font-weight:900;letter-spacing:0.1em;color:var(--wine-deep);
+    background:linear-gradient(135deg, var(--gold-bright), var(--gold));
+    border-radius:999px;padding:2px 9px;text-indent:0.1em;}
+  .news-body p{font-size:12.5px;font-weight:300;color:var(--cream-dim);line-height:1.75;}
+  @media(max-width:520px){
+    .news{padding:56px 20px 64px;}
+    .news-item{flex-direction:column;gap:5px;}
+    .news-date{width:auto;padding-top:0;}
+  }
+
   footer{position:relative;z-index:1;border-top:1px solid rgba(244,233,220,0.08);padding:40px 24px;text-align:center;}
   footer .flogo{font-family:'Zen Kaku Gothic New';font-weight:900;color:var(--gold-soft);font-size:17px;}
   footer p{font-size:12px;font-weight:300;color:rgba(196,178,161,0.5);margin-top:6px;}
@@ -459,8 +592,12 @@
 
     /* キャンペーン */
     .campaign{padding:0 20px;}
-    .campaign-box{padding:26px 20px;}
+    .campaign-box{padding:30px 18px 26px;}
     .campaign-terms{max-width:none;}
+    .campaign-corner{width:112px;height:112px;}
+    .campaign-corner span{top:20px;left:-40px;width:158px;font-size:10.5px;}
+    .ticket-stub{width:60px;}
+    .ticket-main{padding:16px 10px 14px;}
 
     /* セクション見出しの下余白を圧縮 */
     .section-head{margin-bottom:40px;}
@@ -503,7 +640,7 @@
 <header>
   <div class="header-in">
     <div class="logo">Nomi Go<span>ノミゴー</span></div>
-    <a href="https://www.nomi-go.jp" class="header-cta">今すぐ始める</a>
+    <a href="https://www.nomi-go.jp" class="header-cta">先行登録する</a>
   </div>
 </header>
 
@@ -515,20 +652,24 @@
     <span class="line"><span>見つかる。</span></span>
   </h1>
   <p class="sub">「今日飲みたい」が、すぐ叶う。</p>
+
   <div class="cta-area">
     <a href="https://www.nomi-go.jp" class="btn-primary">先行登録する</a>
-    <p class="hero-note">女性はマッチ利用料が無料／男性はチケット1枚 ¥3,980（マッチ成立で1枚消費）</p>
+    <p class="hero-note">女性は登録も利用も無料です。カードのご登録もいりません。<br>男性はチケット1枚 ¥3,980（マッチ成立時に1枚消費）</p>
   </div>
 
   <!-- 正式スタートまでのカウントダウン。9月1日を過ぎるとJSが下のパネルへ切り替える -->
   <div class="countdown-panel" id="countdown-panel">
-    <div class="cd-label">GRAND OPEN</div>
-    <div class="cd-date"><span class="yr">2026</span>9月1日、開幕。</div>
+    <div class="cd-label"><span class="bar"></span>COMING SOON<span class="bar r"></span></div>
+    <div class="cd-date"><span class="yr">2026.</span>9月1日 0:00、開幕。</div>
     <div class="cd-clock">
-      <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-cap">DAYS</div></div>
-      <div class="cd-unit"><div class="cd-num" id="cd-h">--</div><div class="cd-cap">HOURS</div></div>
-      <div class="cd-unit"><div class="cd-num" id="cd-m">--</div><div class="cd-cap">MIN</div></div>
-      <div class="cd-unit sec"><div class="cd-num" id="cd-s">--</div><div class="cd-cap">SEC</div></div>
+      <div class="cd-unit"><div class="cd-num" id="cd-d">00</div><div class="cd-cap">DAYS</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><div class="cd-num" id="cd-h">00</div><div class="cd-cap">HOURS</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit"><div class="cd-num" id="cd-m">00</div><div class="cd-cap">MINUTES</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-unit sec"><div class="cd-num" id="cd-s">00</div><div class="cd-cap">SECONDS</div></div>
     </div>
     <p class="cd-foot">いま登録しておくと、開幕と同時に募集できます。</p>
   </div>
@@ -552,19 +693,78 @@
 <!-- 先行登録キャンペーン。10月1日にこのブロックを削除すること -->
 <div class="campaign">
   <div class="campaign-box">
-    <div class="campaign-ribbon">9月中のご登録限定</div>
-    <p class="campaign-lead">男性のマッチング券 1枚を<br>無料でお渡ししています</p>
-    <div class="campaign-price">
-      <span class="campaign-was">¥3,980</span>
-      <span class="campaign-arrow">▶</span>
-      <span class="campaign-now">¥0</span>
+    <div class="campaign-corner"><span>CAMPAIGN</span></div>
+    <div class="campaign-deadline"><span class="dot"></span>9月30日まで</div>
+    <p class="campaign-lead">いま登録した男性に、<br><em>マッチング券を1枚プレゼント。</em></p>
+
+    <div class="ticket">
+      <div class="ticket-main">
+        <div class="ticket-kind">NOMI GO MATCHING TICKET</div>
+        <div class="ticket-name">マッチング券</div>
+        <div class="ticket-price">
+          <span class="ticket-was">¥3,980</span>
+          <span class="ticket-now">¥0<small>（無料）</small></span>
+        </div>
+      </div>
+      <div class="ticket-stub"><span class="n">1</span><span class="u">枚</span></div>
     </div>
+
     <ul class="campaign-terms">
-      <li><span class="tick">◆</span>ご登録いただくだけで受け取れます</li>
+      <li><span class="tick">◆</span>登録するだけで受け取れます。手続きは不要です</li>
       <li><span class="tick">◆</span>マッチが成立したときに1枚使います</li>
-      <li><span class="tick">◆</span>10月からは通常どおり ¥3,980 です</li>
+      <li><span class="tick">◆</span>10月からは通常どおり1枚 ¥3,980 です</li>
     </ul>
-    <p class="campaign-note">女性はマッチのご利用が無料です。チケットのご購入もカードのご登録も必要ありません。</p>
+    <p class="campaign-note">対象は9月30日までにご登録いただいた男性です。女性はマッチのご利用がずっと無料で、チケットのご購入もカードのご登録も必要ありません。</p>
+  </div>
+</div>
+
+<!-- 女性と男性を左右に並べる。自分の側だけ読めばよいので迷わない -->
+<div class="gender">
+  <div class="gender-in">
+    <p class="gender-head">女性と男性で、何が違うのか。</p>
+    <div class="gtable">
+      <div class="grow head">
+        <div class="gcell f"><div class="ghead-en">WOMEN</div><div class="ghead">女性</div></div>
+        <div class="gcell"><div class="ghead-en">MEN</div><div class="ghead">男性</div></div>
+      </div>
+
+      <div class="grow"><div class="glabel">料金</div></div>
+      <div class="grow">
+        <div class="gcell f"><div class="gval big">無料</div><div class="gnote">ずっと無料です</div></div>
+        <div class="gcell"><div class="gval big">¥3,980</div><div class="gnote">チケット1枚（税込）</div></div>
+      </div>
+
+      <div class="grow"><div class="glabel">9月中の登録</div></div>
+      <div class="grow">
+        <div class="gcell f"><div class="gval">もともと無料</div><div class="gnote">お手続きはありません</div></div>
+        <div class="gcell"><div class="gval">1枚プレゼント</div><div class="gnote">登録するだけで受け取れます</div></div>
+      </div>
+
+      <div class="grow"><div class="glabel">カードの登録</div></div>
+      <div class="grow">
+        <div class="gcell f"><div class="gmk">✕</div><div class="gval">不要</div></div>
+        <div class="gcell"><div class="gmk">◯</div><div class="gnote">チケット購入時のみ</div></div>
+      </div>
+
+      <div class="grow"><div class="glabel">募集する</div></div>
+      <div class="grow">
+        <div class="gcell f"><div class="gmk">◯</div><div class="gnote">何度でも無料</div></div>
+        <div class="gcell"><div class="gmk">◯</div><div class="gnote">募集だけでは減りません</div></div>
+      </div>
+
+      <div class="grow"><div class="glabel">写真の公開</div></div>
+      <div class="grow">
+        <div class="gcell f"><div class="gval">マッチまで非公開</div><div class="gnote">それまではぼかし表示</div></div>
+        <div class="gcell"><div class="gval">マッチまで非公開</div><div class="gnote">それまではぼかし表示</div></div>
+      </div>
+
+      <div class="grow"><div class="glabel">本人確認</div></div>
+      <div class="grow">
+        <div class="gcell f"><div class="gval">必須</div><div class="gnote">身分証と顔写真</div></div>
+        <div class="gcell"><div class="gval">必須</div><div class="gnote">身分証と顔写真</div></div>
+      </div>
+    </div>
+    <p class="gender-foot">どちらも20歳以上・本人確認が必要です。恋愛ではなく、一緒に飲む相手を探す場です。</p>
   </div>
 </div>
 
@@ -622,11 +822,11 @@
       </div>
       <div class="compare-row">
         <div class="name">マッチングアプリ</div>
-        <div class="desc">恋愛目的が多く、気軽に誘いにくい</div>
+        <div class="desc">恋愛目的が前提。飲むだけ、が伝わりにくい</div>
       </div>
       <div class="compare-row nomigo">
         <div class="name">Nomi Go</div>
-        <div class="desc">今日、時間がある人だけ。だからすぐ会える。</div>
+        <div class="desc">恋愛ではなく「飲むだけ」。今日、時間がある人だけ。</div>
       </div>
     </div>
   </div>
@@ -690,6 +890,7 @@
       <div class="safety-item reveal reveal-d2"><div class="safety-mark">◇</div><div><h4>年齢の許容範囲を設定できる</h4><p>「何歳から何歳まで」を自分で決められます。</p></div></div>
       <div class="safety-item reveal reveal-d3"><div class="safety-mark">◎</div><div><h4>20歳以上・身分確認あり</h4><p>年齢確認をしっかり行っています。</p></div></div>
       <div class="safety-item reveal reveal-d4"><div class="safety-mark">✕</div><div><h4>ドタキャン抑止の仕組み</h4><p>無断キャンセルには、段階的な利用制限とキャンセル料の仕組みがあります。</p></div></div>
+      <div class="safety-item reveal reveal-d1"><div class="safety-mark">◈</div><div><h4>恋愛目的ではありません</h4><p>一緒に飲む相手を探す場です。交際や勧誘を目的とした利用は禁止しています。</p></div></div>
     </div>
   </div>
 </section>
@@ -843,6 +1044,37 @@
   </div>
 </section>
 
+<!-- お知らせ。新しいものを上に足し、4件程度に保つ -->
+<section class="news">
+  <div class="news-in">
+    <div class="news-head"><span class="en">NEWS</span><span class="ja">お知らせ</span></div>
+
+    <div class="news-item">
+      <div class="news-date">2026.08.22</div>
+      <div class="news-body">
+        <h4>先行登録の受付をはじめました<span class="news-new">NEW</span></h4>
+        <p>9月1日の開幕に先がけて、ご登録を受け付けています。いま登録しておくと、開幕と同時に募集できます。</p>
+      </div>
+    </div>
+
+    <div class="news-item">
+      <div class="news-date">2026.08.22</div>
+      <div class="news-body">
+        <h4>9月中の登録で、男性のマッチング券が1枚無料<span class="news-new">NEW</span></h4>
+        <p>9月30日までにご登録いただいた男性に、マッチング券1枚（3,980円分）をお渡しします。登録するだけで受け取れます。10月からは通常どおり1枚3,980円です。</p>
+      </div>
+    </div>
+
+    <div class="news-item">
+      <div class="news-date">2026.08.21</div>
+      <div class="news-body">
+        <h4>すすきの・新宿でのサービス提供が決まりました</h4>
+        <p>まずはこの2エリアで開始します。上野・梅田は近日公開予定です。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="flogo">Nomi Go</div>
   <p>Nomi Go運営事務局</p>
@@ -904,7 +1136,7 @@
     function tick(){
       var diff = GOAL - Date.now();
       if(diff <= 0){ open(); return false; }
-      document.getElementById('cd-d').textContent = Math.floor(diff / 86400000);
+      document.getElementById('cd-d').textContent = pad(Math.floor(diff / 86400000));
       document.getElementById('cd-h').textContent = pad(Math.floor(diff / 3600000) % 24);
       document.getElementById('cd-m').textContent = pad(Math.floor(diff / 60000) % 60);
       document.getElementById('cd-s').textContent = pad(Math.floor(diff / 1000) % 60);
