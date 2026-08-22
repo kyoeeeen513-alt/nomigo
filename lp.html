@@ -80,6 +80,18 @@
     padding:14px 24px;max-width:960px;margin:0 auto;}
   .logo{font-family:'Zen Kaku Gothic New';font-size:20px;font-weight:900;letter-spacing:0.04em;color:var(--gold-soft);}
   .logo span{color:var(--cream-dim);font-size:10px;display:block;font-weight:500;letter-spacing:0.25em;margin-top:1px;}
+  /* ページ内リンク。別ページは作らず、既にある内容へ案内する。
+     狭い画面ではロゴとボタンの間に入りきらないため、下段へ折り返す。 */
+  .header-nav{display:flex;align-items:center;gap:clamp(14px,3vw,30px);}
+  .header-nav a{font-family:'Zen Kaku Gothic New',sans-serif;font-size:13.5px;font-weight:700;
+    color:var(--cream);letter-spacing:0.04em;padding:4px 0;position:relative;
+    transition:color .25s;white-space:nowrap;}
+  .header-nav a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:var(--gold);transform:scaleX(0);transform-origin:center;transition:transform .25s;}
+  .header-nav a:hover{color:var(--gold-bright);}
+  .header-nav a:hover::after{transform:scaleX(1);}
+  /* 移動先がヘッダーに隠れないよう、上に余白を確保する */
+  #howto,#price,#safety{scroll-margin-top:78px;}
   .header-cta{font-size:13px;font-weight:700;padding:9px 20px;border:1px solid var(--gold);
     border-radius:999px;color:var(--gold-soft);white-space:nowrap;transition:all .25s;}
   .header-cta:hover{background:rgba(201,160,99,0.15);transform:scale(1.03);}
@@ -419,15 +431,28 @@
   .scene p{font-size:12.5px;font-weight:300;color:var(--cream-dim);}
 
   /* ===== 安心 ===== */
-  .safety-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;max-width:720px;margin:0 auto;}
-  .safety-item{display:flex;gap:14px;align-items:flex-start;padding:20px;
-    background:rgba(244,233,220,0.02);border-radius:16px;border:1px solid rgba(244,233,220,0.06);
-    transition:border-color .3s;}
-  .safety-item:hover{border-color:rgba(201,160,99,0.3);}
-  .safety-mark{width:34px;height:34px;flex:none;border-radius:50%;
-    border:1px solid var(--gold);color:var(--gold-soft);display:flex;align-items:center;justify-content:center;font-size:13px;}
-  .safety-item h4{font-size:14px;font-weight:900;margin-bottom:3px;}
-  .safety-item p{font-size:12.5px;font-weight:300;color:var(--cream-dim);}
+  /* ===== 安心・安全な理由（2026/8/22 改訂） =====
+     従来は小さな箇条書きだったが、女性がここで判断するため大きく見せる。
+     各項目に図（SVG）を添え、3列で2段に並べる。
+     注意：他社が載せている第三者認証マーク（IMS認証・TRUSTe等）は
+     Nomi Goでは取得していないため掲載しない。事実として言えることだけを書く。 */
+  .safety-list{display:grid;grid-template-columns:repeat(3,1fr);gap:26px 20px;
+    max-width:860px;margin:0 auto;}
+  @media(max-width:760px){.safety-list{grid-template-columns:repeat(2,1fr);gap:24px 16px;}}
+  @media(max-width:460px){.safety-list{grid-template-columns:1fr;gap:22px;}}
+  .safety-item{text-align:center;}
+  .safety-fig{width:100%;max-width:150px;margin:0 auto 14px;aspect-ratio:1.15;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at center, rgba(201,160,99,0.1), transparent 68%);}
+  .safety-fig svg{width:100%;height:100%;overflow:visible;}
+  .sf-line{fill:none;stroke:var(--gold-soft);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .sf-thin{fill:none;stroke:rgba(224,198,138,0.45);stroke-width:1.6;stroke-linecap:round;}
+  .sf-fill{fill:rgba(201,160,99,0.16);}
+  .sf-solid{fill:var(--gold-bright);}
+  .safety-item h4{font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:15.5px;font-weight:900;color:var(--cream);margin-bottom:7px;line-height:1.5;}
+  .safety-item p{font-size:12.5px;font-weight:300;color:var(--cream-dim);line-height:1.8;
+    max-width:230px;margin:0 auto;}
 
   /* ===== 特徴 ===== */
   .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;}
@@ -572,6 +597,15 @@
   footer .legal-line a{color:var(--gold-soft);text-decoration:underline;}
 
   @media(max-width:640px){
+    /* ヘッダー：ロゴとボタンを上段、ページ内リンクを下段に分ける */
+    .header-in{flex-wrap:wrap;justify-content:space-between;padding:11px 20px 0;}
+    .header-nav{order:3;width:100%;justify-content:center;gap:0;
+      border-top:1px solid rgba(201,160,99,0.15);margin-top:10px;}
+    .header-nav a{flex:1;text-align:center;font-size:12.5px;padding:9px 0;}
+    .header-nav a::after{left:18%;right:18%;bottom:4px;}
+    #howto,#price,#safety{scroll-margin-top:104px;}
+    .hero{padding:132px 20px 60px;}
+
     section{padding:68px 20px;}
     .wrap{padding:0 20px;}
     .compare-row{grid-template-columns:112px 1fr;}
@@ -579,7 +613,6 @@
     .compare-row .desc{padding:15px;font-size:12.5px;}
 
     /* HERO：詰まりすぎないよう余白調整 */
-    .hero{padding:110px 20px 60px;}
     .now-panel{padding:22px 18px;margin-top:38px;}
     .other-slots{gap:6px;}
     .slot{padding:7px 12px;font-size:12px;}
@@ -640,6 +673,12 @@
 <header>
   <div class="header-in">
     <div class="logo">Nomi Go<span>ノミゴー</span></div>
+    <!-- ページ内の該当箇所へ移動する。別ページは作らず、既にある内容へ案内する -->
+    <nav class="header-nav">
+      <a href="#howto">使い方</a>
+      <a href="#price">料金</a>
+      <a href="#safety">安心・安全</a>
+    </nav>
     <a href="https://www.nomi-go.jp" class="header-cta">先行登録する</a>
   </div>
 </header>
@@ -827,7 +866,7 @@
 </section>
 
 <!-- 3ステップ -->
-<section>
+<section id="howto">
   <div class="wrap">
     <div class="section-head reveal">
       <div class="eyebrow-line">HOW IT WORKS</div>
@@ -873,18 +912,98 @@
 </section>
 
 <!-- 安心 -->
-<section>
+<section id="safety">
   <div class="wrap">
     <div class="section-head reveal">
       <div class="eyebrow-line">SAFETY</div>
-      <h2>初対面だからこそ、<br>安心して使える設計。</h2>
+      <h2>安心・安全な理由</h2>
+      <p>初対面の方と会う場だからこそ、6つの仕組みで守っています。</p>
     </div>
     <div class="safety-list">
-      <div class="safety-item reveal reveal-d1"><div class="safety-mark">◐</div><div><h4>マッチ前は写真をぼかし表示</h4><p>成立するまで顔写真は公開されません。</p></div></div>
-      <div class="safety-item reveal reveal-d2"><div class="safety-mark">◇</div><div><h4>年齢の許容範囲を設定できる</h4><p>「何歳から何歳まで」を自分で決められます。</p></div></div>
-      <div class="safety-item reveal reveal-d3"><div class="safety-mark">◎</div><div><h4>20歳以上・身分確認あり</h4><p>年齢確認をしっかり行っています。</p></div></div>
-      <div class="safety-item reveal reveal-d4"><div class="safety-mark">✕</div><div><h4>ドタキャン抑止の仕組み</h4><p>無断キャンセルには、段階的な利用制限とキャンセル料の仕組みがあります。</p></div></div>
-      <div class="safety-item reveal reveal-d1"><div class="safety-mark">◈</div><div><h4>恋愛目的ではありません</h4><p>一緒に飲む相手を探す場です。交際や勧誘を目的とした利用は禁止しています。</p></div></div>
+
+      <div class="safety-item reveal reveal-d1">
+        <div class="safety-fig"><svg viewBox="0 0 120 104" role="img" aria-label="身分証と顔写真による本人確認">
+          <rect class="sf-fill" x="14" y="20" width="80" height="54" rx="7"/>
+          <rect class="sf-line" x="14" y="20" width="80" height="54" rx="7"/>
+          <rect class="sf-line" x="24" y="31" width="24" height="28" rx="4"/>
+          <circle class="sf-thin" cx="36" cy="41" r="6"/>
+          <path class="sf-thin" d="M27 57c2-6 6-9 9-9s7 3 9 9"/>
+          <path class="sf-thin" d="M58 34h26M58 44h26M58 54h17"/>
+          <circle class="sf-fill" cx="88" cy="70" r="19"/>
+          <circle class="sf-line" cx="88" cy="70" r="19"/>
+          <path class="sf-line" d="M79 70l6 6 12-13" stroke-width="3"/>
+        </svg></div>
+        <h4>全員に本人確認</h4>
+        <p>身分証とご本人のお顔の写真で、20歳以上であることを確認しています。確認が済むまで募集はできません。</p>
+      </div>
+
+      <div class="safety-item reveal reveal-d2">
+        <div class="safety-fig"><svg viewBox="0 0 120 104" role="img" aria-label="写真はマッチ成立まで非公開">
+          <rect class="sf-fill" x="34" y="12" width="52" height="80" rx="9"/>
+          <rect class="sf-line" x="34" y="12" width="52" height="80" rx="9"/>
+          <circle class="sf-thin" cx="60" cy="45" r="11"/>
+          <path class="sf-thin" d="M44 72c3-11 9-16 16-16s13 5 16 16"/>
+          <path class="sf-thin" d="M38 34h44M38 42h44M38 50h44M38 58h44M38 66h44M38 74h44"/>
+          <circle class="sf-fill" cx="90" cy="76" r="17"/>
+          <circle class="sf-line" cx="90" cy="76" r="17"/>
+          <path class="sf-line" d="M81 76c3-5 6-7 9-7s6 2 9 7c-3 5-6 7-9 7s-6-2-9-7z"/>
+          <path class="sf-line" d="M83 84l14-16" stroke-width="2.4"/>
+        </svg></div>
+        <h4>写真はマッチまで非公開</h4>
+        <p>マッチが成立するまで、プロフィール写真はぼかし表示です。年齢確認でお預かりした写真は、他の利用者には一切公開されません。</p>
+      </div>
+
+      <div class="safety-item reveal reveal-d3">
+        <div class="safety-fig"><svg viewBox="0 0 120 104" role="img" aria-label="本名は表示されない">
+          <rect class="sf-fill" x="18" y="24" width="84" height="56" rx="9"/>
+          <rect class="sf-line" x="18" y="24" width="84" height="56" rx="9"/>
+          <circle class="sf-thin" cx="42" cy="46" r="9"/>
+          <path class="sf-thin" d="M30 66c2-8 7-12 12-12s10 4 12 12"/>
+          <path class="sf-line" d="M64 44h26" stroke-width="3"/>
+          <path class="sf-thin" d="M64 56h18"/>
+          <path class="sf-line" d="M60 86l0-9M50 86h20" stroke-width="2"/>
+        </svg></div>
+        <h4>本名は表示されません</h4>
+        <p>お相手に見えるのはニックネームです。本名や生年月日は、年齢確認のためだけにお預かりします。</p>
+      </div>
+
+      <div class="safety-item reveal reveal-d1">
+        <div class="safety-fig"><svg viewBox="0 0 120 104" role="img" aria-label="恋愛目的ではなく飲む相手を探す場">
+          <path class="sf-line" d="M34 26h26l-4 22a9 9 0 0 1-18 0z"/>
+          <path class="sf-line" d="M47 48v22M38 74h18" stroke-width="2"/>
+          <path class="sf-line" d="M64 26h26l-4 22a9 9 0 0 1-18 0z"/>
+          <path class="sf-line" d="M77 48v22M68 74h18" stroke-width="2"/>
+          <path class="sf-thin" d="M60 16l3 6 3-6M54 20l1 6M72 20l-1 6"/>
+        </svg></div>
+        <h4>恋愛目的ではありません</h4>
+        <p>一緒に飲む相手を探す場です。交際や勧誘を目的とした利用は、規約で禁止しています。</p>
+      </div>
+
+      <div class="safety-item reveal reveal-d2">
+        <div class="safety-fig"><svg viewBox="0 0 120 104" role="img" aria-label="年齢の許容範囲を自分で決められる">
+          <path class="sf-line" d="M20 52h80" stroke-width="2"/>
+          <path class="sf-solid" d="M38 50h44v4H38z"/>
+          <circle class="sf-fill" cx="38" cy="52" r="11"/>
+          <circle class="sf-line" cx="38" cy="52" r="11"/>
+          <circle class="sf-fill" cx="82" cy="52" r="11"/>
+          <circle class="sf-line" cx="82" cy="52" r="11"/>
+          <path class="sf-thin" d="M28 76h64M28 28h64"/>
+        </svg></div>
+        <h4>年齢の範囲を選べる</h4>
+        <p>「何歳から何歳まで」を自分で決められます。範囲の外の方とはマッチしません。</p>
+      </div>
+
+      <div class="safety-item reveal reveal-d3">
+        <div class="safety-fig"><svg viewBox="0 0 120 104" role="img" aria-label="通報と無断キャンセルへの対応">
+          <path class="sf-fill" d="M60 14l34 12v26c0 21-14 33-34 38-20-5-34-17-34-38V26z"/>
+          <path class="sf-line" d="M60 14l34 12v26c0 21-14 33-34 38-20-5-34-17-34-38V26z"/>
+          <path class="sf-line" d="M60 38v20" stroke-width="3"/>
+          <circle class="sf-solid" cx="60" cy="68" r="3.4"/>
+        </svg></div>
+        <h4>通報と、ドタキャンへの対応</h4>
+        <p>困ったことがあれば通報できます。無断キャンセルには、段階的な利用制限とキャンセル料の仕組みがあります。</p>
+      </div>
+
     </div>
   </div>
 </section>
@@ -945,7 +1064,7 @@
 </div>
 
 <!-- 料金 -->
-<section>
+<section id="price">
   <div class="wrap">
     <div class="section-head reveal">
       <div class="eyebrow-line">PRICE</div>
