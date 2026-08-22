@@ -375,6 +375,13 @@ const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,e
 // line_user_id は通知処理が使うため現時点では残す。
 // 自分自身のプロフィール。本名・生年月日・身分証および顔写真の保存先は画面で使わないため取得しない。
 // カード登録の有無と本人確認の状態は判定に必要なため含める。
+// 【チケット販売の開閉スイッチ 2026/8/22】
+//   false の間、チケット購入への導線をすべて閉じる。
+//   理由：CREDIXの加盟店審査・開通が未了のため、購入画面へ進んでも決済は成立しない。
+//   TikTok等でアプリのリンクを配る際に誤って押されると、利用者に不信感を与える。
+//   開通が完了したら true に戻し、再デプロイすること。
+const TICKET_SALES_OPEN=false;
+
 const PROFILE_COLS_SELF='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,ticket_count,verified_level,id_verify_status,id_photo_url,stripe_customer_id,line_user_id,email_verified,created_at,updated_at';
 const PROFILE_COLS_PARTNER='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,id_verify_status,line_user_id';
 
@@ -393,7 +400,7 @@ const REVIEW_TAGS=['時間を守った','話しやすかった','また飲みた
 const REVIEW_TAGS_LOW=['時間を守らなかった','話しにくかった','もう会いたくない','礼儀が良くなかった','冷たい態度だった','会話が弾まなかった','場を盛り下げた','写真と印象が違った','その他'];
 const FAQ_QA=[
   {keywords:['料金','値段','いくら','費用','価格'],answer:'女性は無料でご利用いただけます。男性はチケット制です。チケット1枚3,980円（税込）で、マッチが成立すると1枚消費されます。'},
-  {keywords:['チケット','購入'],answer:'チケットはトップ画面の「チケット購入」ボタンから購入できます。1枚3,980円（税込）で、マッチが成立すると1枚消費されます。有効期限は購入日から180日です。'},
+  {keywords:['チケット','購入'],answer:TICKET_SALES_OPEN?'チケットはトップ画面の「チケット購入」ボタンから購入できます。1枚3,980円（税込）で、マッチが成立すると1枚消費されます。有効期限は購入日から180日です。':'ただいまチケットの販売を準備中です。開始まで今しばらくお待ちください。チケットは1枚3,980円（税込）で、マッチが成立すると1枚消費されます。有効期限は購入日から180日です。'},
   {keywords:['キャンセル','取り消し'],answer:'マッチ成立前のキャンセルは無料です。マッチ成立後にキャンセルした場合、男性は消費したチケットが返還されません。女性は、無断キャンセルと判断された場合にキャンセル料3,980円（税込）のご負担が生じることがあります。'},
   {keywords:['ペナルティ','違約金'],answer:'マッチ成立後に連絡なく不参加となった場合、男性は消費したチケットが返還されません。女性はキャンセル料3,980円（税込）のご負担が生じることがあります。判断方法と異議申立ては利用規約第9条の2に定めています。'},
   {keywords:['エリア','場所','地域'],answer:'現在対応しているエリアは、すすきの・新宿の2か所です。上野・梅田は近日公開予定です。'},
@@ -2163,6 +2170,8 @@ async function startRecruit(){
 
 async function goBuyTicket(){
   if(!S.user){go('email');return;}
+  // 販売停止中は、どこから呼ばれても決済へ進ませない。
+  if(!TICKET_SALES_OPEN){ alert('ただいまチケットの販売を準備中です。開始まで今しばらくお待ちください。'); return; }
   // 【カード登録の事前確認を撤去 8/15】
   // 以前はカードが登録済みかを確認し、未登録ならカード登録画面へ送っていた。
   // PAY.JPを使う前提の作りであり、CREDIXではカード番号の入力を
@@ -3251,7 +3260,7 @@ function splashH(){
     +(isMatched?'':'<div style="padding:12px 16px;cursor:pointer" onclick="S._showProfileMenu=false;logout()"><span style="font-size:13px;color:var(--red);font-weight:700">ログアウト</span></div>')
     +'</div>':'';
   var profileMenuBackdrop=profileMenuOpen?'<div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998" onclick="S._showProfileMenu=false;re(\'splash\')"></div>':'';
-  var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.25);border-radius:10px;padding:14px 16px;margin-bottom:20px"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div><button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button></div>':'';
+  var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.25);border-radius:10px;padding:14px 16px;margin-bottom:20px"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div>'+(TICKET_SALES_OPEN?'<button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button>':'<div style="font-size:11px;color:rgba(237,229,224,.6);text-align:right;line-height:1.6">チケット販売は<br>まもなく開始します</div>')+'</div>':'';
   var introAnim='<div style="width:calc(100% + 40px);margin:-20px -20px 12px -20px;overflow:hidden"><img src="intro_temp.jpg" alt="Nomi Go" style="width:100%;height:180px;object-fit:cover;display:block"></div>';
   return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:22px;font-weight:900">Nomi Go</div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div>'+welcomeToastH()+'<div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今夜の一番乗りになれます</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">先に募集した人から順にマッチ。'+oppLabel+'が来たら最初に繋がるのはあなたです</div></div></div>';}})()+(li?waitFeedCardH():'')+'<div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,980円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">'+(S.stats.todayMatches>0?'今日の成立':'累計マッチ')+'</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+(S.stats.todayMatches>0?S.stats.todayMatches:(S.stats.totalMatches||0))+'</div></div></div>'+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 全ユーザー、身分証と顔写真による本人確認済み</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted);line-height:1.9"><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
 }
@@ -3648,7 +3657,11 @@ function recruitH(){
   }
   var noTicket=S.profile&&S.profile.gender==='male'&&(!S.profile.ticket_count||S.profile.ticket_count<1);
   if(S.error==='ticket_zero'){
-    html+='<div style="margin:8px 20px;padding:14px;background:var(--red-bg);border:1px solid rgba(204,64,64,.3);border-radius:10px;color:var(--red);font-size:13px;line-height:1.7">チケットがありません。チケットを購入してください。</div><div style="margin:8px 20px"><button class="btn btn-wine" onclick="goBuyTicket()">チケットを購入する →</button></div>';
+    if(TICKET_SALES_OPEN){
+      html+='<div style="margin:8px 20px;padding:14px;background:var(--red-bg);border:1px solid rgba(204,64,64,.3);border-radius:10px;color:var(--red);font-size:13px;line-height:1.7">チケットがありません。チケットを購入してください。</div><div style="margin:8px 20px"><button class="btn btn-wine" onclick="goBuyTicket()">チケットを購入する →</button></div>';
+    }else{
+      html+='<div style="margin:8px 20px;padding:14px;background:var(--red-bg);border:1px solid rgba(204,64,64,.3);border-radius:10px;color:var(--red);font-size:13px;line-height:1.7">チケットがありません。ただいまチケットの販売を準備中です。開始まで今しばらくお待ちください。</div>';
+    }
   }else if(S.error){
     html+='<div class="err-msg" style="margin:8px 20px">'+S.error+'</div>';
   }
