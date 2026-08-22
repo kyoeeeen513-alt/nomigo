@@ -41,8 +41,20 @@
 //   件数の数え直しやロックの判定はすべてDB側の関数（line_link_check_allowed /
 //   line_link_record_failure / line_link_clear_failures）で行い、
 //   これらの関数は一般利用者からは呼び出せないようにしてあります。
+//
+// 【今回の変更：連携完了メッセージに正式スタート日を追記（8/22）】
+//   TikTokでの集客を開始したが、CREDIXの開通前のため募集中の利用者がまだいない。
+//   連携が完了した直後に「これからマッチ通知をお届けします」とだけ伝えると、
+//   すぐに通知が来るものと受け取られ、来ないことで不信を招く。
+//   正式スタートが9月1日であることをこの時点で伝え、待ってもらう。
+//   PRE_LAUNCH を false にすれば、従来どおりの文面に戻る。
+//   9月1日以降は必ず false に戻すこと（index.html の TICKET_SALES_OPEN を
+//   true に戻すのと同じタイミング。project_status No.133 を参照）。
 
 const crypto = require('crypto');
+
+// 正式スタート前かどうか。9月1日以降は false に戻す。
+const PRE_LAUNCH = true;
 
 const SUPABASE_URL = 'https://dwubothomxjwfudkeepy.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -247,7 +259,13 @@ module.exports = async (req, res) => {
 
           await replyMessage(
             event.replyToken,
-            '連携が完了しました！これからマッチ通知などをお届けします。'
+            PRE_LAUNCH
+              ? '連携が完了しました！\n\n' +
+                'Nomi Goの正式スタートは9月1日です。\n' +
+                'いまは準備期間のため、まだ募集している方がいません。\n\n' +
+                '開始したらこのLINEでお知らせしますので、それまでお待ちください。\n' +
+                'お相手が見つかったときも、こちらに通知が届きます。'
+              : '連携が完了しました！これからマッチ通知などをお届けします。'
           );
         }
       }
