@@ -1256,7 +1256,10 @@ async function saveProfile(){
   // 以前はプロフィール登録の直後にカード登録画面へ送っていたが、
   // PAY.JP前提の画面であり、CREDIXでは不要。
   // 登録の次にやるべきことは年齢確認なので、本人確認画面へ進む。
-  go('id_verify');
+  // 【順序を入れ替え 2026/8/22】以前はここから直接 id_verify（本人確認）へ送っていた。
+  //   本人確認より先にLINE連携を済ませ、途中で離れても連絡が取れる状態にする。
+  if(S.profile&&!S.profile.line_user_id){ await goLineConnect(); }
+  else{ go('id_verify'); }
 }
 
 // 印が残っていればお祝いを出し、印を消す。
@@ -1604,19 +1607,34 @@ function idVerifyH(){
   //   埋もれて気づかれない。画面全体を覆うお祝いの演出（showTicketGift）に変更した。
   //   表示は saveProfile から呼ぶ。ここでは何も描かない。
   var giftHtml='';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','年齢の確認')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'+giftHtml
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','年齢の確認')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'+giftHtml
     // 【UIの方針】決済の同意画面（payConsentH）と同じ考え方。
     //  手続きが増える理由（法律上の義務）と、写真の扱いの安全性を最初に示し、
     //  「面倒」ではなく「必要なこと」として受け取ってもらう。
     //  説明の分量は増やさず、長文2ブロックを枠1つに集約している。
-    +'<div style="display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px">'
-      +'<div style="font-size:18px;line-height:1.2;flex-shrink:0">🔒</div>'
-      +'<div>'
-        +'<div style="font-size:14px;font-weight:900;color:var(--cream);margin-bottom:4px">写真は他の利用者には公開されません</div>'
-        +'<div style="font-size:12px;color:var(--lgray);line-height:1.65">'+nb('年齢確認は法律で')+nb('義務づけられています。')+nb('安全な場に保つための')+nb('手続きです。')+nb('お預かりした写真は')+nb('運営が確認のためだけに')+nb('使用し、')+nb('他の利用者に')+nb('見られることは')+nb('ありません。')+'</div>'
+    // 【2026/8/22 文面を全面的に見直し】
+    //   本人確認は身分証の撮影と自撮りの2つを求めるため、登録の中で最も負荷が高い。
+    //   従来も「公開されません」「法律で義務」とは書いていたが、
+    //   長い一続きの文で読み飛ばされていた。伝えるべきことを3行に分け、
+    //   ひと目で拾えるようにした。とくに女性が夜にひとりで自撮りを求められる場面を想定し、
+    //   「誰が見るのか」「どこにも出ないこと」を最初に置いている。
+    +'<div style="background:linear-gradient(135deg,rgba(201,160,99,.16),rgba(201,160,99,.05));border:1.5px solid rgba(224,176,96,.45);border-radius:14px;padding:18px 16px">'
+      +'<div style="text-align:center;font-size:15px;font-weight:900;color:var(--gold-bright);line-height:1.5;margin-bottom:14px">'+nb('写真は、どこにも')+nb('公開されません')+'</div>'
+      +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:11px">'
+        +'<span style="font-size:15px;line-height:1.5;flex-shrink:0">🙈</span>'
+        +'<div style="font-size:12.5px;color:var(--cream);line-height:1.7">'+nb('マッチした相手にも、')+nb('他の利用者にも、')+nb('一切見えません。')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:11px">'
+        +'<span style="font-size:15px;line-height:1.5;flex-shrink:0">👀</span>'
+        +'<div style="font-size:12.5px;color:var(--cream);line-height:1.7">'+nb('運営が年齢の確認のためだけに')+nb('見ます。')+nb('確認が終われば、')+nb('それ以上は使いません。')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:flex-start;gap:10px">'
+        +'<span style="font-size:15px;line-height:1.5;flex-shrink:0">🛡</span>'
+        +'<div style="font-size:12.5px;color:var(--cream);line-height:1.7">'+nb('全員がこの確認をしています。')+nb('だから、')+nb('あなたが会う相手も')+nb('身元がはっきりしています。')+'</div>'
       +'</div>'
     +'</div>'
-    +'<div style="font-size:13px;color:var(--cream);line-height:1.75">'+nb('Nomi Go は')+nb('20歳以上限定です。')+nb('生年月日が確認できる')+nb('身分証（運転免許証・')+nb('マイナンバーカード・')+nb('パスポートなど）と、')+nb('ご本人の顔写真を')+nb('1枚ずつ')+nb('ご用意ください。')+'</div>'
+    +'<div style="font-size:12px;color:var(--lgray);line-height:1.7;text-align:center">'+nb('20歳未満の方のご利用を防ぐため、')+nb('法律で義務づけられている')+nb('手続きです。')+'</div>'
+    +'<div style="font-size:13px;color:var(--cream);line-height:1.75;background:rgba(0,0,0,.22);border-radius:10px;padding:13px 14px">'+nb('ご用意いただくのは')+nb('2枚だけです。')+nb('生年月日が分かる身分証')+nb('（運転免許証・マイナンバーカード・')+nb('パスポートなど）と、')+nb('いまのお顔の写真。')+nb('1〜2分で終わります。')+'</div>'
     +'<div class="sec-label" style="padding:0">① 身分証の写真</div>'
     +preview
     +'<label style="padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center">'+(S._idPhotoPreview?'別の写真を選び直す':'身分証の写真を選ぶ')+'<input type="file" accept="image/*" style="display:none" onchange="handleIdPhotoSelect(this)"></label>'
@@ -1631,13 +1649,13 @@ function idVerifyH(){
 function idVerifyPendingH(){
   var rejected=S.profile&&S.profile.id_verify_status==='rejected';
   if(rejected){
-    return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','本人確認')+'</div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">'
+    return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','本人確認')+'</div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">'
       +'<div style="font-size:40px">⚠️</div>'
       +'<div style="font-size:16px;font-weight:800;color:var(--cream)">確認できませんでした</div>'
       +'<div style="font-size:13px;color:var(--muted);line-height:1.7">写真がぼやけていたり、生年月日が読み取れなかった可能性があります。<br>もう一度、はっきり写った写真でお試しください。</div>'
       +'</div><div class="ftr"><button class="btn btn-wine" onclick="retryIdVerify()">もう一度アップロードする →</button></div></div>';
   }
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','確認中です')+'</div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','確認中です')+'</div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">'
     +'<div class="verify-waiting"><div class="verify-waiting-ring"></div><div class="verify-waiting-ring verify-waiting-ring2"></div><div class="verify-waiting-core">🔍</div></div>'
     +'<div style="font-size:16px;font-weight:800;color:var(--cream)">運営が確認しています<span class="verify-dots"><span>.</span><span>.</span><span>.</span></span></div>'
     +'<div style="font-size:13px;color:var(--muted);line-height:1.7">身分証の確認には、しばらくお時間をいただく場合があります。<br>確認が完了すると、自動で次の画面に進みます。</div>'
@@ -1864,16 +1882,22 @@ async function goRecruit(){
     // 利用者全員が動かない画面で詰んでしまう。
     // カードの取得はチケット購入時にCREDIX側で行われる（No.56で導線を作り直す）。
 
+    // 【順序を入れ替え 2026/8/22】以前は「本人確認 → LINE連携」の順だった。
+    //   本人確認は身分証の撮影と自撮りの2つを求めるため負荷が高く、
+    //   ここで離れた人とは連絡手段がないまま関係が切れてしまう。
+    //   実際に女性の実ユーザー第1号が本人確認の未提出のまま止まり、
+    //   LINE未連携のため声をかける手段がなかった（No.144）。
+    //   LINEを先に済ませておけば、本人確認で止まっても後から呼び戻せる。
+    // LINE連携は募集の前提条件。未連携なら連携画面へ。
+    // LINEは1アカウントにつき1つしか紐づけられないため、複数アカウントの抑止にもなる。
+    // マッチ成立の通知が確実に届くことは、無断キャンセルの判断の前提でもある。
+    if(!d.line_user_id){await goLineConnect();return;}
+
     var idStatus=!d.id_photo_url?'none':(d.id_verify_status||'pending');
     if(idStatus!=='approved'){
       if(idStatus==='none'){go('id_verify');}else{go('id_verify_pending');}
       return;
     }
-
-    // LINE連携は募集の前提条件。未連携なら連携画面へ。
-    // LINEは1アカウントにつき1つしか紐づけられないため、複数アカウントの抑止にもなる。
-    // マッチ成立の通知が確実に届くことは、無断キャンセルの判断の前提でもある。
-    if(!d.line_user_id){await goLineConnect();return;}
 
     // 確認の呼びかけは、画面を切り替える直前に出す（待ち時間中に出さない）
     if(cancelCheck.count!=null&&cancelCheck.count>=2){
@@ -3450,7 +3474,7 @@ async function goLineConnect(){
 
 function lineConnectH(){
   // LINE連携は必須。完了するまで先へ進めないため戻る導線は出さない
-  return '<div class="screen"><div class="hdr"><div class="hdr-info">'+stepHeadH(5,'LINE連携','LINEと連携する')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+  return '<div class="screen"><div class="hdr"><div class="hdr-info">'+stepHeadH(4,'LINE連携','LINEと連携する')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
     +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
@@ -3587,6 +3611,15 @@ async function afterLineLinked(lineUserId){
     S.user=null;S.profile=null;S.registration=null;S.match=null;
     alert('ご利用いただけません。利用規約に違反したため、アカウントの作成を制限しています。');
     go('splash');
+    return;
+  }
+  // 【順序を入れ替え 2026/8/22】LINE連携が先になったため、
+  //   連携が終わった時点では本人確認がまだ済んでいないことがある。
+  //   その場合は本人確認へ送る。済んでいればトップへ。
+  var st=await getIdVerifyStatus();
+  if(st!=='approved'){
+    if(!st||st==='none'){ go('id_verify'); }
+    else{ go('id_verify_pending'); }
     return;
   }
   S._showWelcomeToast=true;
