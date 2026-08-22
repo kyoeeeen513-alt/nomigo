@@ -1244,15 +1244,30 @@ async function saveProfile(){
   }catch(e){}
   S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:granted};
   // 実際に配られたときだけ知らせる。配られていないのに文言を出すと嘘になる。
-  var _gift=(p.gender==='male'&&granted>0)?granted:0;
+  // 【2026/8/22 表示時期を変更】以前はこの直後にお祝いを出していたが、
+  //   本人確認もLINE連携もこれからという段階で出るため早すぎるとの指摘を受けた。
+  //   ここでは印を残すだけにして、年齢確認の承認とLINE連携が両方とも
+  //   終わったあと（splashへ移る直前）に出す。
+  //   sessionStorage に置くのは、LINE連携で外部へ移動して戻る経路があり、
+  //   画面上の変数だけでは印が消えてしまうため。
+  if(p.gender==='male'&&granted>0){ try{ sessionStorage.setItem('ngo_gift_pending',String(granted)); }catch(e){} }
   S._freeTicketGranted=0;
   // 【カード登録の関門を撤去 8/15】
   // 以前はプロフィール登録の直後にカード登録画面へ送っていたが、
   // PAY.JP前提の画面であり、CREDIXでは不要。
   // 登録の次にやるべきことは年齢確認なので、本人確認画面へ進む。
   go('id_verify');
-  // 画面が切り替わってからお祝いを重ねる。先に出すと描画で消える。
-  if(_gift>0){ setTimeout(function(){ showTicketGift(_gift); },260); }
+}
+
+// 印が残っていればお祝いを出し、印を消す。
+// 呼ぶのは「年齢確認が承認され、LINE連携も済んで splash へ移る」場面のみ。
+// 画面が切り替わってから重ねる。先に出すと描画で消える。
+function maybeShowTicketGift(){
+  var n=0;
+  try{ n=parseInt(sessionStorage.getItem('ngo_gift_pending')||'0'); }catch(e){}
+  if(!n||n<1)return;
+  try{ sessionStorage.removeItem('ngo_gift_pending'); }catch(e){}
+  setTimeout(function(){ showTicketGift(n); },320);
 }
 
 // 【無料チケットのお祝い 2026/8/22】
@@ -2232,7 +2247,7 @@ async function goBuyTicket(){
 // 本人確認 承認後の共通の行き先。LINE未連携なら必ず連携画面へ
 async function goAfterIdApproved(){
   if(S.profile&&!S.profile.line_user_id){ await goLineConnect(); }
-  else{ go('splash'); }
+  else{ go('splash'); maybeShowTicketGift(); }
 }
 
 async function goAfterCardRegister(){
@@ -2245,6 +2260,7 @@ async function goAfterCardRegister(){
     await goLineConnect();
   }else{
     go('splash');
+    maybeShowTicketGift();
   }
 }
 
@@ -3545,6 +3561,7 @@ async function afterLineLinked(lineUserId){
   }
   S._showWelcomeToast=true;
   go('splash');
+  maybeShowTicketGift();
 }
 
 // ===== LINE連携完了直後のウェルカム表示（トップ画面に動きのあるバナーで一度だけ表示）=====
