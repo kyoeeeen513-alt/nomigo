@@ -3,13 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nomi Go｜今、一緒に飲める人が見つかる。</title>
+<title>Nomi Go｜9月1日スタート。今夜の飲み相手が見つかる。</title>
+<meta name="description" content="Nomi Goは、その日一緒に飲む相手を探すサービスです。すすきの・新宿で2026年9月1日スタート。女性は無料、男性は9月中の登録でマッチング券1枚無料。全員が本人確認済み、20歳以上限定です。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.nomi-go.jp/">
-<meta property="og:title" content="Nomi Go｜今、一緒に飲める人が見つかる。">
-<meta property="og:description" content="女性はマッチ利用料が無料。今夜の飲み相手が、その日のうちに見つかる。">
+<meta property="og:title" content="Nomi Go｜9月1日スタート。今夜の飲み相手が見つかる。">
+<meta property="og:description" content="2026年9月1日スタート。女性は無料、男性は9月中の登録でマッチング券1枚無料。すすきの・新宿で先行登録を受付中です。">
 <meta property="og:image" content="https://www.nomi-go.jp/ogp.jpg">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Nomi Go｜9月1日スタート。今夜の飲み相手が見つかる。">
+<meta name="twitter:description" content="2026年9月1日スタート。女性は無料、男性は9月中の登録でマッチング券1枚無料。すすきの・新宿で先行登録を受付中です。">
+<meta name="twitter:image" content="https://www.nomi-go.jp/ogp.jpg">
+<link rel="canonical" href="https://www.nomi-go.jp/">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#3A0E14">
@@ -49,6 +54,8 @@
   h1,h2{font-family:'Shippori Mincho',serif;}
   h3,h4{font-family:'Zen Kaku Gothic New',sans-serif;}
   a{color:inherit;text-decoration:none;}
+  /* キーボードで操作している人に、いまどこを選んでいるか分かるようにする */
+  a:focus-visible,button:focus-visible{outline:2px solid var(--gold-bright);outline-offset:3px;border-radius:6px;}
   .wrap{max-width:960px;margin:0 auto;padding:0 24px;}
 
   /* ===== 背景演出：光 + 泡 ===== */
@@ -424,7 +431,7 @@
     transition:border-color .3s, transform .3s, box-shadow .3s;}
   .scene:hover{border-color:rgba(201,160,99,0.45);transform:translateY(-6px);
     box-shadow:0 14px 30px rgba(0,0,0,0.3);}
-  .scene img{width:100%;height:180px;object-fit:cover;object-position:center 35%;display:block;margin-bottom:16px;
+  .scene img{width:100%;height:180px;background:rgba(244,233,220,0.04);object-fit:cover;object-position:center 35%;display:block;margin-bottom:16px;
     filter:saturate(.92) brightness(.92);transform:scale(1.03);}
   .scene h3,.scene p{padding:0 20px;}
   .scene h3{font-size:15px;font-weight:900;margin-bottom:6px;}
@@ -471,7 +478,7 @@
 
   .area-card{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:1.2;
     border:1.5px solid rgba(228,198,138,0.2);transition:transform .3s;}
-  .area-card img{width:100%;height:100%;object-fit:cover;object-position:center 35%;display:block;
+  .area-card img{width:100%;height:100%;background:rgba(244,233,220,0.04);object-fit:cover;object-position:center 35%;display:block;
     filter:saturate(.7) contrast(1.05) brightness(.8);}
   .area-card-shade{position:absolute;inset:0;
     background:linear-gradient(180deg, rgba(21,10,12,0.15), rgba(21,10,12,0.25) 45%, rgba(10,5,7,0.82));}
@@ -1016,7 +1023,7 @@
       <h2>Nomi Goならではの特徴</h2>
     </div>
     <div class="features">
-      <div class="feature-card reveal reveal-d1"><div class="feature-icon">☾</div><h3>“今すぐ”に強い</h3><p>今日・今すぐ会いたい人だけが集まるので、スピーディーにマッチします。</p></div>
+      <div class="feature-card reveal reveal-d1"><div class="feature-icon">☾</div><h3>“その日”に強い</h3><p>今日・これから会いたい人だけが集まるので、スピーディーにマッチします。</p></div>
       <div class="feature-card reveal reveal-d2"><div class="feature-icon">▽</div><h3>飲みスタイルで相性マッチ</h3><p>ガッツリ／ゆっくり／ご飯メインなど、スタイルを合わせられます。</p></div>
       <div class="feature-card reveal reveal-d3"><div class="feature-icon">◐</div><h3>プライバシー配慮</h3><p>マッチ前は写真をぼかし表示。安心して募集できます。</p></div>
       <div class="feature-card reveal reveal-d1"><div class="feature-icon">👥</div><h3>1人でも2人でも</h3><p>1対1でも、2対2でも。その日の気分で選べます。</p></div>
@@ -1034,27 +1041,27 @@
   </div>
   <div class="areas-grid">
     <div class="area-card live reveal reveal-d1">
-      <img src="area_susukino.jpg" alt="すすきの">
+      <img src="area_susukino.jpg" alt="すすきの" loading="lazy">
       <div class="area-card-sparkle"></div>
       <div class="area-card-shade"></div>
       <div class="area-live-badge"><span class="dot"></span>対応中</div>
       <div class="area-card-body"><span class="area-card-name">すすきの</span></div>
     </div>
     <div class="area-card live reveal reveal-d2">
-      <img src="area_shinjuku.jpg" alt="新宿">
+      <img src="area_shinjuku.jpg" alt="新宿" loading="lazy">
       <div class="area-card-sparkle"></div>
       <div class="area-card-shade"></div>
       <div class="area-live-badge"><span class="dot"></span>対応中</div>
       <div class="area-card-body"><span class="area-card-name">新宿</span></div>
     </div>
     <div class="area-card soon reveal reveal-d3">
-      <img src="area_ueno.jpg" alt="上野">
+      <img src="area_ueno.jpg" alt="上野" loading="lazy">
       <div class="area-card-shade"></div>
       <div class="area-soon-ribbon-wrap"><div class="area-soon-ribbon">COMING SOON</div></div>
       <div class="area-card-body"><span class="area-card-name">上野</span></div>
     </div>
     <div class="area-card soon reveal reveal-d4">
-      <img src="area_umeda.jpg" alt="梅田">
+      <img src="area_umeda.jpg" alt="梅田" loading="lazy">
       <div class="area-card-shade"></div>
       <div class="area-soon-ribbon-wrap"><div class="area-soon-ribbon">COMING SOON</div></div>
       <div class="area-card-body"><span class="area-card-name">梅田</span></div>
@@ -1206,8 +1213,10 @@
 
   // FAQ開閉
   document.querySelectorAll('.faq-q').forEach(function(btn){
+    btn.setAttribute('aria-expanded','false');
     btn.addEventListener('click', function(){
-      btn.parentElement.classList.toggle('open');
+      var opened = btn.parentElement.classList.toggle('open');
+      btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
     });
   });
 
