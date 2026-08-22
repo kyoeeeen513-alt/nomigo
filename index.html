@@ -1183,8 +1183,13 @@ async function saveProfile(){
   if(banned){S.error='ご利用いただけません。利用規約に違反したため、アカウントの作成を制限しています。';re('profile_new');return;}
   go('loading');
   var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
-  var freeTicket=(p.gender==='male')?1:0;
-  var saved=await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,verified_level:1,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:freeTicket,updated_at:new Date().toISOString()});
+  // 【チケット枚数と確認レベルは画面から送らない 2026/8/21】
+  //   以前はここで ticket_count:1（男性）を送っていたが、
+  //   枚数を画面側が決めて送る作りは、送る値を書き換えられると
+  //   いくらでもチケットを増やせてしまう。
+  //   無料付与を行うかどうかはDB側（app_settings と trg_grant_welcome_ticket）が判断する。
+  //   verified_level も同じ理由で送らない。DB側の既定値に任せる。
+  var saved=await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',updated_at:new Date().toISOString()});
   if(saved.error){
     // 同一人物（本名＋生年月日）での2つ目のアカウント作成は、DB側で禁止している。
     // お一人につき1アカウントという規約（第4条）を、実際に担保するための処理。
@@ -1197,8 +1202,18 @@ async function saveProfile(){
     re('profile_new');return;
   }
   await DB.from('user_stats').upsert({user_id:S.user.id});
-  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:freeTicket};
-  if(p.gender==='male'){S._freeTicketGranted=true;}
+  // 実際に付与されたチケット枚数をDBから読み直す。
+  // 画面側で枚数を決めていないため、DBに聞かないと本当の枚数が分からない。
+  // 無料付与が行われるかは app_settings.welcome_ticket_male 次第であり、
+  // 運営がSQLで切り替えられる（No.128）。
+  var granted=0;
+  try{
+    var tc=await DB.from('profiles').select('ticket_count').eq('user_id',S.user.id).single();
+    if(tc.data&&tc.data.ticket_count)granted=tc.data.ticket_count;
+  }catch(e){}
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:granted};
+  // 実際に配られたときだけ知らせる。配られていないのに文言を出すと嘘になる。
+  S._freeTicketGranted=(p.gender==='male'&&granted>0)?granted:0;
   // 【カード登録の関門を撤去 8/15】
   // 以前はプロフィール登録の直後にカード登録画面へ送っていたが、
   // PAY.JP前提の画面であり、CREDIXでは不要。
@@ -1508,7 +1523,20 @@ function idVerifyH(){
   var preview=S._idPhotoPreview?'<img src="'+S._idPhotoPreview+'" style="width:100%;border-radius:12px;display:block;object-fit:cover">':'<div style="width:100%;aspect-ratio:1.6;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">身分証の写真がここに表示されます</div>';
   var facePreview=S._facePhotoPreview?'<img src="'+S._facePhotoPreview+'" style="width:100%;border-radius:12px;display:block;object-fit:cover">':'<div style="width:100%;aspect-ratio:1.6;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">顔写真がここに表示されます</div>';
   var bothReady=!!(S._idPhotoFile&&S._facePhotoFile);
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','年齢の確認')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+  // 【無料チケットのお知らせ 2026/8/21】
+  //   登録直後の1回だけ表示する。表示したら消す（再描画のたびに出ると鬱陶しいため）。
+  //   実際にDBで付与された場合しか出さない。配っていないのに文言だけ出すと嘘になる。
+  var giftHtml='';
+  if(S._freeTicketGranted&&S._freeTicketGranted>0){
+    giftHtml='<div style="background:linear-gradient(135deg,rgba(201,160,99,.20),rgba(201,160,99,.08));border:1px solid var(--gold);border-radius:14px;padding:16px 18px;text-align:center">'
+      +'<div style="font-size:26px;line-height:1;margin-bottom:8px">🎉</div>'
+      +'<div style="font-size:14.5px;font-weight:900;color:var(--gold-bright);margin-bottom:6px">'+nb('チケットを')+nb(S._freeTicketGranted+'枚')+nb('プレゼントしました')+'</div>'
+      +'<div style="font-size:12px;color:var(--cream);line-height:1.75">'+nb('ご登録ありがとうございます。')+nb('本人確認が済んだら、')+nb('さっそく飲み相手を')+nb('募集してみましょう。')+'</div>'
+      +'<div style="font-size:10.5px;color:var(--muted);margin-top:8px">'+nb('チケットはマッチが成立したときに')+nb('1枚使います。')+nb('募集しただけでは減りません。')+'</div>'
+    +'</div>';
+    S._freeTicketGranted=0;
+  }
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(4,'本人確認','年齢の確認')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'+giftHtml
     // 【UIの方針】決済の同意画面（payConsentH）と同じ考え方。
     //  手続きが増える理由（法律上の義務）と、写真の扱いの安全性を最初に示し、
     //  「面倒」ではなく「必要なこと」として受け取ってもらう。
