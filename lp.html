@@ -102,6 +102,8 @@
     .reveal{opacity:1;transform:none;transition:none;}
     .btn-primary::after,.bubble,.dot-live{animation:none !important;}
     .cheers-glow{transition:none;opacity:1;transform:none;}
+    .cd-unit.sec{animation:none !important;}
+    .campaign-box::before{animation:none !important;}
   }
 
   /* ===== HERO ===== */
@@ -154,6 +156,78 @@
   .slot{padding:8px 15px;border-radius:999px;background:rgba(244,233,220,0.04);
     border:1px solid rgba(244,233,220,0.15);font-size:12.5px;font-weight:300;color:var(--cream-dim);}
   .slot .n{color:var(--gold-soft);font-weight:700;margin-right:4px;}
+
+  /* ===== 正式スタートのカウントダウン（2026/8/22 追加） =====
+     9月1日0:00をゴールに、残り時間を秒単位で表示する。
+     従来この位置にあった「今夜のマッチング状況」は、募集中の人が0人の
+     現在は「LIVE・すぐに会える」という表示が実態と食い違うため差し替えた。
+     9月1日を過ぎるとJS側が自動で従来のマッチング状況パネルへ切り替える。 */
+  .countdown-panel{max-width:600px;margin:46px auto 0;
+    background:linear-gradient(180deg, rgba(90,22,32,0.5), rgba(58,14,20,0.5));
+    border:1px solid rgba(201,160,99,0.28);border-radius:22px;padding:28px 22px;
+    backdrop-filter:blur(6px);
+    opacity:0;animation:fadeUp .9s 1.3s forwards;}
+  .cd-label{font-size:11px;font-weight:700;letter-spacing:0.22em;color:var(--gold-soft);margin-bottom:6px;}
+  .cd-date{font-family:'Shippori Mincho',serif;font-weight:800;font-size:clamp(26px,5.4vw,36px);
+    color:var(--gold-bright);letter-spacing:0.04em;margin-bottom:20px;line-height:1.3;}
+  .cd-date .yr{font-size:0.45em;color:var(--cream-dim);font-weight:500;letter-spacing:0.12em;
+    display:block;margin-bottom:2px;}
+  .cd-clock{display:flex;justify-content:center;align-items:flex-start;gap:6px;}
+  .cd-unit{flex:1;max-width:96px;padding:14px 4px 11px;border-radius:14px;
+    background:linear-gradient(160deg, rgba(201,160,99,0.22), rgba(201,160,99,0.05));
+    border:1px solid rgba(201,160,99,0.42);}
+  .cd-num{font-family:'Shippori Mincho',serif;font-weight:800;
+    font-size:clamp(24px,5.6vw,34px);line-height:1;color:var(--cream);
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+  .cd-cap{font-family:'Zen Kaku Gothic New',sans-serif;font-size:10px;font-weight:700;
+    letter-spacing:0.14em;color:var(--gold-soft);margin-top:8px;}
+  /* 秒だけ静かに脈打たせる。ここが動いていることで「今」動いていると伝わる */
+  .cd-unit.sec{background:linear-gradient(160deg, rgba(201,160,99,0.3), rgba(201,160,99,0.08));
+    border-color:rgba(243,217,164,0.6);animation:cdTick 1s steps(1) infinite;}
+  @keyframes cdTick{0%,100%{box-shadow:0 0 22px rgba(243,217,164,0.28);}50%{box-shadow:0 0 8px rgba(243,217,164,0.1);}}
+  .cd-foot{font-size:12.5px;font-weight:300;color:var(--cream-dim);margin-top:18px;line-height:1.75;}
+
+  /* ===== 先行登録キャンペーン（2026/8/22 追加） =====
+     9月中に登録した男性へマッチング券1枚を無料で付与する施策の告知。
+     LINEのあいさつメッセージと同じ内容を載せ、媒体間で食い違わないようにしている。
+     ※10月1日にこのブロックを削除すること（project_status No.150） */
+  .campaign{position:relative;z-index:1;padding:0 24px;}
+  .campaign-box{max-width:600px;margin:0 auto;position:relative;overflow:hidden;
+    border-radius:22px;padding:30px 26px;text-align:center;
+    background:linear-gradient(150deg, rgba(107,26,36,0.85), rgba(58,14,20,0.9));
+    border:1.5px solid var(--gold);
+    box-shadow:0 14px 44px rgba(0,0,0,0.45), inset 0 1px 0 rgba(243,217,164,0.18);}
+  .campaign-box::before{content:"";position:absolute;top:-50%;left:-60%;width:45%;height:200%;
+    background:linear-gradient(105deg, transparent, rgba(243,217,164,0.16), transparent);
+    animation:shine 4.5s infinite;}
+  .campaign-ribbon{display:inline-block;font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:11px;font-weight:900;letter-spacing:0.18em;color:var(--wine-deep);
+    background:linear-gradient(135deg, var(--gold-bright), var(--gold));
+    padding:6px 18px;border-radius:999px;margin-bottom:18px;
+    box-shadow:0 4px 14px rgba(201,160,99,0.45);}
+  .campaign-lead{font-family:'Shippori Mincho',serif;font-weight:700;
+    font-size:clamp(16px,3.2vw,20px);color:var(--cream);margin-bottom:14px;line-height:1.6;}
+  .campaign-price{display:flex;align-items:center;justify-content:center;gap:14px;
+    flex-wrap:wrap;margin-bottom:16px;}
+  .campaign-was{font-family:'Shippori Mincho',serif;font-size:clamp(21px,4vw,27px);font-weight:700;
+    color:var(--cream-dim);position:relative;}
+  .campaign-was::after{content:"";position:absolute;left:-4px;right:-4px;top:52%;height:2px;
+    background:var(--gold-soft);transform:rotate(-8deg);}
+  .campaign-arrow{color:var(--gold);font-size:18px;}
+  .campaign-now{font-family:'Shippori Mincho',serif;font-size:clamp(38px,8.5vw,58px);font-weight:800;
+    line-height:1;background:linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .campaign-terms{display:flex;flex-direction:column;gap:7px;max-width:340px;margin:0 auto 4px;
+    text-align:left;}
+  .campaign-terms li{list-style:none;font-size:13px;font-weight:400;color:var(--cream);
+    display:flex;gap:9px;align-items:flex-start;line-height:1.7;}
+  .campaign-terms li .tick{color:var(--gold-bright);flex:none;font-weight:900;}
+  .campaign-note{font-size:11.5px;font-weight:300;color:var(--cream-dim);margin-top:16px;line-height:1.7;}
+  .price-card.male{position:relative;}
+  .price-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;
+    font-family:'Zen Kaku Gothic New',sans-serif;font-size:11px;font-weight:900;letter-spacing:0.08em;
+    color:var(--wine-deep);background:linear-gradient(135deg, var(--gold-bright), var(--gold));
+    padding:5px 16px;border-radius:999px;box-shadow:0 4px 14px rgba(201,160,99,0.45);}
 
   /* ===== セクション共通 ===== */
   section{position:relative;z-index:1;padding:96px 24px;}
@@ -337,7 +411,7 @@
   .faq-item.open .faq-q .plus{transform:rotate(45deg);}
   .faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease;
     color:var(--cream-dim);font-size:13.5px;font-weight:300;padding-left:28px;}
-  .faq-item.open .faq-a{max-height:260px;padding-bottom:22px;}
+  .faq-item.open .faq-a{max-height:340px;padding-bottom:22px;}
 
   /* ===== 最終CTA ===== */
   .final-cta{text-align:center;background:radial-gradient(ellipse at center, rgba(201,160,99,0.12), transparent 70%);}
@@ -357,6 +431,7 @@
     box-shadow:0 8px 26px rgba(6,199,85,0.3);transition:transform .25s, box-shadow .25s;}
   .btn-line:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(6,199,85,0.4);}
   .btn-line:active{transform:scale(.96);}
+  .line-cta-note{font-size:11.5px;font-weight:300;color:var(--cream-dim);margin-top:14px;}
 
   footer{position:relative;z-index:1;border-top:1px solid rgba(244,233,220,0.08);padding:40px 24px;text-align:center;}
   footer .flogo{font-family:'Zen Kaku Gothic New';font-weight:900;color:var(--gold-soft);font-size:17px;}
@@ -375,6 +450,17 @@
     .now-panel{padding:22px 18px;margin-top:38px;}
     .other-slots{gap:6px;}
     .slot{padding:7px 12px;font-size:12px;}
+
+    /* カウントダウン：狭い画面でも4つ並びを保つ */
+    .countdown-panel{padding:24px 16px;margin-top:38px;}
+    .cd-clock{gap:5px;}
+    .cd-unit{padding:12px 2px 9px;}
+    .cd-cap{font-size:9.5px;letter-spacing:0.1em;}
+
+    /* キャンペーン */
+    .campaign{padding:0 20px;}
+    .campaign-box{padding:26px 20px;}
+    .campaign-terms{max-width:none;}
 
     /* セクション見出しの下余白を圧縮 */
     .section-head{margin-bottom:40px;}
@@ -405,6 +491,7 @@
     .now-big .big{font-size:30px;}
     .other-slots{gap:5px;}
     .slot{padding:6px 10px;font-size:11.5px;}
+    .cd-cap{font-size:9px;}
   }
 </style>
 </head>
@@ -422,18 +509,32 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-eyebrow"><span class="dot-live"></span>今、飲みたい人が集まっています</div>
+  <div class="hero-eyebrow"><span class="dot-live"></span>9月1日、はじまります</div>
   <h1>
     <span class="line"><span>今、<em>一緒に飲める人</em>が</span></span>
     <span class="line"><span>見つかる。</span></span>
   </h1>
   <p class="sub">「今日飲みたい」が、すぐ叶う。</p>
   <div class="cta-area">
-    <a href="https://www.nomi-go.jp" class="btn-primary">今すぐ始める</a>
+    <a href="https://www.nomi-go.jp" class="btn-primary">先行登録する</a>
     <p class="hero-note">女性はマッチ利用料が無料／男性はチケット1枚 ¥3,980（マッチ成立で1枚消費）</p>
   </div>
 
-  <div class="now-panel">
+  <!-- 正式スタートまでのカウントダウン。9月1日を過ぎるとJSが下のパネルへ切り替える -->
+  <div class="countdown-panel" id="countdown-panel">
+    <div class="cd-label">GRAND OPEN</div>
+    <div class="cd-date"><span class="yr">2026</span>9月1日、開幕。</div>
+    <div class="cd-clock">
+      <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-cap">DAYS</div></div>
+      <div class="cd-unit"><div class="cd-num" id="cd-h">--</div><div class="cd-cap">HOURS</div></div>
+      <div class="cd-unit"><div class="cd-num" id="cd-m">--</div><div class="cd-cap">MIN</div></div>
+      <div class="cd-unit sec"><div class="cd-num" id="cd-s">--</div><div class="cd-cap">SEC</div></div>
+    </div>
+    <p class="cd-foot">いま登録しておくと、開幕と同時に募集できます。</p>
+  </div>
+
+  <!-- 開幕後に表示されるパネル。それまでは隠しておく -->
+  <div class="now-panel" id="now-panel" style="display:none;">
     <div class="now-title">〇 今夜のマッチング状況</div>
     <div class="now-big">
       <div class="n">LIVE ・ すぐに会える</div>
@@ -447,6 +548,25 @@
     </div>
   </div>
 </section>
+
+<!-- 先行登録キャンペーン。10月1日にこのブロックを削除すること -->
+<div class="campaign">
+  <div class="campaign-box">
+    <div class="campaign-ribbon">9月中のご登録限定</div>
+    <p class="campaign-lead">男性のマッチング券 1枚を<br>無料でお渡ししています</p>
+    <div class="campaign-price">
+      <span class="campaign-was">¥3,980</span>
+      <span class="campaign-arrow">▶</span>
+      <span class="campaign-now">¥0</span>
+    </div>
+    <ul class="campaign-terms">
+      <li><span class="tick">◆</span>ご登録いただくだけで受け取れます</li>
+      <li><span class="tick">◆</span>マッチが成立したときに1枚使います</li>
+      <li><span class="tick">◆</span>10月からは通常どおり ¥3,980 です</li>
+    </ul>
+    <p class="campaign-note">女性はマッチのご利用が無料です。チケットのご購入もカードのご登録も必要ありません。</p>
+  </div>
+</div>
 
 <!-- 共感 -->
 <section class="empathy">
@@ -644,6 +764,8 @@
         <div class="price-note">マッチのご利用に料金はかかりません。ただし無断キャンセルの場合は、キャンセル料が発生することがあります。</div>
       </div>
       <div class="price-card male reveal reveal-d2">
+        <!-- 10月1日にこのバッジを削除すること -->
+        <div class="price-badge">9月中の登録で1枚無料</div>
         <div class="price-tag">男性</div>
         <div class="price-num"><span class="num-count" data-target="3980">¥3,980</span><span>／チケット1枚（税込）</span></div>
         <div class="price-note">マッチの成立時に1枚消費されます。成立しなければ消費されません。有効期限は購入日から180日です。</div>
@@ -661,6 +783,14 @@
     </div>
     <div class="faq reveal reveal-d1">
       <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>いつから使えますか？<span class="plus">＋</span></button>
+        <div class="faq-a">正式スタートは2026年9月1日です。それまでにご登録いただくと、開幕と同時に募集できます。開始のご案内は公式LINEでお届けします。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q"><span class="mark">Q</span>マッチング券が無料と聞きました<span class="plus">＋</span></button>
+        <div class="faq-a">9月中にご登録いただいた男性に、マッチング券1枚（3,980円分）を無料でお渡ししています。ご登録いただくだけで受け取れます。10月からは通常どおり1枚3,980円です。女性はマッチのご利用がずっと無料で、チケットのご購入もカードのご登録も必要ありません。</div>
+      </div>
+      <div class="faq-item">
         <button class="faq-q"><span class="mark">Q</span>お酒が飲めなくても使えますか？<span class="plus">＋</span></button>
         <div class="faq-a">はい。ご飯メインの人も多く利用しています。飲みスタイルで「ご飯メイン」を選べるので、お酒なしの相手ともマッチできます。</div>
       </div>
@@ -670,15 +800,15 @@
       </div>
       <div class="faq-item">
         <button class="faq-q"><span class="mark">Q</span>写真はいつ相手に見られますか？<span class="plus">＋</span></button>
-        <div class="faq-a">マッチが成立するまで、プロフィール写真はぼかし表示です。成立後にはじめてお互いに写真が見えます。</div>
+        <div class="faq-a">マッチが成立するまで、プロフィール写真はぼかし表示です。成立後にはじめてお互いに写真が見えます。年齢確認でお預かりする身分証とお顔の写真は、他の利用者には一切公開されません。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q"><span class="mark">Q</span>本当にその日のうちに会えますか？<span class="plus">＋</span></button>
-        <div class="faq-a">Nomi Goは「今日・今すぐ会いたい人」が集まるサービスです。今すぐ・19時〜22時など時間帯を選んで、その日のうちにマッチを目指せます。</div>
+        <div class="faq-a">Nomi Goは「今日・今すぐ会いたい人」が集まるサービスです。今すぐ・19時〜22時など時間帯を選んで、その日のうちにマッチを目指せます。募集はその日のうちだけ有効で、後日に勝手にマッチすることはありません。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q"><span class="mark">Q</span>誰でも登録できますか？<span class="plus">＋</span></button>
-        <div class="faq-a">20歳以上の方限定です。安心してご利用いただくため、身分確認を行っています。</div>
+        <div class="faq-a">20歳以上の方限定です。安心してご利用いただくため、全員に身分確認を行っています。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q"><span class="mark">Q</span>上野・梅田では使えませんか？<span class="plus">＋</span></button>
@@ -691,11 +821,11 @@
 <!-- 最終CTA -->
 <section class="final-cta">
   <div class="wrap">
-    <div class="eyebrow-line reveal">START TONIGHT</div>
-    <h2 class="reveal reveal-d1">今夜、<em>一緒に飲む人</em>を<br>見つけよう。</h2>
-    <p class="reveal reveal-d2">登録は数分で完了。女性はマッチ利用料が無料、男性はチケット1枚¥3,980。</p>
+    <div class="eyebrow-line reveal">START 9.1</div>
+    <h2 class="reveal reveal-d1">開幕と同時に、<br><em>一緒に飲む人</em>を見つけよう。</h2>
+    <p class="reveal reveal-d2">登録は数分で完了。女性はマッチ利用料が無料、男性は9月中の登録でマッチング券1枚が無料です。</p>
     <div class="reveal reveal-d3">
-      <a href="https://www.nomi-go.jp" class="btn-primary">Nomi Goを始める</a>
+      <a href="https://www.nomi-go.jp" class="btn-primary">先行登録する</a>
     </div>
   </div>
 </section>
@@ -705,8 +835,8 @@
   <div class="wrap">
     <div class="line-cta-box reveal">
       <div class="line-cta-icon">LINE</div>
-      <h2>先行案内を受け取る</h2>
-      <p>エリア拡大情報や、お得なキャンペーンをいち早くお届けします。<br>公式LINEを友だち追加するだけ、30秒で完了。</p>
+      <h2>開幕のお知らせを受け取る</h2>
+      <p>9月1日の開始や、エリア拡大情報をいち早くお届けします。<br>公式LINEを友だち追加するだけ、30秒で完了。</p>
       <a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn-line">友だち追加する</a>
       <div class="line-cta-note">通知はいつでもオフにできます</div>
     </div>
@@ -753,25 +883,42 @@
     }
   }
 
-  // ===== 数字カウントアップ（共通関数） =====
-  // だんだん減速するカーブで数字を転がす。高級感の秘訣。
-  function countUp(el, target, suffix, duration){
-    var start = null;
-    function step(ts){
-      if(!start) start = ts;
-      var progress = Math.min((ts - start) / duration, 1);
-      var eased = 1 - Math.pow(1 - progress, 3);
-      el.textContent = Math.floor(eased * target) + suffix;
-      if(progress < 1) requestAnimationFrame(step);
+  // ===== 正式スタートまでのカウントダウン（2026/8/22 追加） =====
+  // ゴールは2026年9月1日0:00（日本時間）。末尾の +09:00 が日本時間の指定。
+  // 見ている人の端末の時計の設定に関係なく、日本時間の9月1日を基準に計算する。
+  // 過ぎたらカウントダウンを消し、従来のマッチング状況パネルへ自動で切り替える。
+  // したがって、開幕後にこのファイルを直す必要はない。
+  (function(){
+    var GOAL = new Date('2026-09-01T00:00:00+09:00').getTime();
+    var panel = document.getElementById('countdown-panel');
+    var nowPanel = document.getElementById('now-panel');
+    if(!panel) return;
+
+    function pad(n){ return n < 10 ? '0' + n : '' + n; }
+
+    function open(){
+      panel.style.display = 'none';
+      if(nowPanel) nowPanel.style.display = '';
     }
-    requestAnimationFrame(step);
-  }
 
-  // ヒーローの「今すぐ」を人数表示に切り替える時に使う（ローンチ後に有効化）
-  // 例：countUp(document.getElementById('live-count'), 12, '人が募集中', 1200);
-  // ※0人の時は絶対に呼ばないこと。「今すぐ」表示のままにする。
+    function tick(){
+      var diff = GOAL - Date.now();
+      if(diff <= 0){ open(); return false; }
+      document.getElementById('cd-d').textContent = Math.floor(diff / 86400000);
+      document.getElementById('cd-h').textContent = pad(Math.floor(diff / 3600000) % 24);
+      document.getElementById('cd-m').textContent = pad(Math.floor(diff / 60000) % 60);
+      document.getElementById('cd-s').textContent = pad(Math.floor(diff / 1000) % 60);
+      return true;
+    }
 
-  // ===== 料金カードの数字カウントアップ（安全版） =====
+    if(tick()){
+      var timer = setInterval(function(){
+        if(!tick()) clearInterval(timer);
+      }, 1000);
+    }
+  })();
+
+  // ===== 料金カードの数字カウントアップ =====
   // 数字用のspan（.num-count）の中身だけを書き換える。単位spanには触れないので二重表示しない。
   var priceObs = new IntersectionObserver(function(entries){
     entries.forEach(function(e){
