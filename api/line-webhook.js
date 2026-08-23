@@ -50,11 +50,25 @@
 //   PRE_LAUNCH を false にすれば、従来どおりの文面に戻る。
 //   9月1日以降は必ず false に戻すこと（index.html の TICKET_SALES_OPEN を
 //   true に戻すのと同じタイミング。project_status No.133 を参照）。
+//
+// 【今回の変更：アプリを開くリンクを返信に追記（8/24）】
+//   Nomi GoはWebアプリのため、スマホのホーム画面から開く習慣がつきにくく、
+//   一度離れると戻ってこない。LINEはほぼ毎日開くので、そこから1タップで
+//   アプリへ戻れる状態にしておく。
+//   追記したのは「連携が完了したとき」と「すでに連携済みのとき」の2つ。
+//   とくに後者は、登録を終えた人がLINEを開いて何か送ってきた場面であり、
+//   アプリへ戻したい相手そのものにあたる。
+//   まちがった番号を送ったときの返信には入れていない。あの場面で伝えるべきは
+//   「番号を発行し直す」ことだけで、リンクを増やすと何をすべきか分からなくなるため。
+//   URLは1か所（APP_URL）にまとめてあるので、変わったときはここだけ直せばよい。
 
 const crypto = require('crypto');
 
 // 正式スタート前かどうか。9月1日以降は false に戻す。
 const PRE_LAUNCH = true;
+
+// アプリのURL。返信に載せるリンク。変わったらここだけ直す。
+const APP_URL = 'https://www.nomi-go.jp';
 
 const SUPABASE_URL = 'https://dwubothomxjwfudkeepy.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -233,7 +247,12 @@ module.exports = async (req, res) => {
           // 同じユーザーが再度送ってきた場合は、そのまま完了扱い
           if (alreadyLinkedUserId === userId) {
             await callRpc('line_link_clear_failures', { p_line_user_id: lineUserId });
-            await replyMessage(event.replyToken, '連携はすでに完了しています。');
+            await replyMessage(
+              event.replyToken,
+              '連携はすでに完了しています。\n\n' +
+              '▼ Nomi Goを開く\n' +
+              APP_URL
+            );
             continue;
           }
 
@@ -264,8 +283,12 @@ module.exports = async (req, res) => {
                 'Nomi Goの正式スタートは9月1日です。\n' +
                 'いまは準備期間のため、まだ募集している方がいません。\n\n' +
                 '開始したらこのLINEでお知らせしますので、それまでお待ちください。\n' +
-                'お相手が見つかったときも、こちらに通知が届きます。'
-              : '連携が完了しました！これからマッチ通知などをお届けします。'
+                'お相手が見つかったときも、こちらに通知が届きます。\n\n' +
+                '▼ Nomi Goを開く\n' +
+                APP_URL
+              : '連携が完了しました！これからマッチ通知などをお届けします。\n\n' +
+                '▼ Nomi Goを開く\n' +
+                APP_URL
           );
         }
       }
