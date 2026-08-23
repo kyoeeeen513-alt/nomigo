@@ -3422,11 +3422,25 @@ function resetSentH(){
 }
 
 async function saveNewPassword(){
+  // 2026/8/24：押しても画面が変わらず、通信が途切れたように見えていた。
+  // 再設定メールを送る側（sendPasswordReset）と同じく、
+  // 二重押しの防止と「保存中…」の表示を入れる。
+  // 連打すると通信が重なって本当に失敗するため、防止は必須。
+  if(S._savingNewPass)return;
   var pass=document.getElementById('newpass-inp').value;
   var errEl=document.getElementById('newpass-err');
   if(!pass||pass.length<6){if(errEl)errEl.textContent='パスワードは6文字以上です';return;}
+  if(errEl)errEl.textContent='';
+  S._savingNewPass=true;
+  var btn=document.getElementById('newpass-btn');
+  if(btn){btn.disabled=true;btn.style.opacity='.55';btn.textContent='保存中…';}
   var res=await DB.auth.updateUser({password:pass});
-  if(res.error){if(errEl)errEl.textContent=friendlyError(res.error,'エラーが発生しました。もう一度お試しください。');return;}
+  S._savingNewPass=false;
+  if(res.error){
+    if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='保存する';}
+    if(errEl)errEl.textContent=friendlyError(res.error,'エラーが発生しました。もう一度お試しください。');
+    return;
+  }
   alert('パスワードを変更しました。もう一度ログインしてください。');
   await DB.auth.signOut();
   S.user=null;S.profile=null;
@@ -3434,7 +3448,20 @@ async function saveNewPassword(){
 }
 
 function newPasswordH(){
-  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-title">新しいパスワードを設定</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><input class="inp" id="newpass-inp" type="password" placeholder="新しいパスワード（6文字以上）"><div id="newpass-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" onclick="saveNewPassword()">保存する</button></div></div>';
+  // 2026/8/24：この画面だけ「← 戻る」が無く、メールのリンクから来た人が
+  // 抜け出せなくなっていた。他の画面と同じく戻れるようにする。
+  // 戻り先はログイン画面。再設定をやめてログインし直すこともできる。
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="cancelNewPassword()">← 戻る</button><div class="hdr-info"><div class="hdr-title">新しいパスワードを設定</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><input class="inp" id="newpass-inp" type="password" placeholder="新しいパスワード（6文字以上）"><div id="newpass-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="newpass-btn" onclick="saveNewPassword()">保存する</button></div></div>';
+}
+
+// 再設定をやめてログイン画面へ戻る。
+// メールのリンクで一時的にログインした状態になっているため、
+// そのまま戻ると中途半端な状態が残る。サインアウトしてから戻す。
+async function cancelNewPassword(){
+  try{ await DB.auth.signOut(); }catch(e){}
+  S.user=null;S.profile=null;S.registration=null;S.match=null;
+  S.error='';S.info='';
+  go('email');
 }
 
 function goChangePassword(){
