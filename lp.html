@@ -148,7 +148,9 @@
   @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
 
   .hero h1{
-    font-size:clamp(32px,7vw,64px);font-weight:800;line-height:1.42;margin-bottom:24px;
+    /* 2026/8/24：見出しを「ひとりの夜は嫌いじゃない。」に変更した際、
+       1行目が13文字になり狭い画面で折り返して崩れたため、下限を下げた。 */
+    font-size:clamp(26px,5.6vw,56px);font-weight:800;line-height:1.42;margin-bottom:24px;
   }
   .hero h1 .line{display:block;overflow:hidden;}
   .hero h1 .line span{display:inline-block;transform:translateY(110%);animation:lineUp .9s cubic-bezier(.2,.8,.2,1) forwards;}
@@ -694,10 +696,10 @@
 <section class="hero">
   <div class="hero-eyebrow"><span class="dot-live"></span>9月1日、はじまります</div>
   <h1>
-    <span class="line"><span>今、<em>一緒に飲める人</em>が</span></span>
-    <span class="line"><span>見つかる。</span></span>
+    <span class="line"><span>ひとりの夜は嫌いじゃない。</span></span>
+    <span class="line"><span>でも、<em>今日は</em>。</span></span>
   </h1>
-  <p class="sub">「今日飲みたい」が、すぐ叶う。</p>
+  <p class="sub">今日、時間がある人だけが集まる。</p>
 
   <div class="cta-area">
     <a href="https://www.nomi-go.jp" class="btn-primary">先行登録する</a>
