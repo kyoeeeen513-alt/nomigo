@@ -751,6 +751,17 @@
   .cd-sep{flex:none;}
   .cd-num{text-indent:0.04em;}
   .cd-cap{display:block;width:100%;text-align:center;}
+
+  /* 2026/8/24：カウントダウンのパネルが、下のキャンペーンのパネルより
+     右へ56pxはみ出していた（実機の計測値）。左端は揃っている。
+     原因は、キャンペーン側は親の .campaign に padding:0 20px があるのに対し、
+     カウントダウンは .hero の中にあり、狭い画面での左右の余白が
+     確保されていなかったため。
+     キャンペーン側と同じ幅・同じ余白に揃える。 */
+  @media(max-width:640px){
+    .countdown-panel{max-width:640px;margin-left:auto;margin-right:auto;}
+    .hero{padding-left:20px;padding-right:20px;}
+  }
   @media(max-width:380px){
     .cd-cap{font-size:9px;letter-spacing:0.06em;text-indent:0.06em;}
   }
