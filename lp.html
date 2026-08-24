@@ -753,14 +753,26 @@
   .cd-cap{display:block;width:100%;text-align:center;}
 
   /* 2026/8/24：カウントダウンのパネルが、下のキャンペーンのパネルより
-     右へ56pxはみ出していた（実機の計測値）。左端は揃っている。
-     原因は、キャンペーン側は親の .campaign に padding:0 20px があるのに対し、
-     カウントダウンは .hero の中にあり、狭い画面での左右の余白が
-     確保されていなかったため。
-     キャンペーン側と同じ幅・同じ余白に揃える。 */
+     右へ56pxはみ出していた（実機の計測値）。
+
+     真の原因は、時計そのものが画面幅に収まっていなかったこと。
+     .cd-num は clamp(34px,10.5vw,74px)。iPhone（幅434px）では
+     1文字あたり約45px、「00」で約91px。4組で約364px、
+     さらにコロン3つ（各約37px）で計約475px必要になる。
+     しかし .hero の左右余白20pxを引いた使える幅は約394pxしかない。
+     約80pxはみ出し、その分パネルが右へ押し広げられていた。
+
+     数字とコロンを画面に収まる大きさにして、はみ出しをなくす。
+     あわせて align-self:center を明示する。.hero は
+     display:flex; flex-direction:column のため、子要素は既定で
+     横幅いっぱいに引き伸ばされ max-width が効かないため。 */
   @media(max-width:640px){
-    .countdown-panel{max-width:640px;margin-left:auto;margin-right:auto;}
-    .hero{padding-left:20px;padding-right:20px;}
+    .countdown-panel{max-width:640px;width:100%;align-self:center;
+      margin-left:auto;margin-right:auto;padding-left:12px;padding-right:12px;}
+    .cd-clock{width:100%;}
+    .cd-num{font-size:clamp(20px,7.2vw,56px);}
+    .cd-sep{font-size:clamp(15px,5vw,42px);padding-bottom:26px;}
+    .cd-unit{padding:12px 1px 9px;}
   }
   @media(max-width:380px){
     .cd-cap{font-size:9px;letter-spacing:0.06em;text-indent:0.06em;}
