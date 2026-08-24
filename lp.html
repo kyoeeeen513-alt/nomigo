@@ -672,6 +672,71 @@
     .slot{padding:6px 10px;font-size:11.5px;}
     .cd-cap{font-size:9px;}
   }
+
+  /* ===== 2026/8/24 追加：iPhoneでも横2列に揃える =====
+     iPadでは3列で横並びなのに、iPhoneでは1列になり縦に非常に長かった。
+     エリアだけが2列だったため、全セクションを2列に統一する。
+
+     3列にしなかった理由：iPhoneで使える幅は約342px。3列にすると
+     1列あたり約105pxとなり、説明文が1行5〜6文字で細切れになって読めない。
+     2列なら約165pxで9〜10文字入る。エリアが2列で成立しているのは
+     中身が「すすきの」「新宿」という短い語だけだからで、事情が異なる。
+
+     ※このブロックは、あとから書いたものが優先されるため、
+       上にある指定を打ち消す形で効く。消すときはこのブロックごと消せばよい。 */
+
+  /* --- こんな使い方（写真6枚）--- */
+  @media(max-width:520px){
+    .scenes{grid-template-columns:repeat(2,1fr);gap:10px;}
+    .scene{padding:0 0 14px;border-radius:14px;}
+    .scene img{height:118px;margin-bottom:11px;}
+    .scene h3,.scene p{padding:0 12px;}
+    .scene h3{font-size:13px;margin-bottom:4px;line-height:1.45;}
+    .scene p{font-size:11px;line-height:1.7;}
+  }
+
+  /* --- 安心・安全（6項目）--- */
+  @media(max-width:460px){
+    .safety-list{grid-template-columns:repeat(2,1fr);gap:22px 12px;}
+    .safety-fig{max-width:92px;margin-bottom:10px;}
+    .safety-item h4{font-size:13.5px;margin-bottom:5px;}
+    .safety-item p{font-size:11px;line-height:1.75;}
+  }
+
+  /* --- 特徴（6項目）--- */
+  @media(max-width:560px){
+    .features{grid-template-columns:repeat(2,1fr);gap:12px;}
+    .feature-card{padding:18px 13px;border-radius:14px;}
+    .feature-icon{width:34px;height:34px;border-radius:10px;font-size:16px;margin-bottom:11px;}
+    .feature-card h3{font-size:13.5px;margin-bottom:6px;line-height:1.45;}
+    .feature-card p{font-size:11px;line-height:1.75;}
+  }
+
+  /* --- 使い方3ステップ ---
+     3つなので2列だと3つ目が余る。3つ目は横いっぱいに広げる。 */
+  @media(max-width:560px){
+    .steps{grid-template-columns:repeat(2,1fr);}
+    .step{padding:26px 13px;}
+    .step:last-child{grid-column:1 / -1;}
+    .step-num{font-size:27px;margin-bottom:10px;}
+    .step h3{font-size:15px;margin-bottom:7px;}
+    .step p{font-size:11.5px;line-height:1.75;}
+  }
+
+  /* ===== 2026/8/24 追加：カウントダウンの右寄りを直す =====
+     時計が中央からずれて右に寄って見えていた。原因は2つ。
+     (1) 640px以下で .cd-cap の letter-spacing を 0.24em から 0.1em に
+         変えているのに、文字間隔の右余りを打ち消す text-indent が
+         0.24em のまま残っていた。両者がずれると左に寄って見える。
+     (2) SECONDS だけ7文字と長く、その枠だけ横に広がって全体を押していた。
+     対策：text-indent を letter-spacing と揃え、4つの枠を等分に固定する。 */
+  @media(max-width:640px){
+    .cd-unit{flex:1 1 0;min-width:0;}
+    .cd-cap{letter-spacing:0.1em;text-indent:0.1em;}
+  }
+  @media(max-width:380px){
+    .cd-cap{font-size:9px;letter-spacing:0.06em;text-indent:0.06em;}
+  }
 </style>
 </head>
 <body>
