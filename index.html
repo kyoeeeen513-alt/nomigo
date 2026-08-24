@@ -385,6 +385,18 @@ const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,e
 //   開通が完了したら true に戻し、再デプロイすること。
 const TICKET_SALES_OPEN=false;
 
+// 【2026/8/24追加】このサービスの正式なアドレス。
+//   これまで、パスワード再設定メールの戻り先とお友だち招待リンクに
+//   window.location.origin（＝今開いているアドレス）を使っていた。
+//   そのため nomigo-final-5.vercel.app で開いていると、
+//   メールや招待リンクにもその見慣れないアドレスが入ってしまい、
+//   受け取った相手に偽物を疑われる。とくに招待は友だちに送るものなので影響が大きい。
+//   また vercel.app のアドレスが Supabase の許可リストから外れると、
+//   そこから申し込んだ再設定が全て失敗する。
+//   どこで開いていても正式なアドレスになるよう、ここに固定する。
+//   ドメインを変えるときは、ここだけ直せばよい。
+const SITE_URL='https://www.nomi-go.jp';
+
 const PROFILE_COLS_SELF='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,ticket_count,verified_level,id_verify_status,id_photo_url,stripe_customer_id,line_user_id,email_verified,created_at,updated_at';
 const PROFILE_COLS_PARTNER='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,id_verify_status,line_user_id';
 
@@ -784,6 +796,11 @@ async function init(){
     DB.auth.onAuthStateChange(function(event,session){
       if(event==='PASSWORD_RECOVERY'){
         S._recovering=true;
+        // 2026/8/24：ここが来て初めて、メールのリンクのトークンが読み取られ
+        // パスワードを変更できる状態になる。これ以前に保存を押すと
+        // 「ログインの有効期限が切れました」になるため、印を立てて
+        // 保存ボタンを押せるようにする。
+        S._recoveryReady=true;
         if(session&&session.user)S.user=session.user;
         S.screen='newpassword';
         render();
@@ -798,6 +815,24 @@ async function init(){
       S._recovering=true;
       S.screen='newpassword';
       render();
+      // 2026/8/24：この時点ではまだトークンの読み取りが終わっていないため、
+      // 保存ボタンは押せない状態で表示される。読み取りが終わると
+      // 上の PASSWORD_RECOVERY が来て押せるようになる。
+      // 万一いつまでも来ない場合に画面が固まったままにならないよう、
+      // 10秒経ったらログイン状態があるかを自分で確かめる。
+      setTimeout(async function(){
+        if(S._recoveryReady)return;
+        try{
+          var _r=await DB.auth.getSession();
+          if(_r&&_r.data&&_r.data.session&&_r.data.session.user){
+            S.user=_r.data.session.user;
+            S._recoveryReady=true;
+          }else{
+            S._recoveryFailed=true;
+          }
+        }catch(e){ S._recoveryFailed=true; }
+        if(S.screen==='newpassword')render();
+      },10000);
       return;
     }
     var r=await Promise.race([DB.auth.getSession(),new Promise(function(res){setTimeout(function(){res({data:{session:null}});},5000);})]);
@@ -2004,7 +2039,7 @@ async function issuePairInvite(){
 
 function pairInviteUrl(){
   if(!S._pair||!S._pair.token)return '';
-  return window.location.origin+'/?pair='+S._pair.token;
+  return SITE_URL+'/?pair='+S._pair.token;
 }
 
 function copyPairInviteUrl(){
@@ -3404,7 +3439,7 @@ async function sendPasswordReset(){
   S.error='';S.info='';
   var btn=document.getElementById('fp-btn');
   if(btn){btn.disabled=true;btn.style.opacity='.55';btn.textContent='送信中…';}
-  var res=await DB.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+  var res=await DB.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL});
   S._sendingReset=false;
   if(res.error){
     if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='再設定メールを送る →';}
@@ -3427,6 +3462,7 @@ async function saveNewPassword(){
   // 二重押しの防止と「保存中…」の表示を入れる。
   // 連打すると通信が重なって本当に失敗するため、防止は必須。
   if(S._savingNewPass)return;
+  if(!S._recoveryReady)return;
   var pass=document.getElementById('newpass-inp').value;
   var errEl=document.getElementById('newpass-err');
   if(!pass||pass.length<6){if(errEl)errEl.textContent='パスワードは6文字以上です';return;}
@@ -3444,6 +3480,7 @@ async function saveNewPassword(){
   alert('パスワードを変更しました。もう一度ログインしてください。');
   await DB.auth.signOut();
   S.user=null;S.profile=null;
+  S._recovering=false;S._recoveryReady=false;S._recoveryFailed=false;
   go('splash');
 }
 
@@ -3451,7 +3488,19 @@ function newPasswordH(){
   // 2026/8/24：この画面だけ「← 戻る」が無く、メールのリンクから来た人が
   // 抜け出せなくなっていた。他の画面と同じく戻れるようにする。
   // 戻り先はログイン画面。再設定をやめてログインし直すこともできる。
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="cancelNewPassword()">← 戻る</button><div class="hdr-info"><div class="hdr-title">新しいパスワードを設定</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><input class="inp" id="newpass-inp" type="password" placeholder="新しいパスワード（6文字以上）"><div id="newpass-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="newpass-btn" onclick="saveNewPassword()">保存する</button></div></div>';
+  //
+  // 2026/8/24：メールのリンクを開いた直後は、まだトークンの読み取りが
+  // 終わっていない。その状態で保存を押すと「ログインの有効期限が切れました」
+  // になるため、準備が整うまでボタンを押せなくする。通常は一瞬で整う。
+  var ready=!!S._recoveryReady;
+  var failed=!!S._recoveryFailed;
+  var btn = failed
+    ? '<button class="btn" style="background:var(--surface);border:1.5px solid var(--border);color:var(--muted)" onclick="cancelNewPassword()">ログイン画面に戻る</button>'
+    : '<button class="btn btn-wine" id="newpass-btn" onclick="saveNewPassword()"'+(ready?'':' disabled style="opacity:.55"')+'>'+(ready?'保存する':'準備中…')+'</button>';
+  var msg = failed
+    ? '<div class="err-msg">このリンクは使えませんでした。すでに使用済みか、有効期限が切れています。お手数ですが、もう一度はじめから再設定してください。</div>'
+    : (ready?'':'<div style="font-size:12px;color:var(--muted);line-height:1.7">準備をしています。数秒お待ちください。</div>');
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="cancelNewPassword()">← 戻る</button><div class="hdr-info"><div class="hdr-title">新しいパスワードを設定</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><input class="inp" id="newpass-inp" type="password" placeholder="新しいパスワード（6文字以上）"'+(ready?'':' disabled')+'>'+msg+'<div id="newpass-err" class="err-msg"></div></div><div class="ftr">'+btn+'</div></div>';
 }
 
 // 再設定をやめてログイン画面へ戻る。
@@ -3460,6 +3509,9 @@ function newPasswordH(){
 async function cancelNewPassword(){
   try{ await DB.auth.signOut(); }catch(e){}
   S.user=null;S.profile=null;S.registration=null;S.match=null;
+  // 再設定中の印を消しておかないと、この後ログインしても
+  // 画面が切り替わらなくなる（onAuthStateChange が S._recovering で止まるため）
+  S._recovering=false;S._recoveryReady=false;S._recoveryFailed=false;
   S.error='';S.info='';
   go('email');
 }
