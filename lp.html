@@ -731,9 +731,26 @@
      (2) SECONDS だけ7文字と長く、その枠だけ横に広がって全体を押していた。
      対策：text-indent を letter-spacing と揃え、4つの枠を等分に固定する。 */
   @media(max-width:640px){
-    .cd-unit{flex:1 1 0;min-width:0;}
     .cd-cap{letter-spacing:0.1em;text-indent:0.1em;}
   }
+  /* 2026/8/24 再修正：数字だけが右にずれる件。
+     実機の計測では、DAYS〜SECONDSのラベルはほぼ中央にあるのに、
+     数字の並びだけが右へ約56pxずれていた。
+
+     原因は .cd-num の letter-spacing:0.04em。文字間隔は最後の文字の
+     右側にも空くため、数字4組ぶんの右余りが積み上がって全体が右へ寄る。
+     ラベル側は前回 text-indent で打ち消し済みだったため、
+     ラベルだけが中央に見えていた。
+
+     数字にも同量の text-indent を与えて左右を釣り合わせる。
+     あわせて、枠を等分に伸ばす指定（flex:1 1 0）はやめた。
+     4つの枠と3つのコロンを自然な幅のまま並べ、
+     時計全体をひとまとまりとして中央に置くほうが確実なため。 */
+  .cd-clock{display:flex;justify-content:center;align-items:center;width:100%;}
+  .cd-unit{flex:none;}
+  .cd-sep{flex:none;}
+  .cd-num{text-indent:0.04em;}
+  .cd-cap{display:block;width:100%;text-align:center;}
   @media(max-width:380px){
     .cd-cap{font-size:9px;letter-spacing:0.06em;text-indent:0.06em;}
   }
