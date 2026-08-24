@@ -1163,6 +1163,19 @@ function friendlyError(err,fallback){
   var m='';
   try{m=String((err&&(err.message||err.msg))||err||'');}catch(e){}
   var low=m.toLowerCase();
+  // 【2026/8/24追加】以下の3つは、これまで下の「session」判定に巻き込まれて
+  //   「ログインの有効期限が切れました」と誤って表示されていた。
+  //   実際の原因と案内が食い違い、利用者が何をすればよいか分からなくなる。
+  //   sessionの判定より前に置くこと。
+  if(low.indexOf('should be different')!==-1||low.indexOf('same_password')!==-1){
+    return '今お使いのパスワードと同じです。別のパスワードを入力してください。';
+  }
+  if(low.indexOf('aal2')!==-1||low.indexOf('insufficient_aal')!==-1||low.indexOf('mfa')!==-1){
+    return 'このアカウントは二段階認証が設定されているため、こちらではパスワードを変更できません。お問い合わせください。';
+  }
+  if(low.indexOf('password should be at least')!==-1||low.indexOf('weak_password')!==-1){
+    return 'パスワードが短すぎます。6文字以上で入力してください。';
+  }
   if(low.indexOf('permission denied')!==-1||low.indexOf('row-level security')!==-1||low.indexOf('42501')!==-1){
     return 'この操作は許可されていません。時間をおいてもう一度お試しください。';
   }
