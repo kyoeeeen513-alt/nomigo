@@ -257,10 +257,18 @@ module.exports = async (req, res) => {
           }
 
           // --- ④ 保存 ---
+          // line_linked_at：いつ連携したかを記録する（2026/8/24追加）。
+          //   これまで連携時刻を保存しておらず、誰がいつ連携したかを
+          //   後から確認できなかった。運営が利用者の状況を把握するために使う。
+          //   利用者側からは書き換えられない（DBのガードで無効化してある）。
           const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${userId}`, {
             method: 'PATCH',
             headers: { ...HEADERS, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ line_user_id: lineUserId, line_link_code: null }),
+            body: JSON.stringify({
+              line_user_id: lineUserId,
+              line_link_code: null,
+              line_linked_at: new Date().toISOString(),
+            }),
           });
 
           if (!patchRes.ok) {
