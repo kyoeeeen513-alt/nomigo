@@ -36,7 +36,7 @@
      ここで先に読み込んでおくと、画面を開いた時点で既に手元にあり、すぐ表示される。
      ホーム上部の画像は最初に必ず見えるため fetchpriority="high" で最優先にする。
      残り3枚は起動直後にJavaScript側でまとめて先読みする（下部 preloadImages）。 -->
-<link rel="preload" as="image" href="intro_temp.jpg" fetchpriority="high">
+<link rel="preload" as="image" href="intro_temp.jpg?v=2" fetchpriority="high">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -238,9 +238,9 @@ input[type=date].inp{color-scheme:dark}
 .star-btn{cursor:pointer;background:none;border:none;padding:4px;outline:none;-webkit-appearance:none;appearance:none;display:inline-flex;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
 .star-btn:active{transform:scale(1.25)}
 .star-btn:focus-visible{outline:2px solid var(--gold) !important;outline-offset:2px;border-radius:6px}
-.mode-card{position:relative;border-radius:20px;overflow:hidden;cursor:pointer;border:1.5px solid rgba(228,198,138,.2);transition:transform .3s,box-shadow .3s;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.mode-card{position:relative;border-radius:20px;overflow:hidden;background:#2A1219;cursor:pointer;border:1.5px solid rgba(228,198,138,.2);transition:transform .3s,box-shadow .3s;box-shadow:0 10px 26px rgba(0,0,0,.35)}
 .mode-card:active{transform:scale(.98)}
-.mode-card img{width:100%;height:180px;object-fit:cover;object-position:center;display:block}
+.mode-card img{width:100%;height:180px;object-fit:cover;object-position:center;display:block;background:#2A1219}
 .mode-card-square img{object-position:center 25%}
 .mode-card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(10,5,7,.9));padding:22px 16px 14px}
 .mode-card-title{font-size:18px;font-weight:800;color:#fff;font-family:'Shippori Mincho',serif;letter-spacing:.03em;text-shadow:0 2px 8px rgba(0,0,0,.6)}
@@ -427,10 +427,10 @@ const PROFILE_COLS_SELF='user_id,nickname,age,gender,job,smoke,alcohol,tags,phot
 const PROFILE_COLS_PARTNER='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,id_verify_status,line_user_id';
 
 const AREAS=[
-  {id:'susukino',name:'すすきの',img:'area_susukino.jpg',open:true},
-  {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg',open:true},
-  {id:'ueno',name:'上野',img:'area_ueno.jpg',open:false},
-  {id:'umeda',name:'梅田',img:'area_umeda.jpg',open:false}
+  {id:'susukino',name:'すすきの',img:'area_susukino.jpg?v=2',open:true},
+  {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg?v=2',open:true},
+  {id:'ueno',name:'上野',img:'area_ueno.jpg?v=2',open:false},
+  {id:'umeda',name:'梅田',img:'area_umeda.jpg?v=2',open:false}
 ];
 const JOBS=['会社員（事務・管理）','会社員（営業）','会社員（企画・マーケティング）','会社員（技術・研究）','経営者・役員','自営業・フリーランス','公務員','士業（弁護士・会計士など）','コンサルタント','IT・エンジニア','クリエイター・デザイナー','メディア・広告','金融・保険','不動産・建設','メーカー・技術職','商社・貿易','医療・看護','福祉・介護','保育・教育','販売・小売','飲食・フード','美容・理容','アパレル・ファッション','ホテル・ブライダル','旅行・観光','ブライダル・イベント','運輸・物流','製造・工場','農林水産','スポーツ・フィットネス','エンタメ・芸能','公務（警察・消防・自衛官）','学生','その他'];
 const DRINK_STYLES=['ガッツリ飲みたい','ゆっくり飲みたい','ご飯メイン'];
@@ -832,7 +832,7 @@ function mountPayjp(){
 // ここで読んだ画像はブラウザに保存されるため、実際にその画面を開いたときは
 // 通信を待たずに即座に表示される。表示自体は行わないので画面には影響しない。
 function preloadImages(){
-  ['mode_1v1.jpg','mode_2v2.jpg','matched_top.jpg'].forEach(function(src){
+  ['mode_1v1.jpg?v=2','mode_2v2.jpg?v=2','matched_top.jpg?v=2','area_susukino.jpg?v=2','area_shinjuku.jpg?v=2','area_ueno.jpg?v=2','area_umeda.jpg?v=2'].forEach(function(src){
     var im=new Image();
     im.decoding='async';
     im.src=src;
@@ -2335,8 +2335,8 @@ function selectMode(m,el){
 function modeSelectH(){
   var m=S.form.mode;
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'area_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">人数を選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'
-    +'<div class="mode-card mode-card-square" onclick="selectMode(\'1v1\',this)"><img src="mode_1v1.jpg" alt="1対1で飲む"><div class="mode-card-label"><span class="mode-card-title">🍺 1対1で飲む</span></div></div>'
-    +'<div class="mode-card" onclick="selectMode(\'2v2\',this)"><img src="mode_2v2.jpg" alt="2対2で飲む"><div class="mode-card-label"><span class="mode-card-title">🍻 2対2で飲む</span></div></div>'
+    +'<div class="mode-card mode-card-square" onclick="selectMode(\'1v1\',this)"><img src="mode_1v1.jpg?v=2" alt="1対1で飲む"><div class="mode-card-label"><span class="mode-card-title">🍺 1対1で飲む</span></div></div>'
+    +'<div class="mode-card" onclick="selectMode(\'2v2\',this)"><img src="mode_2v2.jpg?v=2" alt="2対2で飲む"><div class="mode-card-label"><span class="mode-card-title">🍻 2対2で飲む</span></div></div>'
     +'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">同じ人数を希望する人同士でマッチングします。</div>'
     +'</div></div>';
 }
@@ -3500,7 +3500,7 @@ function splashH(){
       : '<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:11px;color:rgba(237,229,224,.6)">現在のチケット</span><span style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</span></div>'
         +'<div style="font-size:11.5px;color:rgba(237,229,224,.55);margin-top:6px;padding-top:8px;border-top:1px solid rgba(237,229,224,.1)">'+nb('チケットの販売は')+nb('9月1日からです。')+'</div>')
     +'</div>':'';
-  var introAnim='<div style="width:calc(100% + 40px);margin:-20px -20px 12px -20px;overflow:hidden"><img src="intro_temp.jpg" alt="Nomi Go" fetchpriority="high" decoding="sync" style="width:100%;height:180px;object-fit:cover;display:block"></div>';
+  var introAnim='<div style="width:calc(100% + 40px);margin:-20px -20px 12px -20px;overflow:hidden"><img src="intro_temp.jpg?v=2" alt="Nomi Go" fetchpriority="high" decoding="sync" style="width:100%;height:180px;object-fit:cover;display:block"></div>';
   return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:29px;font-weight:900;line-height:1.05;letter-spacing:.01em;background:linear-gradient(180deg,#F3D9A4,#C9A063);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Nomi Go<div style="font-size:9px;font-weight:500;letter-spacing:.34em;color:rgba(237,229,224,.55);-webkit-text-fill-color:rgba(237,229,224,.55);margin-top:2px;text-indent:.34em">ノミゴー</div></div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div>'+welcomeToastH()+'<div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">気軽に、すぐ。今夜の飲み相手を見つけよう</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今夜の一番乗りになれます</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">先に募集した人から順にマッチ。'+oppLabel+'が来たら最初に繋がるのはあなたです</div></div></div>';}})()+(li?waitFeedCardH():'')+'<div style="display:flex;gap:8px;margin-bottom:20px"><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,980円</div></div><div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">累計マッチ</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">'+(S.stats.totalMatches||0)+'</div></div></div>'+preLaunchCard+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">飲み会をきっかけに、自然な出会いが生まれるサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 全ユーザー、身分証と顔写真による本人確認済み</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted);line-height:1.9"><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
 }
 
@@ -4165,7 +4165,7 @@ function matchedH(){
   return '<div class="match-wrap">'
     +'<div class="hdr"><button class="hdr-back" onclick="goSplashFromMatched()">← トップへ</button><div class="hdr-info"><div class="hdr-step">マッチ成立</div></div></div>'
     +'<div style="position:relative">'
-      +'<img src="matched_top.jpg" alt="マッチ成立" style="width:100%;height:220px;object-fit:cover;object-position:top;display:block">'
+      +'<img src="matched_top.jpg?v=2" alt="マッチ成立" style="width:100%;height:220px;object-fit:cover;object-position:top;display:block">'
       +'<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:40px 20px 16px;text-align:center">'
         +'<div style="font-size:24px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px;color:#fff">マッチ成立！</div>'
         +'<div style="font-size:14px;font-weight:800;color:var(--gold)">今夜の飲み相手が決まりました</div>'
