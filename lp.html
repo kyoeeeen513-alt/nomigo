@@ -140,9 +140,41 @@
   .hero{position:relative;z-index:1;min-height:100svh;
     display:flex;flex-direction:column;justify-content:center;
     padding:120px 24px 70px;text-align:center;}
+  /* 2026/8/26：サービス名がヒーローに出ておらず、何のサイトか一目で分からないため
+     ブランド名を最上部に大きく置いた。ヘッダー左上の小さいロゴだけに頼らない。 */
+  .hero-brand{position:relative;display:inline-block;
+    font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;
+    font-size:clamp(42px,9vw,82px);line-height:1.05;letter-spacing:0.01em;
+    margin-bottom:8px;}
+  /* 下地：まだ液体で満たされていない部分。うっすら輪郭だけ見せる */
+  .hero-brand .base{color:rgba(201,160,99,0.20);}
+  /* 上に重ねた同じ文字を、下から波打ちながら満たしていく（液体が湧き上がる表現） */
+  .hero-brand .fill{position:absolute;left:0;top:0;
+    background:linear-gradient(175deg, var(--gold-bright) 0%, var(--gold) 55%, #B8874A 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+    filter:drop-shadow(0 0 14px rgba(201,160,99,0.30));
+    clip-path:polygon(0% 118%,25% 110%,50% 120%,75% 112%,100% 118%,100% 140%,0% 140%);
+    animation:liquidRise 2.1s cubic-bezier(.32,.72,.2,1) .25s forwards,
+              liquidWave 4.5s 2.4s ease-in-out infinite;}
+  @keyframes liquidRise{
+    to{clip-path:polygon(0% -10%,25% -3%,50% -14%,75% -5%,100% -11%,100% 140%,0% 140%);}
+  }
+  @keyframes liquidWave{
+    0%,100%{clip-path:polygon(0% -10%,25% -3%,50% -14%,75% -5%,100% -11%,100% 140%,0% 140%);}
+    50%    {clip-path:polygon(0% -4%,25% -13%,50% -3%,75% -14%,100% -5%,100% 140%,0% 140%);}
+  }
+  /* 動きを減らす設定の端末では、静止した金文字として表示する */
+  @media (prefers-reduced-motion:reduce){
+    .hero-brand .fill{animation:none;clip-path:none;}
+    .hero-brand .base{color:transparent;}
+  }
+  .hero-brand-sub{font-size:11px;font-weight:500;letter-spacing:0.42em;
+    color:var(--cream-dim);margin-bottom:26px;text-indent:0.42em;
+    opacity:0;animation:fadeUp .9s .18s forwards;}
   .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;justify-content:center;
-    font-size:12px;font-weight:500;letter-spacing:0.2em;color:var(--gold-soft);margin-bottom:34px;
-    opacity:0;animation:fadeUp .9s .2s forwards;}
+    font-size:12px;font-weight:500;letter-spacing:0.2em;color:var(--gold-soft);margin-bottom:28px;
+    opacity:0;animation:fadeUp .9s .26s forwards;}
   .dot-live{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite;}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,160,99,0.55);}70%{box-shadow:0 0 0 10px rgba(201,160,99,0);}100%{box-shadow:0 0 0 0 rgba(201,160,99,0);}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
@@ -799,6 +831,8 @@
 
 <!-- HERO -->
 <section class="hero">
+  <div class="hero-brand"><span class="base">Nomi Go</span><span class="fill" aria-hidden="true">Nomi Go</span></div>
+  <div class="hero-brand-sub">ノミゴー</div>
   <div class="hero-eyebrow"><span class="dot-live"></span>9月1日、はじまります</div>
   <h1>
     <span class="line"><span>ひとりの夜は嫌いじゃない。</span></span>
