@@ -142,35 +142,11 @@
     padding:120px 24px 70px;text-align:center;}
   /* 2026/8/26：サービス名がヒーローに出ておらず、何のサイトか一目で分からないため
      ブランド名を最上部に大きく置いた。ヘッダー左上の小さいロゴだけに頼らない。 */
-  .hero-brand{position:relative;display:block;width:100%;text-align:center;
-    font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;
-    font-size:clamp(42px,9vw,82px);line-height:1.05;letter-spacing:0.01em;
-    margin-bottom:8px;}
-  /* 下地：まだ液体で満たされていない部分。うっすら輪郭だけ見せる */
-  .hero-brand .base{color:rgba(201,160,99,0.18);}
-  /* 上に重ねた同じ文字を、下から波打ちながら満たしていく（液体が湧き上がる表現）
-     2026/8/26修正：left:0のみだと中央揃えの下地と位置がずれるため、
-     左右0＋width:100%＋text-align:centerで下地と完全に重ねる。 */
-  .hero-brand .fill{position:absolute;left:0;right:0;top:0;width:100%;text-align:center;
-    background:linear-gradient(175deg, var(--gold-bright) 0%, var(--gold) 55%, #B8874A 100%);
-    -webkit-background-clip:text;background-clip:text;
-    -webkit-text-fill-color:transparent;color:transparent;
-    filter:drop-shadow(0 0 16px rgba(201,160,99,0.35));
-    clip-path:polygon(0% 125%,25% 115%,50% 128%,75% 117%,100% 124%,100% 150%,0% 150%);
-    animation:liquidRise 3s cubic-bezier(.35,.7,.25,1) .4s forwards,
-              liquidWave 5s 3.4s ease-in-out infinite;}
-  @keyframes liquidRise{
-    to{clip-path:polygon(0% -12%,25% 2%,50% -18%,75% 0%,100% -14%,100% 150%,0% 150%);}
-  }
-  @keyframes liquidWave{
-    0%,100%{clip-path:polygon(0% -12%,25% 2%,50% -18%,75% 0%,100% -14%,100% 150%,0% 150%);}
-    50%    {clip-path:polygon(0% 1%,25% -16%,50% 3%,75% -18%,100% 0%,100% 150%,0% 150%);}
-  }
-  /* 動きを減らす設定の端末では、静止した金文字として表示する */
-  @media (prefers-reduced-motion:reduce){
-    .hero-brand .fill{animation:none;clip-path:none;}
-    .hero-brand .base{color:transparent;}
-  }
+  .hero-brand{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;
+    font-size:clamp(42px,9vw,82px);line-height:1;letter-spacing:0.01em;
+    background:linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:8px;opacity:0;animation:fadeUp .9s .1s forwards;}
   .hero-brand-sub{font-size:11px;font-weight:500;letter-spacing:0.42em;
     color:var(--cream-dim);margin-bottom:26px;text-indent:0.42em;
     opacity:0;animation:fadeUp .9s .18s forwards;}
@@ -833,7 +809,7 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-brand"><span class="base">Nomi Go</span><span class="fill" aria-hidden="true">Nomi Go</span></div>
+  <div class="hero-brand">Nomi Go</div>
   <div class="hero-brand-sub">ノミゴー</div>
   <div class="hero-eyebrow"><span class="dot-live"></span>9月1日、はじまります</div>
   <h1>
