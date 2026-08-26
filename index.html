@@ -238,6 +238,14 @@ input[type=date].inp{color-scheme:dark}
 .star-btn{cursor:pointer;background:none;border:none;padding:4px;outline:none;-webkit-appearance:none;appearance:none;display:inline-flex;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
 .star-btn:active{transform:scale(1.25)}
 .star-btn:focus-visible{outline:2px solid var(--gold) !important;outline-offset:2px;border-radius:6px}
+/* エリア選択を2列に並べる（2026/8/26）
+   エリアが6つに増え縦一列だとスクロールが長すぎるため、2つずつ横に並べる。
+   1枚あたりが小さくなるので、画像の高さとラベルの文字も少し詰める。 */
+.area-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.area-grid .area-card img{height:120px}
+.area-grid .area-card-title{font-size:14px}
+.area-grid .area-live-badge,.area-grid .area-quiet-badge{font-size:10px;padding:4px 8px}
+.area-grid .area-soon-ribbon{font-size:9px;letter-spacing:.06em}
 .mode-card{position:relative;border-radius:20px;overflow:hidden;background:#2A1219;cursor:pointer;border:1.5px solid rgba(228,198,138,.2);transition:transform .3s,box-shadow .3s;box-shadow:0 10px 26px rgba(0,0,0,.35)}
 .mode-card:active{transform:scale(.98)}
 .mode-card img{width:100%;height:180px;object-fit:cover;object-position:center;display:block;background:#2A1219}
@@ -2073,7 +2081,7 @@ function areaSelectH(){
     var overlay='<div class="area-card-tint"></div>';
     return '<div class="'+cardCls+'" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'">'+overlay+badge+'<div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
   }).join('');
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'+cardsHtml+'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">現在は「新宿」「すすきの」でご利用いただけます。その他のエリアは近日公開予定です。</div></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px"><div class="area-grid">'+cardsHtml+'</div><div style="font-size:11px;color:var(--muted);line-height:1.7;padding:14px 4px 0">現在は「新宿」「すすきの」でご利用いただけます。その他のエリアは近日公開予定です。</div></div></div>';
 }
 
 // ===== 2対2の招待 =====
