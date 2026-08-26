@@ -430,7 +430,9 @@ const AREAS=[
   {id:'susukino',name:'すすきの',img:'area_susukino.jpg?v=2',open:true},
   {id:'shinjuku',name:'新宿',img:'area_shinjuku.jpg?v=2',open:true},
   {id:'ueno',name:'上野',img:'area_ueno.jpg?v=2',open:false},
-  {id:'umeda',name:'梅田',img:'area_umeda.jpg?v=2',open:false}
+  {id:'umeda',name:'梅田',img:'area_umeda.jpg?v=2',open:false},
+  {id:'nagoya',name:'名古屋',img:'area_nagoya.jpg?v=2',open:false},
+  {id:'hakata',name:'博多',img:'area_hakata.jpg?v=2',open:false}
 ];
 const JOBS=['会社員（事務・管理）','会社員（営業）','会社員（企画・マーケティング）','会社員（技術・研究）','経営者・役員','自営業・フリーランス','公務員','士業（弁護士・会計士など）','コンサルタント','IT・エンジニア','クリエイター・デザイナー','メディア・広告','金融・保険','不動産・建設','メーカー・技術職','商社・貿易','医療・看護','福祉・介護','保育・教育','販売・小売','飲食・フード','美容・理容','アパレル・ファッション','ホテル・ブライダル','旅行・観光','ブライダル・イベント','運輸・物流','製造・工場','農林水産','スポーツ・フィットネス','エンタメ・芸能','公務（警察・消防・自衛官）','学生','その他'];
 const DRINK_STYLES=['ガッツリ飲みたい','ゆっくり飲みたい','ご飯メイン'];
@@ -832,7 +834,7 @@ function mountPayjp(){
 // ここで読んだ画像はブラウザに保存されるため、実際にその画面を開いたときは
 // 通信を待たずに即座に表示される。表示自体は行わないので画面には影響しない。
 function preloadImages(){
-  ['mode_1v1.jpg?v=2','mode_2v2.jpg?v=2','matched_top.jpg?v=2','area_susukino.jpg?v=2','area_shinjuku.jpg?v=2','area_ueno.jpg?v=2','area_umeda.jpg?v=2'].forEach(function(src){
+  ['mode_1v1.jpg?v=2','mode_2v2.jpg?v=2','matched_top.jpg?v=2','area_susukino.jpg?v=2','area_shinjuku.jpg?v=2','area_ueno.jpg?v=2','area_umeda.jpg?v=2','area_nagoya.jpg?v=2','area_hakata.jpg?v=2'].forEach(function(src){
     var im=new Image();
     im.decoding='async';
     im.src=src;
