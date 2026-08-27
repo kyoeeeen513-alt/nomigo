@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet"></noscript>
 
-<!-- 【このページの役割 2026/8/27】
+<!-- 【このページの役割 2026/8/27・No.201】
      チケットの購入が完了したあと、CREDIXの決済ページから戻ってくる先です。
 
      なぜ独立したページが必要か：
@@ -18,24 +18,12 @@
      アフィリエイト（成果報酬型の広告）は、この専用URLが表示されたことをもって
      「成果が発生した」と数える仕組みのため、専用のページが必要になります。
 
-     【重要・計測タグを貼る前に必ず解決すること】
-     このページは、決済が成功したときにだけタグを動かす必要があります。
-     決済に失敗した場合や、利用者が途中でやめた場合にもタグが動くと、
-     売れていないのに成果として数えられ、広告費を過剰に支払うことになります。
-     判定の方法は project_status No.201 に記載しています。
-     判定の仕組みを入れるまで、計測タグは貼らないこと。
-
      【チケットの枚数について】
      チケットの付与はサーバー側（/api/credix-notify）が行います。
      このページは表示するだけで、枚数の増減には一切関与しません。
      ここで枚数を書き換える処理を足してはいけません。 -->
 
-<!-- ▼▼▼ アフィリエイトの計測タグを貼る場所 ▼▼▼
-     レントラックスから届いたタグを、この下に貼り付けてください。
-     まだ届いていないため、現在は空です。
-     貼るのは「計測タグ」と「タグマネージャー」の2種類のみ。
-     リターゲティングタグ・ピクセルタグは貼らない方針です（No.200）。
-     ▲▲▲ ここまで ▲▲▲ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
@@ -219,7 +207,8 @@ body{
 </main>
 
 <script>
-// 背景の泡。アプリ本体と同じ演出を、控えめな数で。
+// ===== 背景の泡 =====
+// アプリ本体と同じ演出を、控えめな数で。
 (function(){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   var layer=document.getElementById('fx');
@@ -235,6 +224,114 @@ body{
     layer.appendChild(b);
   }
 })();
+
+
+// =====================================================================
+// アフィリエイトの成果計測
+// =====================================================================
+//
+// 【なぜ、ただタグを貼るだけにしないのか】
+//   このページのURLは、決済が失敗した場合や、利用者が決済画面で
+//   やめて戻ってきた場合にも開かれる可能性がある。
+//   また、一度開いたあとブックマークや履歴から開き直すこともできる。
+//   そのすべてでタグが動くと、売れていないのに成果として数えられ、
+//   広告費を過剰に支払うことになる。
+//
+// 【どう判定しているか】
+//   DBに「本人の直近60分以内の、成功した決済」を問い合わせ、
+//   1件返ってきたときにだけタグを動かす。
+//   問い合わせにはSupabaseの関数 get_my_last_payment_result() を使う。
+//   この関数は、ログイン中の本人の決済しか返さない。
+//
+// 【なぜ payments を直接読まないのか】
+//   payments には金額・決済識別子・失敗理由が入っており、
+//   本人に読ませる設定にすると、それらが端末に降りてしまう。
+//   関数は判定に必要な4項目だけを返す。
+//
+// 【注文番号について】
+//   計測タグには payments.id（購入ごとに一意なID）を注文番号として渡す。
+//   sendid は利用者ごとに固定で、購入ごとに変わらないことを実データで
+//   確認しているため、注文番号には使ってはいけない（2回目の購入が
+//   1回目と同じ注文とみなされる）。
+//
+// 【まだタグを貼っていない理由】
+//   レントラックスから計測タグが届いていないため。
+//   届いたら fireAffiliateTag の中に貼ること。
+// =====================================================================
+
+var SUPABASE_URL='https://dwubothomxjwfudkeepy.supabase.co';
+var SUPABASE_KEY='sb_publishable_vpUd5hulLV1-gI1wsAkgWA_hrB9ZOJ9';
+
+// 二重に動かさないための札。
+// 同じ画面の中で判定処理が複数回走っても、タグは一度しか動かない。
+var _tagFired=false;
+
+function fireAffiliateTag(orderId,amount){
+  if(_tagFired)return;
+  _tagFired=true;
+
+  // ▼▼▼ ここにレントラックスの計測タグを貼る ▼▼▼
+  //
+  // 届いたタグに、注文番号と金額を渡す欄があるはずなので、
+  // そこに orderId と amount を入れること。
+  //   orderId … この購入を表す一意のID（文字列）
+  //   amount  … 金額（数値・円）
+  //
+  // 貼るのは「計測タグ」と「タグマネージャー」の2種類のみ。
+  // リターゲティングタグ・ピクセルタグは貼らない方針（No.200）。
+  //
+  // タグを貼る前に、必ずテスト用の環境で
+  // 「決済に失敗したときは動かないこと」を確認すること。
+  //
+  // ▲▲▲ ここまで ▲▲▲
+
+  // タグを貼るまでの間、動作の確認ができるように記録だけ残す。
+  // タグを貼ったあとも、この行はそのまま残してよい。
+  try{ console.log('[affiliate] 成果として計測:',orderId,amount); }catch(e){}
+}
+
+// 決済の結果をDBに問い合わせる。
+// 決済が成立した直後は、CREDIXからの通知がまだ届いておらず
+// status が pending のままのことがある。数秒待って数回だけ問い合わせ直す。
+// 何度も問い合わせ続けると通信の負担になるため、回数は限る。
+var CHECK_DELAYS_MS=[0,3000,8000,15000];
+
+async function checkPaymentAndFire(){
+  var db;
+  try{
+    db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  }catch(e){
+    // 部品の読み込みに失敗した場合。
+    // 画面の表示には影響しないため、そのまま何もしない。
+    return;
+  }
+
+  // ログインしていない場合は判定できないため、タグは動かさない。
+  // （決済はログイン中にしか行えないため、通常この経路には入らない）
+  try{
+    var s=await db.auth.getSession();
+    if(!s||!s.data||!s.data.session)return;
+  }catch(e){ return; }
+
+  for(var i=0;i<CHECK_DELAYS_MS.length;i++){
+    if(i>0)await new Promise(function(r){setTimeout(r,CHECK_DELAYS_MS[i]);});
+    try{
+      var res=await db.rpc('get_my_last_payment_result');
+      if(res.error)continue;
+      var row=res.data&&res.data[0];
+      if(row&&row.out_ok===true&&row.out_order_id){
+        fireAffiliateTag(row.out_order_id,row.out_amount);
+        return;
+      }
+    }catch(e){}
+  }
+  // ここに来た場合、成功した決済を確認できなかった。
+  // 成果としては数えない。画面の表示は変えない
+  //（本当は決済が成立していて通知が遅れているだけの可能性があり、
+  //  ここで「失敗しました」と表示すると利用者を不安にさせるため）。
+}
+
+checkPaymentAndFire();
 </script>
 </body>
 </html>
