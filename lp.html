@@ -1428,5 +1428,33 @@
   document.querySelectorAll('.num-count').forEach(function(el){ priceObs.observe(el); });
 </script>
 
+
+<!-- ▼ レントラックス ランディングページ用トラッキングタグ（2026/8/27 設置・No.201）
+     アフィリエイト経由で来た人を識別するためのタグ。
+     成果を数えるのは thanks.html 側で、こちらは「どのサイト経由で来たか」を
+     記録するためのもの。先方の資料の指示どおり </body> の直前に置く。
+     受領ファイル：PID16351_lp-tag.txt の内容をそのまま使用しており、変更していない。
+     ページの表示や動作には影響しない（読み込みは非同期で行われる）。 -->
+<script type="text/javascript">
+(function(callback){
+var script = document.createElement("script");
+script.type = "text/javascript";
+script.src = "https://www.rentracks.jp/js/itp/rt.track.js?t=" + (new Date()).getTime();
+if ( script.readyState ) {
+script.onreadystatechange = function() {
+if ( script.readyState === "loaded" || script.readyState === "complete" ) {
+script.onreadystatechange = null;
+callback();
+}
+};
+} else {
+script.onload = function() {
+callback();
+};
+}
+document.getElementsByTagName("head")[0].appendChild(script);
+}(function(){}));
+</script>
+
 </body>
 </html>
