@@ -1989,9 +1989,14 @@ async function goRecruit(){
     var results=await Promise.all([
       DB.from('profiles').select('stripe_customer_id,id_photo_url,id_verify_status,line_user_id,photo_url').eq('user_id',S.user.id).single(),
       DB.from('registrations').select('id',{count:'exact',head:true}).eq('user_id',S.user.id).eq('status','cancelled').not('match_id','is',null),
-      loadAreaStats()
+      loadAreaStats(),
+      // お友だちと組んでいるか（2対2が確定しているか）を毎回確かめる。
+      // アプリを閉じて開き直しても正しく判定できるよう、画面の記憶ではなくDBを見る。
+      DB.from('pair_invites').select('id').eq('status','accepted')
+        .or('host_user_id.eq.'+S.user.id+',guest_user_id.eq.'+S.user.id).limit(1)
     ]);
-    var me=results[0], cancelCheck=results[1];
+    var me=results[0], cancelCheck=results[1], pairCheck=results[3];
+    S._paired=!!(pairCheck&&!pairCheck.error&&pairCheck.data&&pairCheck.data.length>0);
     if(!me.error&&me.data&&S.profile){
       S.profile.stripe_customer_id=me.data.stripe_customer_id;
       S.profile.id_photo_url=me.data.id_photo_url;
@@ -2056,11 +2061,18 @@ function selectArea(areaId,el){
     alert('このエリアは近日公開予定です。現在は「新宿」「すすきの」でご利用いただけます。');
     return;
   }
+  // 既にお友だちと組んでいる人は、2対2で確定しているため人数選択を飛ばす。
+  // ここで1対1を選べてしまうと、組んだ相手が置き去りになる。
+  function next(){
+    S.form.area=areaId;
+    if(S._paired){S.form.mode='2v2';go('recruit');}
+    else{go('mode_select');}
+  }
   if(el){
     el.classList.add('card-selected');
-    setTimeout(function(){S.form.area=areaId;go('mode_select');},220);
+    setTimeout(next,220);
   }else{
-    S.form.area=areaId;go('mode_select');
+    next();
   }
 }
 
@@ -2276,8 +2288,16 @@ async function acceptPairInvite(){
       return;
     }
     S._inviteToken=null;S._invitePeek=null;
-    alert('参加が確定しました。お友だちが募集を始めるとマッチングが始まります。');
-    go('splash');
+    // 【2026/8/26 修正 No.123】
+    // 以前は「お友だちが募集を始めるとマッチングが始まります」と伝えて
+    // トップへ戻していたが、これは実装と食い違っていた。
+    // マッチの成立には4人ぶんの募集が必要で、招待された側も自分で
+    // 条件を選んで募集を出さないと、いつまでも4人そろわない。
+    // そのため案内文を直し、そのまま募集の作成へ進めるようにした。
+    S._paired=true;
+    S.form.mode='2v2';
+    alert('参加が確定しました。\n続けて、あなたも飲みたい条件を選んでください。4人そろうとマッチが成立します。');
+    await goRecruit();
   }finally{ _pairAccepting=false;hideBusy(); }
 }
 
