@@ -125,7 +125,11 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
    タブバーに隠れていた。タブバー自体が safe-area-inset-bottom（iPhoneの
    ホームバー領域）ぶん高くなるのに、余白側がそれを足していなかったため。
    タブバーの実高（約56px）＋ホームバー領域＋余裕16pxで計算する。 */
-.has-tabbar{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+/* 【2026/8/27修正・第2版】第1版で calc に直しても直らなかった。真の原因は
+   トップ画面の div が style="padding:0" というHTML内の直接指定を持っており、
+   CSSのクラス指定より直接指定が優先されるため、余白が常に0に上書きされていたこと。
+   !important を付けて直接指定より強くする。 */
+.has-tabbar{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px)) !important}
 .ftr{padding:14px 20px 30px;flex-shrink:0;border-top:1px solid var(--border2);background:#241016}
 .btn{display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;
   font-weight:900;border-radius:999px;transition:transform .18s,box-shadow .25s,opacity .2s;font-size:16px;padding:16px 20px;width:100%;letter-spacing:.04em}
