@@ -226,10 +226,42 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
     <div class="tabs">
       <div class="tab on" id="t1" onclick="show('verify')">本人確認<span class="tag" id="c1">0</span></div>
       <div class="tab" id="t2" onclick="show('inq')">お客様対応<span class="tag" id="c2">0</span></div>
+      <div class="tab" id="t3" onclick="show('pw')">パスワード</div>
     </div>
 
     <div id="verify"></div>
     <div id="inq" class="hide"></div>
+
+    <!-- 【パスワード変更 2026/8/28 追加】
+         なぜアプリ側ではなくここに置くか：
+         2段階認証を設定しているアカウントは、メールのリンクから行う再設定では
+         パスワードを変更できない。パスワードだけで本人と認められた状態
+         （aal1）では、6桁を知らない第三者による変更を防ぐため
+         Supabaseが拒否する仕組みになっているため。
+         この運営ページは6桁の入力を通ってから開くため（aal2）、変更が許可される。
+
+         注意：ここで変更すると、同じアカウントで使っている
+         利用者向けアプリ（nomi-go.jp）のパスワードも同時に変わる。
+         どちらもSupabaseの同一アカウントを使っているため。 -->
+    <div id="pw" class="hide">
+      <div class="card">
+        <h2 style="margin:0 0 12px">パスワードの変更</h2>
+        <div class="note" style="margin-bottom:16px">
+          新しいパスワードを入力してください。<br>
+          <b>変更すると、Nomi Goのアプリ側のパスワードも同時に変わります。</b>
+          どちらも同じアカウントのためです。変更後は、アプリでも新しいパスワードでログインしてください。
+          <br><br>
+          他のサービスと同じパスワードは使わないでください。
+        </div>
+        <label>新しいパスワード（6文字以上）</label>
+        <input id="npw1" type="password" autocomplete="new-password" placeholder="新しいパスワード">
+        <label style="margin-top:12px">確認のためもう一度</label>
+        <input id="npw2" type="password" autocomplete="new-password" placeholder="もう一度入力">
+        <div class="err" id="pwerr" style="margin-top:10px"></div>
+        <div id="pwok" style="margin-top:10px;color:var(--ok);font-size:13px;line-height:1.7"></div>
+        <button class="btn-main" id="pwbtn" style="margin-top:14px" onclick="doChangePw()">変更する</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -470,8 +502,55 @@ function show(which){
   CUR=which;
   document.getElementById('verify').className=(which==='verify')?'':'hide';
   document.getElementById('inq').className=(which==='inq')?'':'hide';
+  document.getElementById('pw').className=(which==='pw')?'':'hide';
   document.getElementById('t1').className=(which==='verify')?'tab on':'tab';
   document.getElementById('t2').className=(which==='inq')?'tab on':'tab';
+  document.getElementById('t3').className=(which==='pw')?'tab on':'tab';
+  // 画面を離れるときは入力を消す。表示したまま端末を置かれると
+  // 新しいパスワードが画面に残るため。
+  if(which!=='pw'){
+    var a=document.getElementById('npw1'),b=document.getElementById('npw2');
+    if(a)a.value='';if(b)b.value='';
+    var e=document.getElementById('pwerr'),o=document.getElementById('pwok');
+    if(e)e.textContent='';if(o)o.textContent='';
+  }
+}
+
+// ---------- パスワードの変更 ----------
+// 二重押しを防ぐ。通信が重なると同じ変更が2回走る。
+var _pwBusy=false;
+async function doChangePw(){
+  if(_pwBusy)return;
+  var p1=document.getElementById('npw1').value;
+  var p2=document.getElementById('npw2').value;
+  var err=document.getElementById('pwerr');
+  var ok=document.getElementById('pwok');
+  var btn=document.getElementById('pwbtn');
+  err.textContent='';ok.textContent='';
+  if(!p1||p1.length<6){err.textContent='パスワードは6文字以上で入力してください';return;}
+  if(p1!==p2){err.textContent='2つのパスワードが一致しません';return;}
+  _pwBusy=true;
+  btn.disabled=true;btn.textContent='変更中...';
+  var r=await DB.auth.updateUser({password:p1});
+  _pwBusy=false;
+  btn.disabled=false;btn.textContent='変更する';
+  if(r.error){
+    var m=String(r.error.message||'').toLowerCase();
+    if(m.indexOf('should be different')!==-1||m.indexOf('same_password')!==-1){
+      err.textContent='今お使いのパスワードと同じです。別のパスワードを入力してください。';
+    }else if(m.indexOf('at least')!==-1||m.indexOf('weak_password')!==-1){
+      err.textContent='パスワードが短すぎます。6文字以上で入力してください。';
+    }else if(m.indexOf('aal')!==-1||m.indexOf('mfa')!==-1){
+      err.textContent='6桁の番号による確認が必要です。いったんログアウトし、ログインし直してからお試しください。';
+    }else{
+      err.textContent='変更できませんでした。時間をおいてもう一度お試しください。';
+    }
+    return;
+  }
+  document.getElementById('npw1').value='';
+  document.getElementById('npw2').value='';
+  ok.textContent='パスワードを変更しました。アプリ側も同じパスワードになります。';
+  alert('パスワードを変更しました。\n\nNomi Goのアプリでも、これからは新しいパスワードでログインしてください。\n\n念のため、いったんログアウトして、新しいパスワードで入れることを確認してください。');
 }
 
 // ---------- 本人確認 ----------
