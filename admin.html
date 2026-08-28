@@ -243,7 +243,7 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
          注意：ここで変更すると、同じアカウントで使っている
          利用者向けアプリ（nomi-go.jp）のパスワードも同時に変わる。
          どちらもSupabaseの同一アカウントを使っているため。 -->
-    <div id="pw" class="hide">
+    <div id="pwpane" class="hide">
       <div class="card">
         <h2 style="margin:0 0 12px">パスワードの変更</h2>
         <div class="note" style="margin-bottom:16px">
@@ -502,7 +502,7 @@ function show(which){
   CUR=which;
   document.getElementById('verify').className=(which==='verify')?'':'hide';
   document.getElementById('inq').className=(which==='inq')?'':'hide';
-  document.getElementById('pw').className=(which==='pw')?'':'hide';
+  document.getElementById('pwpane').className=(which==='pw')?'':'hide';
   document.getElementById('t1').className=(which==='verify')?'tab on':'tab';
   document.getElementById('t2').className=(which==='inq')?'tab on':'tab';
   document.getElementById('t3').className=(which==='pw')?'tab on':'tab';
