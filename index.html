@@ -772,6 +772,107 @@ function stopWaitMessageRotation(){
 }
 // ===== 待機画面の演出用タイマー（ここまで） =====
 
+// =====================================================================
+// アフィリエイト（レントラックス）の成果計測
+// =====================================================================
+//
+// 【成果地点】
+//   レントラックスとの契約上の成果地点は
+//   「男女ともに初回マッチでの体験・参加」であり、
+//   マッチが成立した時点を指す（2026/8/28に永澤経由で確認）。
+//
+// 【当初の実装との違い】
+//   当初は決済完了ページ（thanks.html）で購入を成果としていたが、
+//   これは契約と食い違っていた。
+//   ①9月中は男性のチケットが無料のため購入が発生せず成果が0件になる
+//   ②女性はそもそも購入しないため女性経由の成果が永久に0件になる
+//   という重大な問題があったため、マッチ成立時点へ移した。
+//
+// 【なぜ判定をDB側で行うか】
+//   「初回のマッチかどうか」を画面側で判定すると、
+//   書き換えによって何度でも成果を発生させられる。
+//   成果は報酬の支払いに直結するため、判定は必ずサーバー側で行う。
+//   画面側は get_my_first_match_for_affiliate() を呼び、
+//   1行返ってきたときにだけタグを動かす。
+//
+// 【注文番号】
+//   DB側が「マッチID＋利用者ID」を返す。
+//   同じ人が同じマッチ画面を何度開いても同一の番号になるため、
+//   レントラックス側で重複が排除される。
+//
+// 【10月以降の切り替えについて（重要）】
+//   10月からはチケットの購入を成果地点とする方針である。
+//   その際は、この処理を止めたうえで thanks.html 側を有効にすること。
+//   両方が動いていると二重に成果が計上される。自動では切り替わらない。
+// =====================================================================
+
+// 同じ画面で何度も動かさないための札。
+// 画面の再描画のたびに通信が走るのを防ぐ。
+var _affiliateFired = false;
+
+function fireAffiliateTag(orderId){
+  if(!orderId) return;
+
+  // ここから下はレントラックスから受領したタグの中身。
+  // 読み込み処理は原文のまま。
+  (function(){
+    function loadScriptRTCV(callback){
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = 'https://www.rentracks.jp/js/itp/rt.track.js?t=' + (new Date()).getTime();
+      if ( script.readyState ) {
+        script.onreadystatechange = function() {
+          if ( script.readyState === 'loaded' || script.readyState === 'complete' ) {
+            script.onreadystatechange = null;
+            callback();
+          };
+        };
+      } else {
+        script.onload = function() {
+          callback();
+        };
+      };
+      document.getElementsByTagName('head')[0].appendChild(script);
+    }
+
+    loadScriptRTCV(function(){
+      try{
+        // _rt.sid / _rt.pid は先方指定の固定値。変更しない。
+        // _rt.price は定額案件のため0固定。
+        // _rt.cname / _rt.ctel / _rt.cemail は氏名・電話・メールを入れる欄だが、
+        //   成果の特定は注文番号だけで足り、個人情報を外部へ渡すことは
+        //   プライバシーポリシー第4条・第6条の説明と食い違うため空にする。
+        //   ここに個人情報を入れてはいけない。
+        _rt.sid    = 11469;
+        _rt.pid    = 16351;
+        _rt.price  = 0;
+        _rt.reward = -1;
+        _rt.cname  = '';
+        _rt.ctel   = '';
+        _rt.cemail = '';
+        _rt.cinfo  = encodeURIComponent(String(orderId));
+        rt_tracktag();
+      }catch(e){}
+    });
+  })();
+}
+
+// マッチ画面を開いたときに呼ばれる。
+// 初回のマッチであることをDBが認めた場合にだけ成果を送る。
+// 通信に失敗しても画面の動作には影響させない。
+async function checkFirstMatchAndFire(){
+  if(_affiliateFired) return;
+  try{
+    var res = await DB.rpc('get_my_first_match_for_affiliate');
+    if(res.error) return;
+    var row = res.data && res.data[0];
+    if(row && row.out_ok === true && row.out_order_id){
+      _affiliateFired = true;
+      fireAffiliateTag(row.out_order_id);
+    }
+  }catch(e){}
+}
+
 function go(sc){
   if(sc!=='chat'&&S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;_sendingMsg=false;}
   S.screen=sc;S.error='';S.info='';
@@ -791,6 +892,11 @@ function go(sc){
     // 経路によらず、募集画面に入った時点で「送信中」の札は必ず下ろす（押せなくなるのを防ぐ保険）
     _isSubmitting=false;
   }
+  // 【アフィリエイトの成果計測 2026/8/28・No.211】
+  // 成果地点は「男女ともに初回マッチでの体験・参加」＝マッチが成立した時点。
+  // マッチ画面へ入る経路は複数あるが、すべてこの go() を通るため、ここに置く。
+  // 判定はDB側で行うので、ここでは呼ぶだけ。画面の動作には一切影響しない。
+  if(sc==='matched'&&S.user){ checkFirstMatchAndFire(); }
   if(sc==='splash'&&S.user){
     syncTicketCount();
   }
