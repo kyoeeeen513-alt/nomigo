@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#12090B">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Nomi Go</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,11 +42,11 @@
 <style>
 /* ===== デザイントークン（LPと統一） ===== */
 :root{
-  --night:#150A0C;--hero:#3A0E14;--bg:#1D0D10;--surface:#2A1014;--card:#31131A;
-  --border:#5A2A32;--border2:#3A181E;
-  --wine:#C9A063;--wine-bg:rgba(201,160,99,.14);--wine-true:#6B1A24;
-  --cream:#F4E9DC;--muted:#C4B2A1;--lgray:#8A6E60;
-  --gold:#C9A063;--gold-bright:#F3D9A4;--gold-bg:rgba(201,160,99,.16);
+  --ink:#12090B;--night:#1B0B0E;--hero:#351018;--bg:#160A0D;--surface:#211014;--card:#281216;
+  --border:rgba(205,167,101,.34);--border2:rgba(245,236,223,.10);
+  --wine:#6B1D29;--wine-bg:rgba(107,29,41,.22);--wine-true:#48131B;
+  --cream:#F5ECDF;--muted:#BDAEA3;--lgray:#907E74;
+  --gold:#CDA765;--gold-bright:#F0D8A7;--gold-bg:rgba(205,167,101,.14);
   --green:#7BC98F;--red:#FF8A6C;--red-bg:rgba(255,138,108,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -352,6 +354,146 @@ body{background:
 .match-hero{position:relative;border-bottom:1px solid rgba(201,160,99,.28);overflow:hidden}
 .match-hero>img{width:100%;height:238px;object-fit:cover;object-position:center;display:block;filter:saturate(.9) contrast(1.05)}
 .match-hero-copy{position:absolute;inset:auto 0 0;background:linear-gradient(transparent,rgba(10,5,7,.96));padding:62px 20px 18px;text-align:center}
+
+/* ===== 2026/8/29 アプリ全画面ラグジュアリーUI ===== */
+html,body{background:var(--ink);color-scheme:dark}
+body{font-feature-settings:"palt" 1;letter-spacing:.012em}
+#app{background:radial-gradient(ellipse 360px 260px at 100% 0%,rgba(107,29,41,.24),transparent 70%),linear-gradient(180deg,var(--night),var(--ink));border-left:1px solid rgba(205,167,101,.07);border-right:1px solid rgba(205,167,101,.07)}
+.screen,.match-wrap{background:linear-gradient(180deg,rgba(53,16,24,.16),rgba(18,9,11,.18) 45%,rgba(18,9,11,.5));min-height:100%}
+.body{background:linear-gradient(180deg,rgba(255,255,255,.012),transparent 220px);scrollbar-width:none}
+.hdr,.head{min-height:72px;padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20;background:rgba(18,9,11,.9);border-bottom:1px solid rgba(205,167,101,.18);backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2)}
+.hdr::after,.head::after{content:"";position:absolute;left:20px;right:20px;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(240,216,167,.62),transparent);pointer-events:none}
+.hdr-info{min-width:0}
+.hdr-step{font-size:9px;line-height:1.4;font-weight:800;color:var(--gold);letter-spacing:.26em;text-transform:uppercase}
+.hdr-title,.head-title{font-family:'Shippori Mincho',serif;font-size:20px;font-weight:700;line-height:1.35;letter-spacing:.035em;color:var(--cream)}
+.hdr-back,.back{appearance:none;background:transparent;border:0;color:var(--muted);font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;min-width:44px;min-height:40px;padding:8px 6px 8px 0;cursor:pointer}
+.back{font-size:20px;color:var(--gold-bright)}
+.hdr-back:active,.back:active{color:var(--gold-bright)}
+.ftr{padding:14px 20px calc(22px + env(safe-area-inset-bottom,0px));background:rgba(18,9,11,.94);border-top:1px solid rgba(205,167,101,.18);box-shadow:0 -18px 36px rgba(18,9,11,.38)}
+
+/* CTAと入力欄 */
+.btn{min-height:52px;border:1px solid transparent;font-size:15px;letter-spacing:.055em;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.btn-wine{color:#241014;background:linear-gradient(135deg,#F3DEB4 0%,#CDA765 58%,#B98C45 100%);border-color:rgba(240,216,167,.7);box-shadow:0 12px 30px rgba(205,167,101,.22),inset 0 1px 0 rgba(255,255,255,.52),inset 0 -1px 0 rgba(66,34,12,.18)}
+.btn-wine:active{box-shadow:0 5px 16px rgba(205,167,101,.18),inset 0 1px 0 rgba(255,255,255,.34)}
+.btn:disabled{filter:saturate(.4);opacity:.38}
+.btn:focus-visible,.inp:focus-visible,.sel-btn:focus-visible,.choice-btn:focus-visible,.range-btn:focus-visible,.tag-chip:focus-visible{outline:2px solid var(--gold-bright);outline-offset:3px}
+.inp,.chat-inp{background:linear-gradient(180deg,rgba(245,236,223,.075),rgba(245,236,223,.035));border:1px solid rgba(205,167,101,.26);color:var(--cream);box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 8px 24px rgba(0,0,0,.12)}
+.inp{min-height:52px;border-radius:12px;padding:14px 15px;font-size:15px}
+.inp:hover{border-color:rgba(205,167,101,.4)}
+.inp:focus,.chat-inp:focus{border-color:var(--gold);background:rgba(245,236,223,.075);box-shadow:0 0 0 3px rgba(205,167,101,.11),0 10px 28px rgba(0,0,0,.18)}
+.inp.filled{border-color:rgba(205,167,101,.52);background:rgba(205,167,101,.07)}
+.inp:disabled{background:rgba(245,236,223,.025);color:var(--muted)}
+select.inp option{color:var(--cream);background:#211014}
+button[style*="background:#FFFFFF"]:not(.chat-send):not([onclick*="captureFacePhoto"]),button[style*="background:#fff"]:not(.chat-send):not([onclick*="captureFacePhoto"]){background:linear-gradient(180deg,rgba(245,236,223,.08),rgba(245,236,223,.035)) !important;color:var(--gold-bright) !important;border-color:rgba(205,167,101,.34) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+span[style*="background:#FFFFFF"][style*="width:20px"]{background:rgba(245,236,223,.04) !important;border-color:rgba(205,167,101,.42) !important}
+input[type="checkbox"]{accent-color:var(--gold)}
+
+/* 選択UI */
+.sel-btn,.choice-btn,.range-btn,.check-item,.tag-chip{background:linear-gradient(180deg,rgba(245,236,223,.055),rgba(245,236,223,.025));border-color:rgba(205,167,101,.22);color:var(--muted);box-shadow:inset 0 1px 0 rgba(255,255,255,.018)}
+.sel-btn{min-height:48px;border-radius:12px}
+.choice-btn{min-height:54px;border-radius:12px;padding:15px 16px}
+.range-btn{min-height:43px;border-radius:10px}
+.check-item{border-radius:12px}
+.sel-btn.on,.choice-btn.on,.range-btn.on,.check-item.on{border-color:rgba(240,216,167,.72);background:linear-gradient(135deg,rgba(107,29,41,.62),rgba(53,16,24,.86));color:var(--cream);box-shadow:0 8px 22px rgba(0,0,0,.22),inset 0 1px 0 rgba(240,216,167,.12)}
+.choice-btn.on span:last-child{color:var(--gold-bright) !important}
+.tag-chip{padding:8px 14px}
+.tag-chip.on{border-color:rgba(240,216,167,.72);background:linear-gradient(135deg,var(--wine),#48131B);color:var(--gold-bright);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.sec-label{display:flex;align-items:center;gap:10px;font-size:9px;font-weight:900;color:var(--gold);letter-spacing:.24em;text-transform:uppercase}
+.sec-label::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,rgba(205,167,101,.38),transparent)}
+.sec-label[style*="text-align:center"]{justify-content:center}
+.sec-label[style*="text-align:center"]::after{display:none}
+.err-msg{border-radius:8px;color:#FF9B83}
+
+/* 下部ナビ */
+.tabbar{left:50%;right:auto;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(18,9,11,.94);border-top:1px solid rgba(205,167,101,.2);backdrop-filter:blur(22px) saturate(1.2);-webkit-backdrop-filter:blur(22px) saturate(1.2);box-shadow:0 -16px 34px rgba(0,0,0,.34)}
+.tabbar-i{position:relative;min-height:58px;color:#8D7E75;padding-top:10px}
+.tabbar-i::before{content:"";position:absolute;top:0;left:32%;right:32%;height:1px;background:transparent}
+.tabbar-i.on{color:var(--gold-bright)}
+.tabbar-i.on::before{background:linear-gradient(90deg,transparent,var(--gold-bright),transparent);box-shadow:0 0 10px rgba(240,216,167,.5)}
+.tabbar-i .ic{width:20px;height:20px;stroke-width:1.5}
+.tabbar-i .lb{font-size:9px;letter-spacing:.08em}
+
+/* トップ */
+.home-stage{padding:20px 20px 26px;background:linear-gradient(180deg,#351018 0%,#241014 56%,#180B0E 100%);position:relative;overflow:hidden}
+.home-stage::after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;right:-130px;bottom:30px;background:radial-gradient(circle,rgba(205,167,101,.09),transparent 68%);pointer-events:none}
+.home-visual{height:232px;margin-bottom:18px;border-bottom-color:rgba(205,167,101,.38)}
+.home-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;position:relative;z-index:1}
+.home-wordmark{font:700 28px/1.04 'Shippori Mincho',serif;letter-spacing:.045em;color:var(--gold-bright);text-shadow:0 5px 22px rgba(0,0,0,.34)}
+.home-live{display:flex;align-items:center;gap:6px;background:rgba(18,9,11,.55);border:1px solid rgba(123,201,143,.34);border-radius:999px;padding:6px 11px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.home-title{position:relative;z-index:1;font:700 34px/1.25 'Shippori Mincho',serif;letter-spacing:.025em;margin-bottom:10px;color:var(--cream)}
+.home-lead{position:relative;z-index:1;font-size:13px;color:rgba(245,236,223,.68);line-height:1.75;margin-bottom:22px;letter-spacing:.04em}
+.home-metric{background:linear-gradient(155deg,rgba(245,236,223,.065),rgba(245,236,223,.018));border-color:rgba(205,167,101,.2);border-radius:12px;padding:13px 6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.022)}
+.home-status-card,.home-announcement,.home-ticket{position:relative;border-radius:14px !important;box-shadow:0 12px 30px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.025)}
+.home-menu{background:rgba(33,16,20,.98) !important;border:1px solid rgba(205,167,101,.28) !important;border-radius:14px !important;box-shadow:0 22px 55px rgba(0,0,0,.52) !important;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.home-menu>div{border-bottom-color:rgba(205,167,101,.12) !important;color:var(--cream)}
+button[onclick*="_showProfileMenu"]{display:grid;place-items:center;width:42px;height:42px;padding:0 !important;border:1px solid rgba(205,167,101,.28) !important;border-radius:50% !important;background:rgba(18,9,11,.45) !important;color:var(--gold-bright) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* エリア・人数・候補カード */
+.area-grid{gap:12px}
+.area-card,.mode-card{background:#211014;border:1px solid rgba(205,167,101,.26);border-radius:18px;box-shadow:0 16px 34px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.025)}
+.area-grid .area-card img{height:130px}
+.area-card img{filter:saturate(.7) contrast(1.08) brightness(.76)}
+.area-card-tint{background:linear-gradient(180deg,rgba(18,9,11,.08),rgba(18,9,11,.2) 42%,rgba(12,6,8,.92))}
+.area-card-label{padding:15px}
+.area-card-title{font-size:16px !important;font-weight:700;letter-spacing:.08em}
+.area-live-badge,.area-quiet-badge{top:10px;right:10px}
+.area-live-badge{background:linear-gradient(135deg,#F0D8A7,#CDA765);box-shadow:0 8px 20px rgba(0,0,0,.28)}
+.area-soon{opacity:.66}
+.area-soon-ribbon-wrap{border-radius:18px}
+.mode-card img{height:204px}
+.mode-card-title{font-size:20px;font-weight:700;letter-spacing:.065em}
+.mode-card-sub{color:rgba(245,236,223,.62);letter-spacing:.045em}
+.card-selected{border-color:var(--gold-bright) !important;box-shadow:0 0 0 2px rgba(240,216,167,.14),0 18px 42px rgba(0,0,0,.42) !important}
+
+/* 待機・マッチ・評価 */
+.wait-hero{background:linear-gradient(180deg,#351018,#211014);padding:30px 20px 27px;text-align:center;border-bottom:1px solid rgba(205,167,101,.2);position:relative;overflow:hidden}
+.wait-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 18%,rgba(205,167,101,.11),transparent 52%);pointer-events:none}
+.wait-info,.cond-wrap{margin-left:20px;margin-right:20px;padding:6px 16px;background:linear-gradient(150deg,rgba(245,236,223,.045),rgba(245,236,223,.015));border:1px solid rgba(205,167,101,.16);border-radius:14px}
+.cond-wrap{padding:15px 16px;margin-top:16px}
+.wait-row{padding:13px 0;border-bottom-color:rgba(245,236,223,.08)}
+.wait-ico{filter:saturate(.72)}
+.cond-chip{border-color:rgba(205,167,101,.2);background:rgba(245,236,223,.035);color:var(--cream)}
+.match-hero>img{height:248px}
+.member-row{margin:0 16px;padding:15px 4px;border-bottom-color:rgba(245,236,223,.09)}
+.flow-step{margin:0 0 10px;padding:15px 16px;border:1px solid rgba(205,167,101,.15);border-radius:13px;background:rgba(245,236,223,.025)}
+.flow-num{background:linear-gradient(135deg,var(--wine),#48131B);border-color:rgba(240,216,167,.55);color:var(--gold-bright)}
+.review-hero{padding:32px 20px 24px;text-align:center;border-bottom:1px solid rgba(205,167,101,.18);background:radial-gradient(circle at 50% 0%,rgba(205,167,101,.12),transparent 65%)}
+.review-hero-icon{font-size:30px;margin-bottom:12px;filter:saturate(.72)}
+.review-hero-title{font:700 21px/1.5 'Shippori Mincho',serif;letter-spacing:.04em}
+
+/* チャット */
+.chat-msgs{padding:20px 18px;gap:14px;background:radial-gradient(circle at 100% 0%,rgba(107,29,41,.12),transparent 45%)}
+.msg-system{background:rgba(245,236,223,.035);border-color:rgba(205,167,101,.16);color:var(--muted);font-size:10px;letter-spacing:.03em}
+.msg-bubble{border-radius:16px;max-width:232px;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.msg-row.mine .msg-bubble{background:linear-gradient(135deg,#792331,#48131B) !important;border:1px solid rgba(240,216,167,.16)}
+.msg-row:not(.mine) .msg-bubble{background:linear-gradient(180deg,#2A151A,#211014) !important;border-color:rgba(205,167,101,.16)}
+.chat-input{padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(18,9,11,.94);border-top-color:rgba(205,167,101,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.chat-inp{min-height:44px;border-radius:999px}
+.chat-send{background:linear-gradient(135deg,#F0D8A7,#CDA765);box-shadow:0 8px 22px rgba(205,167,101,.22)}
+
+/* 本人確認・プロフィール・決済 */
+.verify-waiting-core{background:linear-gradient(145deg,#351018,#211014);border-color:rgba(205,167,101,.42);box-shadow:0 14px 38px rgba(0,0,0,.34)}
+#pf-prev-wrap>img,#pf-prev-wrap>div{border:1px solid rgba(205,167,101,.38);box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.cardreg-hero{border-radius:16px;background:linear-gradient(155deg,rgba(107,29,41,.55),rgba(33,16,20,.92));border-color:rgba(205,167,101,.44);box-shadow:0 18px 40px rgba(0,0,0,.3),inset 0 1px 0 rgba(240,216,167,.08)}
+.cardreg-hero-title{font-size:22px;font-weight:700;letter-spacing:.05em}
+.cardreg-input{border-radius:12px;border-color:rgba(205,167,101,.32);box-shadow:0 12px 28px rgba(0,0,0,.2)}
+.cardreg-notes{background:rgba(245,236,223,.025);border-color:rgba(205,167,101,.16)}
+.head-title{flex:1}
+#app[data-screen="payconsent"] #payconsent-scroll{border-color:rgba(205,167,101,.18) !important;background:rgba(245,236,223,.025) !important}
+
+/* 認証・完了・法務画面 */
+#app[data-screen="email"] .body::before{content:"Nomi Go";display:block;text-align:center;margin:8px 0 10px;color:var(--gold-bright);font:700 28px/1.2 'Shippori Mincho',serif;letter-spacing:.08em;text-shadow:0 8px 26px rgba(0,0,0,.38)}
+#app[data-screen="email"] .tab-btn{min-height:46px;background:transparent;color:var(--muted)}
+#app[data-screen="email"] .tab-btn[style*="var(--wine)"]{background:linear-gradient(135deg,var(--wine),#48131B) !important;color:var(--gold-bright) !important;box-shadow:inset 0 1px 0 rgba(240,216,167,.1)}
+#app[data-screen="email_verify"] #everify-inp{font-size:24px;text-align:center;letter-spacing:.24em;font-weight:800;font-variant-numeric:tabular-nums}
+#app[data-screen="line_connect"] .body>div:nth-child(2){background:linear-gradient(150deg,rgba(107,29,41,.5),rgba(33,16,20,.9)) !important;border:1px solid rgba(205,167,101,.36);box-shadow:0 16px 36px rgba(0,0,0,.25)}
+#app[data-screen="reset_sent"] .body>div[style*="font-size:44px"],#app[data-screen="id_verify_pending"] .body>div[style*="font-size:40px"],#app[data-screen="report"] .body>div[style*="font-size:40px"],#app[data-screen="inquiry"] .body>div[style*="font-size:40px"]{display:grid;place-items:center;width:76px;height:76px;border-radius:50%;background:linear-gradient(145deg,rgba(107,29,41,.54),rgba(33,16,20,.9));border:1px solid rgba(205,167,101,.36);box-shadow:0 16px 34px rgba(0,0,0,.28)}
+#app[data-screen="faqbot"] button[onclick*="inquiry"]{border-color:rgba(205,167,101,.5) !important;color:var(--gold-bright) !important;background:rgba(205,167,101,.06) !important}
+#app[data-screen="loading"] .nl-brand,.loading .nl-brand{font:700 28px/1.2 'Shippori Mincho',serif;letter-spacing:.08em;color:var(--gold-bright);text-shadow:0 8px 28px rgba(0,0,0,.38)}
+#app[data-screen="loading"] .nl-bar,.loading .nl-bar{background:rgba(245,236,223,.08);border:1px solid rgba(205,167,101,.16);overflow:hidden}
+#app[data-screen="loading"] .nl-fill,.loading .nl-fill{background:linear-gradient(90deg,#B98C45,#F0D8A7,#CDA765);box-shadow:0 0 16px rgba(240,216,167,.34)}
+#app[data-screen="terms"] .body>div,#app[data-screen="privacy"] .body>div,#app[data-screen="tokushoho"] .body>div{padding:20px !important;background:rgba(245,236,223,.025);border:1px solid rgba(205,167,101,.16);border-top-color:rgba(205,167,101,.52);border-radius:0 0 16px 16px;box-shadow:0 16px 36px rgba(0,0,0,.18)}
+#app[data-screen="choose"] .body>div[style*="display:flex"]>div{border-color:rgba(205,167,101,.3) !important;background:linear-gradient(180deg,#281216,#1B0B0E) !important;box-shadow:0 16px 34px rgba(0,0,0,.28)}
 </style>
 </head>
 <body>
@@ -648,6 +790,7 @@ var _animateNext=true;
 function render(){
   var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,cardregister:cardRegisterH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
   var app=document.getElementById('app');
+  app.dataset.screen=S.screen;
   var html=(map[S.screen]||loadingH)();
   // 【下タブバー 2026/8/26】
   // 一部の画面だけに出すと導線として意味がないため、ここで一括して差し込む。
@@ -2251,7 +2394,7 @@ function areaSelectH(){
     }
     var cardCls='mode-card area-card'+(isComingSoon?' area-soon':'');
     var overlay='<div class="area-card-tint"></div>';
-    return '<div class="'+cardCls+'" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'">'+overlay+badge+'<div class="area-card-label"><span class="area-card-title">📍 '+a.name+'</span></div></div>';
+    return '<div class="'+cardCls+'" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'">'+overlay+badge+'<div class="area-card-label"><span class="area-card-title">'+a.name+'</span></div></div>';
   }).join('');
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px"><div class="area-grid">'+cardsHtml+'</div><div style="font-size:11px;color:var(--muted);line-height:1.7;padding:14px 4px 0">現在は「新宿」「すすきの」でご利用いただけます。その他のエリアは近日公開予定です。順次エリアを増やし、全国展開を予定しています。</div></div></div>';
 }
@@ -3627,9 +3770,9 @@ function splashH(){
   if(S.match&&S.registration&&S.registration.status==='matched'){
     var opponent=S.matchMembers.find(function(m){return m.user_id!==S.user.id;});
     var oppName=opponent&&opponent.profiles?opponent.profiles.nickname:'相手';
-    matchCard='<div style="background:rgba(0,0,0,.3);border:1.5px solid rgba(212,160,80,.4);border-radius:12px;padding:16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">🍻</span><div style="font-size:14px;font-weight:800;color:var(--gold)">マッチ中です</div></div><div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.7;margin-bottom:12px">'+(shouldRemindFinish()?'飲み会が終わっていたら「飲み終わった」から評価をお願いします。':'<strong>'+oppName+'さん</strong>とマッチしています。<br>チャットで待ち合わせの相談ができます。')+'</div><div style="display:flex;gap:8px"><button class="btn btn-wine" style="font-size:13px;padding:11px" onclick="openChat()">チャットを開く</button><button class="btn" style="font-size:13px;padding:11px;background:transparent;border:1.5px solid rgba(237,229,224,.2);color:var(--cream)" onclick="go(\'matched\')">マッチ詳細を見る</button></div></div>';
+    matchCard='<div class="home-status-card" style="background:rgba(0,0,0,.3);border:1.5px solid rgba(212,160,80,.4);padding:16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">🍻</span><div style="font-size:14px;font-weight:800;color:var(--gold)">マッチ中です</div></div><div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.7;margin-bottom:12px">'+(shouldRemindFinish()?'飲み会が終わっていたら「飲み終わった」から評価をお願いします。':'<strong>'+oppName+'さん</strong>とマッチしています。<br>チャットで待ち合わせの相談ができます。')+'</div><div style="display:flex;gap:8px"><button class="btn btn-wine" style="font-size:13px;padding:11px" onclick="openChat()">チャットを開く</button><button class="btn" style="font-size:13px;padding:11px;background:transparent;border:1.5px solid rgba(237,229,224,.2);color:var(--cream)" onclick="go(\'matched\')">マッチ詳細を見る</button></div></div>';
   }else if(S.registration&&S.registration.status==='waiting'){
-    matchCard='<div style="background:rgba(0,0,0,.3);border:1.5px solid rgba(123,224,144,.4);border-radius:12px;padding:16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><div style="font-size:14px;font-weight:800;color:#7BE090">募集中です</div></div><div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.7;margin-bottom:12px">今夜のお相手を探しています。<br>見つかると自動でお知らせします。</div><button class="btn btn-wine" style="font-size:13px;padding:11px" onclick="go(\'waiting\')">募集状況を見る</button></div>';
+    matchCard='<div class="home-status-card" style="background:rgba(0,0,0,.3);border:1.5px solid rgba(123,224,144,.4);padding:16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><div style="font-size:14px;font-weight:800;color:#7BE090">募集中です</div></div><div style="font-size:13px;color:rgba(237,229,224,.75);line-height:1.7;margin-bottom:12px">今夜のお相手を探しています。<br>見つかると自動でお知らせします。</div><button class="btn btn-wine" style="font-size:13px;padding:11px" onclick="go(\'waiting\')">募集状況を見る</button></div>';
   }
   var isMatched=!!(S.match&&S.registration&&S.registration.status==='matched');
   var isWaiting=!!(S.registration&&S.registration.status==='waiting');
@@ -3644,7 +3787,7 @@ function splashH(){
   var idPendingNote=isIdPending?'<div style="font-size:11.5px;color:rgba(237,229,224,.55);text-align:center;margin-top:8px;line-height:1.6">運営が身分証・顔写真を確認しています。<br>承認され次第、募集できるようになります。</div>':'';
   var profileMenuOpen=!!S._showProfileMenu;
   var hamburgerBtn=li?'<button onclick="S._showProfileMenu=!S._showProfileMenu;re(\'splash\')" style="background:none;border:none;color:var(--cream);font-size:20px;cursor:pointer;padding:4px 6px;line-height:1">☰</button>':'';
-  var profileMenuDropdown=profileMenuOpen?'<div style="position:absolute;top:56px;right:16px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden;z-index:9999;min-width:190px">'
+  var profileMenuDropdown=profileMenuOpen?'<div class="home-menu" style="position:absolute;top:56px;right:16px;overflow:hidden;z-index:9999;min-width:190px">'
     +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer" onclick="S._showProfileMenu=false;goProfileEdit()"><span style="font-size:13px;color:var(--cream)">プロフィール編集</span></div>'
     +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer" onclick="S._showProfileMenu=false;goFaqBot()"><span style="font-size:13px;color:var(--cream)">よくある質問</span></div>'
     +'<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer" onclick="S._showProfileMenu=false;goChangePassword()"><span style="font-size:13px;color:var(--cream)">パスワード変更</span></div>'
@@ -3665,7 +3808,7 @@ function splashH(){
   if(!TICKET_SALES_OPEN&&li&&S.profile&&S.profile.gender){
     var _pl=S.profile.gender==='male';
     var _lineOk=!!S.profile.line_user_id;
-    preLaunchCard='<div style="background:linear-gradient(135deg,rgba(201,160,99,.2),rgba(201,160,99,.05));border:1.5px solid rgba(224,176,96,.45);border-radius:14px;padding:18px 16px 15px;margin-bottom:20px;text-align:center">'
+    preLaunchCard='<div class="home-announcement" style="background:linear-gradient(135deg,rgba(201,160,99,.2),rgba(201,160,99,.05));border:1.5px solid rgba(224,176,96,.45);padding:18px 16px 15px;margin-bottom:20px;text-align:center">'
       // 日付を主役に。ここだけ大きく置き、下に細い罫線を敷いて見出しだと分からせる
       +'<div style="font-size:10.5px;font-weight:800;color:var(--gold);letter-spacing:.2em;margin-bottom:2px">COMING SOON</div>'
       +'<div style="font-size:30px;font-weight:900;color:var(--gold-bright);line-height:1.15;letter-spacing:.02em">9/1<span style="font-size:15px;margin-left:6px">'+nb('スタート')+'</span></div>'
@@ -3684,14 +3827,14 @@ function splashH(){
       +'</div>'
     +'</div>';
   }
-  var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:14px 16px;margin-bottom:20px">'
+  var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div class="home-ticket" style="background:rgba(0,0,0,.25);padding:14px 16px;margin-bottom:20px">'
     +(TICKET_SALES_OPEN
       ? '<div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div><button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button></div>'
       : '<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:11px;color:rgba(237,229,224,.6)">現在のチケット</span><span style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</span></div>'
         +'<div style="font-size:11.5px;color:rgba(237,229,224,.55);margin-top:6px;padding-top:8px;border-top:1px solid rgba(237,229,224,.1)">'+nb('チケットの販売は')+nb('9月1日からです。')+'</div>')
     +'</div>':'';
   var introAnim='<div class="home-visual"><img src="'+APP_IMG_INTRO+'" alt="Nomi Go — 今飲みたいを叶える" fetchpriority="high" decoding="sync"></div>';
-  return '<div class="screen" style="padding:0;position:relative"><div style="background:var(--hero);padding:20px 20px 24px">'+introAnim+'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div style="font-size:29px;font-weight:900;line-height:1.05;letter-spacing:.01em;background:linear-gradient(180deg,#F3D9A4,#C9A063);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Nomi Go<div style="font-size:9px;font-weight:500;letter-spacing:.34em;color:rgba(237,229,224,.55);-webkit-text-fill-color:rgba(237,229,224,.55);margin-top:2px;text-indent:.34em">ノミゴー</div></div><div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:6px;background:rgba(123,224,144,.15);border:1px solid rgba(123,224,144,.4);border-radius:20px;padding:5px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div>'+welcomeToastH()+'<div style="font-size:34px;font-weight:900;line-height:1.15;letter-spacing:-.03em;margin-bottom:8px">今夜、一緒に<br>飲みませんか？</div><div style="font-size:13px;color:rgba(237,229,224,.65);line-height:1.6;margin-bottom:20px">恋愛じゃなく、今夜一緒に飲む友達を。</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今夜の一番乗りになれます</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">条件に合う'+oppLabel+'が募集すると、自動でマッチングします</div></div></div>';}})()+(li?waitFeedCardH():'')+'<div style="display:flex;gap:8px;margin-bottom:20px"><div class="home-metric"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div><div style="font-size:10px;color:rgba(237,229,224,.6);margin-top:2px;line-height:1.3">マッチ利用料</div></div><div class="home-metric"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,980円</div><div style="font-size:10px;color:rgba(237,229,224,.6);margin-top:2px;line-height:1.3">チケット1枚</div></div><div class="home-metric"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">対象年齢</div><div style="font-size:18px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">20歳以上</div><div style="font-size:10px;color:rgba(237,229,224,.6);margin-top:2px;line-height:1.3">本人確認必須</div></div></div>'+preLaunchCard+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">恋愛目的ではなく、今日一緒に飲む友達を探すサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 募集は、本人確認が完了した20歳以上の方のみ</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted);line-height:1.9"><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
+  return '<div class="screen" style="padding:0;position:relative"><div class="home-stage">'+introAnim+'<div class="home-bar"><div class="home-wordmark">Nomi Go<div style="font-size:9px;font-weight:500;letter-spacing:.34em;color:rgba(237,229,224,.55);-webkit-text-fill-color:rgba(237,229,224,.55);margin-top:2px;text-indent:.34em">ノミゴー</div></div><div style="display:flex;align-items:center;gap:10px"><div class="home-live"><span style="width:7px;height:7px;border-radius:50%;background:#7BE090;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:12px;font-weight:700;color:#7BE090"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div>'+welcomeToastH()+'<div class="home-title">今夜、一緒に<br>飲みませんか？</div><div class="home-lead">恋愛じゃなく、今夜一緒に飲む友達を。</div>'+(function(){if(!li||!S.profile||!S.profile.gender)return '';var isMale=S.profile.gender==='male';var oppCount=isMale?S.stats.femaleWaiting:S.stats.maleWaiting;var oppLabel=isMale?'女性':'男性';if(oppCount>0){return '<div style="background:rgba(224,176,96,.14);border:1.5px solid rgba(224,176,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🍷</span><div style="line-height:1.5"><div style="font-size:15px;font-weight:900;color:var(--gold)">今、'+oppLabel+'が'+oppCount+'人 飲み相手を探しています</div><div style="font-size:11.5px;color:rgba(237,229,224,.7)">募集すると、すぐにマッチするかもしれません</div></div></div>';}else{return '<div style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🌙</span><div style="line-height:1.5"><div style="font-size:13.5px;font-weight:800;color:var(--cream)">今夜の一番乗りになれます</div><div style="font-size:11.5px;color:rgba(237,229,224,.65)">条件に合う'+oppLabel+'が募集すると、自動でマッチングします</div></div></div>';}})()+(li?waitFeedCardH():'')+'<div style="display:flex;gap:8px;margin-bottom:20px"><div class="home-metric"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">女性</div><div style="font-size:20px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">無料</div><div style="font-size:10px;color:rgba(237,229,224,.6);margin-top:2px;line-height:1.3">マッチ利用料</div></div><div class="home-metric"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">男性</div><div style="font-size:20px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">3,980円</div><div style="font-size:10px;color:rgba(237,229,224,.6);margin-top:2px;line-height:1.3">チケット1枚</div></div><div class="home-metric"><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">対象年齢</div><div style="font-size:18px;font-weight:900;color:var(--cream);text-shadow:0 2px 3px rgba(0,0,0,.4);letter-spacing:.01em">20歳以上</div><div style="font-size:10px;color:rgba(237,229,224,.6);margin-top:2px;line-height:1.3">本人確認必須</div></div></div>'+preLaunchCard+ticketCard+recruitBtn+idPendingNote+matchCard+'</div><div class="body"><div style="padding:16px 20px;font-size:11px;color:var(--lgray);text-align:center;line-height:1.65">恋愛目的ではなく、今日一緒に飲む友達を探すサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>🛡️ 募集は、本人確認が完了した20歳以上の方のみ</div><div style="padding:0 20px 20px;text-align:center;font-size:11px;color:var(--muted);line-height:1.9"><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'terms\')">利用規約</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'privacy\')">プライバシーポリシー</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'inquiry\')">お問い合わせ</span><span style="margin:0 8px">・</span><span style="text-decoration:underline;cursor:pointer;display:inline-block" onclick="go(\'tokushoho\')">特定商取引法に基づく表記</span></div></div>'+profileMenuBackdrop+profileMenuDropdown+'</div>';
 }
 
 function emailH(){
@@ -4277,7 +4420,7 @@ function waitH(){
     :'<span class="wait-pill"><span class="wait-dot"></span>'+(rm!=null?'あと'+(rm>=60?(Math.floor(rm/60)+'時間'+(rm%60?(rm%60)+'分':'')):(rm+'分'))+'で自動終了':'募集中')+'</span>';
 
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← トップに戻る</button><div class="hdr-info"><div class="hdr-step">募集の状況</div><div class="hdr-title">'+(expired?'受付を終了しました':'募集中')+'</div></div></div><div class="body">'
-    +'<div style="background:var(--hero);padding:26px 20px 24px;text-align:center">'
+      +'<div class="wait-hero">'
       +pill
       +'<div style="font-size:26px;font-weight:900;letter-spacing:-.03em;line-height:1.35;margin:14px 0 8px">'+(expired?'募集を<br>終了しました':'今夜の相手を<br>探しています')+'</div>'
       +(expired
@@ -4420,7 +4563,7 @@ function reviewH(){
   var otherOk=!S.reviewChecks[otherIdx]||(S.reviewOtherText&&S.reviewOtherText.trim().length>0);
   var canSubmit=S.reviewStars>0&&anyTagSelected&&otherOk&&!_reviewSubmitting;
   var submitBtnLabel=_reviewSubmitting?'送信中...':'評価を送信する';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div style="padding:28px 20px 20px;text-align:center;border-bottom:1px solid var(--border2)"><div style="font-size:32px;margin-bottom:12px">🍺</div><div style="font-size:20px;font-weight:800;margin-bottom:6px">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'+checksSection+'</div><div class="ftr"><button class="btn btn-wine" id="review-submit-btn" '+(canSubmit?'':'disabled ')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div class="review-hero"><div class="review-hero-icon">🍺</div><div class="review-hero-title">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'+checksSection+'</div><div class="ftr"><button class="btn btn-wine" id="review-submit-btn" '+(canSubmit?'':'disabled ')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
 }
 
 function updateRecruitSubmitBtn(){
