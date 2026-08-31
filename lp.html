@@ -177,16 +177,17 @@
     }
     .hero-photo{
       position:absolute;inset:0;z-index:-3;width:100%;height:100%;
-      object-fit:cover;object-position:center;
+      object-fit:cover;
+      object-position:var(--hero-x,center) var(--hero-y,center);
       opacity:1;
-      transform:translate3d(0,0,0) scale(1);
+      transform:translate3d(0,0,0) scaleX(var(--hero-flip,1)) scale(1);
       transition:opacity .24s ease,transform .24s cubic-bezier(.22,.61,.36,1);
       will-change:opacity,transform;
     }
-    .hero-photo.is-leaving{opacity:0;transform:translate3d(-28px,0,0) scale(1.025)}
+    .hero-photo.is-leaving{opacity:0;transform:translate3d(-28px,0,0) scaleX(var(--hero-flip,1)) scale(1.025)}
     .hero-photo.is-entering{
       opacity:0;
-      transform:translate3d(28px,0,0) scale(1.025);
+      transform:translate3d(28px,0,0) scaleX(var(--hero-flip,1)) scale(1.025);
       transition:none;
     }
     @media(prefers-reduced-motion:reduce){
@@ -537,7 +538,7 @@
       nav{display:none}
       .hero{min-height:760px;padding-top:calc(var(--header) + 54px);align-items:flex-start}
       .hero::before{background:linear-gradient(180deg,rgba(12,6,8,.34),rgba(12,6,8,.2) 25%,rgba(12,6,8,.92) 62%,rgba(12,6,8,1) 100%)}
-      .hero-photo{object-position:63% center}
+      .hero-photo{object-position:var(--hero-mobile-x,var(--hero-x,63%)) var(--hero-y,center)}
       .hero-copy{padding-top:300px}
       .launch-box{gap:22px;padding-inline:18px}
       .promise-grid,.steps,.safety-grid{grid-template-columns:1fr}
@@ -1008,8 +1009,26 @@
         if(!heroPhoto||scenePhotos.length<2)return;
         if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 
-        var slides=scenePhotos.map(function(img){
-          return {src:img.getAttribute('src'),alt:img.getAttribute('alt')||''};
+        // 画像ごとの人物位置。6枚目は人物が左側にいるため左右を反転し、
+        // PCでも文字の裏に隠れず、右側に顔が見えるようにする。
+        var focalPoints=[
+          {desktop:'68%',mobile:'72%'},
+          {desktop:'60%',mobile:'60%'},
+          {desktop:'50%',mobile:'50%'},
+          {desktop:'66%',mobile:'66%'},
+          {desktop:'69%',mobile:'70%'},
+          {desktop:'70%',mobile:'70%',flip:true},
+          {desktop:'54%',mobile:'54%'}
+        ];
+        var slides=scenePhotos.map(function(img,index){
+          var focal=focalPoints[index]||{desktop:'50%',mobile:'50%'};
+          return {
+            src:img.getAttribute('src'),
+            alt:img.getAttribute('alt')||'',
+            desktop:focal.desktop,
+            mobile:focal.mobile,
+            flip:!!focal.flip
+          };
         }).filter(function(slide,index,list){
           return slide.src&&list.findIndex(function(item){return item.src===slide.src})===index;
         });
@@ -1021,8 +1040,14 @@
           preload.src=slide.src;
         });
 
+        function applyFocalPoint(slide){
+          heroPhoto.style.setProperty('--hero-x',slide.desktop);
+          heroPhoto.style.setProperty('--hero-mobile-x',slide.mobile);
+          heroPhoto.style.setProperty('--hero-flip',slide.flip?'-1':'1');
+        }
         var current=0;
         var busy=false;
+        applyFocalPoint(slides[0]);
         window.setInterval(function(){
           if(document.hidden||busy)return;
           busy=true;
@@ -1035,6 +1060,7 @@
             heroPhoto.classList.add('is-entering');
             heroPhoto.src=next.src;
             heroPhoto.alt=next.alt;
+            applyFocalPoint(next);
             void heroPhoto.offsetWidth;
 
             window.requestAnimationFrame(function(){
