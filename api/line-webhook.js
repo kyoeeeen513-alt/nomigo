@@ -65,7 +65,7 @@
 const crypto = require('crypto');
 
 // 正式スタート前かどうか。9月1日以降は false に戻す。
-const PRE_LAUNCH = true;
+const PRE_LAUNCH = false;
 
 // アプリのURL。返信に載せるリンク。変わったらここだけ直す。
 const APP_URL = 'https://www.nomi-go.jp';
