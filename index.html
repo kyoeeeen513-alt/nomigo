@@ -746,6 +746,14 @@ const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,e
 //   開通が完了したら true に戻し、再デプロイすること。
 const TICKET_SALES_OPEN=false;
 
+// 【2026/8/31追加】トップ画面右上の「◯人が募集中」を出すかどうかの切り替え。
+//   false＝出さない（現在）／true＝出す。
+//   理由：利用者が少ないうちに実数を出すと「0人」「1人」と表示され、
+//   アプリが動いていないように見えてしまう。人数が増えてから出す方針。
+//   出したくなったら、この1行を true に変えて再デプロイするだけでよい。
+//   人数の集計自体は裏側で動かし続けているため、切り替えた瞬間から正しい数字が出る。
+const SHOW_LIVE_COUNT=false;
+
 // 【2026/8/24追加】このサービスの正式なアドレス。
 //   これまで、パスワード再設定メールの戻り先とお友だち招待リンクに
 //   window.location.origin（＝今開いているアドレス）を使っていた。
@@ -2275,7 +2283,9 @@ async function loadStats(){
     S.stats.femaleWaiting=femaleW;
     S.stats.todayMatches=r2.count!=null?r2.count:0;
     S.stats.totalMatches=r3.count!=null?r3.count:0;
-    var el=document.getElementById('live-n');if(el)el.textContent=S.stats.active;
+    // SHOW_LIVE_COUNT が false のときは表示そのものが無いため、el は null になる。
+    // 集計（S.stats）は動かし続けているので、true に戻した時点で正しい数字が出る。
+    if(SHOW_LIVE_COUNT){var el=document.getElementById('live-n');if(el)el.textContent=S.stats.active;}
     if(S.screen==='splash')render();
   }catch(e){console.error('[loadStats] exception:',e);}
 }
@@ -4011,6 +4021,10 @@ function splashH(){
     }
     return '<div class="home-context-card">'+firstMark+'<div><div class="home-context-title">今夜の一番乗りになれます</div><div class="home-context-sub">条件に合う'+oppLabel+'が募集すると、自動でマッチングします。</div></div></div>';
   })();
+  // トップ画面右上の「◯人が募集中」。SHOW_LIVE_COUNT が false の間は何も出さない。
+  var liveBadge=SHOW_LIVE_COUNT
+    ? '<div class="home-live"><span style="width:7px;height:7px;border-radius:50%;background:#7BC98F;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:11.5px;font-weight:700;color:#8AD39B"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'
+    : '';
   var facts='<div class="home-facts">'
     +'<div class="home-fact"><div class="home-fact-k">女性</div><div class="home-fact-v">無料</div><div class="home-fact-s">マッチ利用料</div></div>'
     +'<div class="home-fact"><div class="home-fact-k">男性</div><div class="home-fact-v">3,980円</div><div class="home-fact-s">チケット1枚</div></div>'
@@ -4019,7 +4033,7 @@ function splashH(){
   return '<div class="screen" style="padding:0;position:relative">'
     +'<div class="home-stage">'
       +introAnim
-      +'<div class="home-bar"><div class="home-wordmark">Nomi Go<div style="font-size:9px;font-weight:500;letter-spacing:.34em;color:rgba(247,240,230,.65);margin-top:2px;text-indent:.34em">ノミゴー</div></div><div style="display:flex;align-items:center;gap:8px"><div class="home-live"><span style="width:7px;height:7px;border-radius:50%;background:#7BC98F;display:inline-block;animation:pulse 1.5s infinite"></span><span style="font-size:11.5px;font-weight:700;color:#8AD39B"><span id="live-n">'+S.stats.active+'</span>人が募集中</span></div>'+hamburgerBtn+'</div></div>'
+      +'<div class="home-bar"><div class="home-wordmark">Nomi Go<div style="font-size:9px;font-weight:500;letter-spacing:.34em;color:rgba(247,240,230,.65);margin-top:2px;text-indent:.34em">ノミゴー</div></div><div style="display:flex;align-items:center;gap:8px">'+liveBadge+hamburgerBtn+'</div></div>'
       +welcomeToastH()
       +'<div class="home-title">今夜、一緒に<br><span class="home-title-accent">飲みませんか？</span></div>'
       +'<div class="home-lead">恋愛じゃなく、今夜一緒に飲む友達を。</div>'
