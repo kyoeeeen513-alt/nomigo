@@ -175,7 +175,23 @@
       isolation:isolate;
       overflow:hidden;
     }
-    .hero-photo{position:absolute;inset:0;z-index:-3;width:100%;height:100%;object-fit:cover;object-position:center}
+    .hero-photo{
+      position:absolute;inset:0;z-index:-3;width:100%;height:100%;
+      object-fit:cover;object-position:center;
+      opacity:1;
+      transform:translate3d(0,0,0) scale(1);
+      transition:opacity .24s ease,transform .24s cubic-bezier(.22,.61,.36,1);
+      will-change:opacity,transform;
+    }
+    .hero-photo.is-leaving{opacity:0;transform:translate3d(-28px,0,0) scale(1.025)}
+    .hero-photo.is-entering{
+      opacity:0;
+      transform:translate3d(28px,0,0) scale(1.025);
+      transition:none;
+    }
+    @media(prefers-reduced-motion:reduce){
+      .hero-photo{transition:none}
+    }
     .hero::before{
       content:"";
       position:absolute;
@@ -983,6 +999,52 @@
           bubbleBox.appendChild(bubble);
         }
       }
+
+      // 「こんな夜に」の7枚をトップ画像でも順番に表示する。
+      // 約4秒ごとに、現在の写真が左へ抜け、次の写真が右から入る。
+      function startHeroRotation(){
+        var heroPhoto=document.querySelector('.hero-photo');
+        var scenePhotos=Array.from(document.querySelectorAll('.scene-grid .scene img'));
+        if(!heroPhoto||scenePhotos.length<2)return;
+        if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+
+        var slides=scenePhotos.map(function(img){
+          return {src:img.getAttribute('src'),alt:img.getAttribute('alt')||''};
+        }).filter(function(slide,index,list){
+          return slide.src&&list.findIndex(function(item){return item.src===slide.src})===index;
+        });
+        if(slides.length<2)return;
+
+        // 切り替え時に画像の読み込み待ちが起きないよう、先に7枚を準備する。
+        slides.forEach(function(slide){
+          var preload=new Image();
+          preload.src=slide.src;
+        });
+
+        var current=0;
+        var busy=false;
+        window.setInterval(function(){
+          if(document.hidden||busy)return;
+          busy=true;
+          current=(current+1)%slides.length;
+          heroPhoto.classList.add('is-leaving');
+
+          window.setTimeout(function(){
+            var next=slides[current];
+            heroPhoto.classList.remove('is-leaving');
+            heroPhoto.classList.add('is-entering');
+            heroPhoto.src=next.src;
+            heroPhoto.alt=next.alt;
+            void heroPhoto.offsetWidth;
+
+            window.requestAnimationFrame(function(){
+              heroPhoto.classList.remove('is-entering');
+              window.setTimeout(function(){busy=false},280);
+            });
+          },240);
+        },4200);
+      }
+      startHeroRotation();
 
       var START = new Date('2026-09-01T00:00:00+09:00').getTime();
       var PROMO_END = new Date('2026-10-01T00:00:00+09:00').getTime();
