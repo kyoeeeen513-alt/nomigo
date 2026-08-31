@@ -257,6 +257,70 @@
     .countdown b{font-size:24px;color:#fff;font-variant-numeric:tabular-nums}
     .countdown small{margin-left:3px;color:var(--muted);font-size:10px}
     [data-live]{display:none}
+    .launch-live{
+      position:relative;
+      min-height:166px;
+      justify-content:space-between;
+      gap:28px;
+      padding:28px 34px;
+      overflow:hidden;
+      text-align:left;
+      border-color:rgba(240,216,167,.58);
+      background:
+        radial-gradient(circle at 12% 0%,rgba(205,167,101,.24),transparent 34%),
+        linear-gradient(120deg,#5a1521 0%,#351018 48%,#160a0d 100%);
+      box-shadow:0 20px 60px rgba(0,0,0,.42),0 0 0 1px rgba(205,167,101,.12) inset;
+    }
+    .launch-live::after{
+      content:"";
+      position:absolute;
+      width:260px;height:260px;
+      right:-90px;top:-150px;
+      border:1px solid rgba(240,216,167,.15);
+      border-radius:50%;
+      box-shadow:0 0 70px rgba(205,167,101,.14);
+      pointer-events:none;
+    }
+    .launch-kicker{
+      position:relative;z-index:1;
+      display:inline-flex;align-items:center;gap:9px;
+      width:max-content;
+      padding:7px 13px;
+      border-radius:999px;
+      background:linear-gradient(135deg,var(--gold-bright),var(--gold));
+      color:#271014;
+      font-size:11px;font-weight:900;letter-spacing:.12em;
+      white-space:nowrap;
+    }
+    .launch-pulse{
+      width:8px;height:8px;border-radius:50%;
+      background:#6b1d29;
+      box-shadow:0 0 0 5px rgba(107,29,41,.14);
+    }
+    .launch-copy{position:relative;z-index:1;flex:1}
+    .launch-copy strong{
+      display:block;
+      margin-top:11px;
+      color:#fff8ed;
+      font:800 clamp(23px,2.5vw,35px)/1.35 "Shippori Mincho",serif;
+      letter-spacing:.04em;
+    }
+    .launch-copy p{margin:7px 0 0;color:#e4d7cb;font-size:13px}
+    .launch-cta{
+      position:relative;z-index:1;
+      display:inline-flex;align-items:center;justify-content:center;gap:14px;
+      min-height:58px;
+      padding:0 25px;
+      border-radius:999px;
+      background:linear-gradient(135deg,var(--gold-bright),var(--gold));
+      color:#271014;
+      font-size:14px;font-weight:900;
+      text-decoration:none;
+      white-space:nowrap;
+      box-shadow:0 12px 34px rgba(205,167,101,.28);
+      transition:.2s ease;
+    }
+    .launch-cta:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(205,167,101,.4)}
 
     .intro{padding:112px 0 90px;text-align:center}
     .intro-quote{margin:0;font:800 clamp(30px,5.2vw,56px)/1.55 "Shippori Mincho",serif}
@@ -484,6 +548,11 @@
       .btn-primary{width:100%;min-height:58px;padding-inline:20px;font-size:15px}
       .launch-strip{margin-top:0}
       .launch-box{display:block;padding:19px 15px}
+      .launch-live{padding:24px 18px;text-align:center}
+      .launch-kicker{margin:0 auto}
+      .launch-copy strong{font-size:25px}
+      .launch-copy p{font-size:12px}
+      .launch-cta{width:100%;margin-top:20px;min-height:56px;padding-inline:16px}
       .countdown{justify-content:center;margin-top:8px;gap:10px}
       .countdown b{font-size:21px}
       .intro,.scenes,.price,.faq{padding:82px 0}
@@ -574,9 +643,13 @@
             <span><b id="cd-s">00</b><small>秒</small></span>
           </div>
         </div>
-        <div class="launch-box" data-live>
-          <div class="launch-label">新宿・すすきので受付中</div>
-          <div>今から飲める相手を探す →</div>
+        <div class="launch-box launch-live" data-live>
+          <div class="launch-copy">
+            <div class="launch-kicker"><span class="launch-pulse"></span>Nomi Go、本日スタート</div>
+            <strong>新宿・すすきので<br>募集受付を開始しました</strong>
+            <p>今夜、一緒に飲める相手を今から探せます。</p>
+          </div>
+          <a class="launch-cta" href="https://www.nomi-go.jp">無料で登録して募集する <span>→</span></a>
         </div>
       </div>
     </div>
