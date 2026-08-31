@@ -117,6 +117,23 @@ async function whoAmI(req) {
   }
 }
 
+// 画面のスイッチは書き換えられるため、販売可否はDBの運営設定を正とする。
+async function isTicketSalesOpen() {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/app_settings?key=eq.ticket_sales_open&select=bool_value&limit=1`,
+      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
+    );
+    if (!r.ok) return false;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return false;
+    const value = rows[0].bool_value;
+    return value === true || value === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
 // 同意した事実をDBへ記録する。成功したら true、失敗したら false を返す。
 async function recordConsent(req, userId) {
   const forwarded = req.headers['x-forwarded-for'] || '';
@@ -310,6 +327,12 @@ module.exports = async (req, res) => {
   try {
     if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY || !CREDIX_IP_CODE) {
       res.status(500).json({ success: false, error: 'server_not_configured' });
+      return;
+    }
+
+    // 審査・開通前は、URLを直接呼ばれても購入を開始しない。
+    if (!(await isTicketSalesOpen())) {
+      res.status(200).json({ success: false, error: 'sales_closed' });
       return;
     }
 

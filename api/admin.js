@@ -332,6 +332,35 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // service_role の更新ではDBトリガーから担当者を判定できないため、
+      // 認証済みの運営者IDをここで明示して本人確認ログへ残す。
+      const profile = updated[0];
+      let ageAtCheck = null;
+      if (profile.birthdate) {
+        const born = new Date(profile.birthdate + 'T00:00:00Z');
+        const today = new Date();
+        ageAtCheck = today.getUTCFullYear() - born.getUTCFullYear();
+        const beforeBirthday =
+          today.getUTCMonth() < born.getUTCMonth() ||
+          (today.getUTCMonth() === born.getUTCMonth() && today.getUTCDate() < born.getUTCDate());
+        if (beforeBirthday) ageAtCheck -= 1;
+      }
+      await db('age_verification_logs', {
+        method: 'POST',
+        body: {
+          user_id: userId,
+          event: decision,
+          old_status: null,
+          new_status: decision,
+          birthdate: profile.birthdate || null,
+          age_at_check: ageAtCheck,
+          id_photo_url: profile.id_photo_url || null,
+          face_photo_url: profile.face_photo_url || null,
+          actor_id: myId,
+          actor_is_admin: true,
+        },
+      });
+
       const lineId = updated[0].line_user_id || null;
       const text =
         decision === 'approved'

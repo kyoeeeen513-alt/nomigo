@@ -1,7 +1,5 @@
 {
   "name": "nomigo",
   "version": "1.0.0",
-  "dependencies": {
-    "payjp": "^1.0.3"
-  }
+  "private": true
 }

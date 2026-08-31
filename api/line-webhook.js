@@ -48,8 +48,7 @@
 //   すぐに通知が来るものと受け取られ、来ないことで不信を招く。
 //   正式スタートが9月1日であることをこの時点で伝え、待ってもらう。
 //   PRE_LAUNCH を false にすれば、従来どおりの文面に戻る。
-//   9月1日以降は必ず false に戻すこと（index.html の TICKET_SALES_OPEN を
-//   true に戻すのと同じタイミング。project_status No.133 を参照）。
+//   決済の販売可否とは独立した表示スイッチである。
 //
 // 【今回の変更：アプリを開くリンクを返信に追記（8/24）】
 //   Nomi GoはWebアプリのため、スマホのホーム画面から開く習慣がつきにくく、
@@ -187,21 +186,7 @@ module.exports = async (req, res) => {
             continue;
           }
 
-          // --- ① このLINEがBANされていないか確認 ---
-          const banRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/blacklist?line_user_id=eq.${encodeURIComponent(lineUserId)}&select=id&limit=1`,
-            { headers: HEADERS }
-          );
-          const banRows = await banRes.json();
-          if (Array.isArray(banRows) && banRows.length > 0) {
-            await replyMessage(
-              event.replyToken,
-              'ご利用いただけません。利用規約に違反したため、アカウントの作成を制限しています。'
-            );
-            continue;
-          }
-
-          // --- ② このLINEが既に別アカウントで使われていないか確認 ---
+          // --- ① このLINEが既に別アカウントで使われていないか確認 ---
           const dupRes = await fetch(
             `${SUPABASE_URL}/rest/v1/profiles?line_user_id=eq.${encodeURIComponent(lineUserId)}&select=user_id&limit=1`,
             { headers: HEADERS }
@@ -210,7 +195,7 @@ module.exports = async (req, res) => {
           const alreadyLinkedUserId =
             Array.isArray(dupRows) && dupRows.length > 0 ? dupRows[0].user_id : null;
 
-          // --- ③ 番号からユーザーを探す（有効期限内のものだけを対象とする）---
+          // --- ② 番号からユーザーを探す（有効期限内のものだけを対象とする）---
           //     期限切れの番号は、そもそも見つからない扱いになる
           const nowIso = new Date().toISOString();
           const findRes = await fetch(
@@ -233,6 +218,37 @@ module.exports = async (req, res) => {
           }
 
           const userId = rows[0].user_id;
+
+          // --- ③ 利用停止中の本人またはLINEではないか確認 ---
+          // 番号からNomi Go側の利用者を特定してから、user_id と LINE ID の両方で照合する。
+          const banFilter = new URLSearchParams({
+            or: `(user_id.eq.${userId},line_user_id.eq.${lineUserId})`,
+            select: 'id,expires_at',
+          });
+          const banRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/blacklist?${banFilter.toString()}`,
+            { headers: HEADERS }
+          );
+          if (!banRes.ok) {
+            console.error('blacklist check failed:', banRes.status);
+            await replyMessage(
+              event.replyToken,
+              '利用状態を確認できませんでした。時間をおいて、もう一度番号をお送りください。'
+            );
+            continue;
+          }
+          const banRows = await banRes.json();
+          const now = Date.now();
+          const activelyBanned = Array.isArray(banRows) && banRows.some((row) =>
+            !row.expires_at || new Date(row.expires_at).getTime() > now
+          );
+          if (activelyBanned) {
+            await replyMessage(
+              event.replyToken,
+              'ご利用いただけません。利用規約に違反したため、アカウントの作成を制限しています。'
+            );
+            continue;
+          }
 
           // 既に別のアカウントに紐づいている場合は保存しない
           if (alreadyLinkedUserId && alreadyLinkedUserId !== userId) {
