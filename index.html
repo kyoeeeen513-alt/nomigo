@@ -1504,6 +1504,15 @@ async function routeAfterLoad(){
     go('splash');
     return;
   }
+  // LINE連携後にアプリを閉じたり再読み込みした場合も、本人確認が未完了なら
+  // ホームへ戻さず必ず登録の続きへ送る。Safari復帰時にタイマーが止まっても
+  // 「募集する」を押すまで本人確認が出ない状態を作らない。
+  if(S.profile.line_user_id&&S.profile.id_verify_status!=='approved'){
+    var onboardingIdStatus=await getIdVerifyStatus();
+    if(!onboardingIdStatus||onboardingIdStatus==='none'){go('id_verify');}
+    else{go('id_verify_pending');}
+    return;
+  }
   // 【カード登録の関門を撤去 8/15】
   // 以前はここで、カード未登録の利用者をログインのたびに
   // カード登録画面へ強制的に送っていた。PAY.JPを使う前提の名残であり、
@@ -1848,6 +1857,19 @@ function handleIdPhotoSelect(inputEl){
   reader.readAsDataURL(file);
 }
 
+function handleFacePhotoSelect(inputEl){
+  var file=inputEl.files&&inputEl.files[0];
+  if(!file)return;
+  S._facePhotoFile=file;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    S._facePhotoPreview=e.target.result;
+    S._faceCameraError='';
+    re('id_verify');
+  };
+  reader.readAsDataURL(file);
+}
+
 async function uploadIdPhoto(userId,file){
   if(!file)return {path:null,error:null};
   var ext=(file.name&&file.name.split('.').pop())||'jpg';
@@ -2165,11 +2187,13 @@ function idVerifyH(){
     +'<div style="font-size:12.5px;color:var(--cream);line-height:1.7;background:rgba(0,0,0,.22);border-radius:10px;padding:12px 14px">'+nb('20歳未満の方のご利用を防ぐため、')+nb('法律により義務づけられた手続きです。')+nb('生年月日を確認できる身分証')+nb('（運転免許証・マイナンバーカード・')+nb('パスポートなど）と、')+nb('ご本人のお顔の写真の2点で、')+nb('1〜2分ほどで完了します。')+'</div>'
     +'<div class="sec-label" style="padding:0">① 身分証の写真</div>'
     +preview
-    +'<button type="button" style="width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'別の写真を選び直す':'身分証の写真を選ぶ')+'</button><input type="file" accept="image/*" id="pf-photo-id" style="display:none" onchange="handleIdPhotoSelect(this)">'
+    +'<button type="button" style="width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'身分証を撮り直す・選び直す':'身分証を撮影・選択')+'</button><input type="file" accept="image/*" id="pf-photo-id" style="display:none" onchange="handleIdPhotoSelect(this)">'
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:-8px">ボタンを押すと、カメラで撮影するか写真から選べます。</div>'
     +'<div class="sec-label" style="padding:8px 0 0">② ご本人の顔写真</div>'
     +facePreview
     +(S._faceCameraError?'<div class="err-msg">'+S._faceCameraError+'</div>':'')
-    +'<button class="btn" style="background:#FFFFFF;color:#6A4A50;border:1.5px solid var(--border)" onclick="'+(S._facePhotoPreview?'retakeFacePhoto()':'openFaceCamera()')+'">'+(S._facePhotoPreview?'📷 撮り直す':'📷 顔写真を撮影する')+'</button>'
+    +'<button class="btn" style="background:#FFFFFF;color:#6A4A50;border:1.5px solid var(--border)" onclick="'+(S._facePhotoPreview?'retakeFacePhoto()':'openFaceCamera()')+'">'+(S._facePhotoPreview?'📷 カメラで撮り直す':'📷 カメラで顔写真を撮影')+'</button>'
+    +'<button type="button" class="btn" style="background:transparent;color:var(--cream);border:1.5px solid var(--border)" onclick="openPhotoPicker(\'face_verify\')">'+(S._facePhotoPreview?'🖼 別の顔写真を選ぶ':'🖼 顔写真を写真から選択')+'</button><input type="file" accept="image/*" id="pf-photo-face" style="display:none" onchange="handleFacePhotoSelect(this)">'
     +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
     +'</div><div class="ftr"><button class="btn btn-wine" '+(bothReady&&!_idVerifySubmitting?'':'disabled ')+'onclick="submitIdVerify()">'+(_idVerifySubmitting?'送信中...':'アップロードして確認を依頼する →')+'</button></div></div>';
 }
@@ -2387,6 +2411,7 @@ window.addEventListener('pageshow',function(ev){
   hideBusy();
   _ticketPurchasing=false;
   _isSubmitting=false;
+  resumeLineLinkCheck();
 });
 
 var _goRecruitBusy=false;
@@ -4278,15 +4303,22 @@ function welcomeToastH(){
     +'</div>';
 }
 
-async function checkLineLinkNow(){
+async function checkLineLinkNow(silent){
   var res=await DB.from('profiles').select('line_user_id').eq('user_id',S.user.id).single();
   if(res.data&&res.data.line_user_id){
     if(S._lineLinkTimer){clearInterval(S._lineLinkTimer);S._lineLinkTimer=null;}
     if(S.profile)S.profile.line_user_id=res.data.line_user_id;
     await afterLineLinked();
-  }else{
+  }else if(!silent){
     alert('まだ連携が確認できていません。\n\n番号を送っても進まない場合は、そのLINEアカウントが既に別のNomi Goアカウントで使われている可能性があります。');
   }
+}
+
+var _lineResumeChecking=false;
+async function resumeLineLinkCheck(){
+  if(document.hidden||!S.user||S.screen!=='line_connect'||_lineResumeChecking)return;
+  _lineResumeChecking=true;
+  try{await checkLineLinkNow(true);}finally{_lineResumeChecking=false;}
 }
 
 function startLineLinkPolling(){
@@ -4345,6 +4377,7 @@ async function saveProfileEdit(){
 function openPhotoPicker(where){
   var id = where==='profile_new' ? 'pf-photo-new'
          : where==='profile_edit' ? 'pf-photo-edit'
+         : where==='face_verify' ? 'pf-photo-face'
          : 'pf-photo-id';
   var el = document.getElementById(id);
   if(!el){ alert('写真の選択を開けませんでした。画面を読み込み直してからお試しください。'); return; }
@@ -4755,6 +4788,7 @@ function inquiryH(){
 
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){sessionStorage.setItem('ngo_last_active',String(Date.now()));}
+  else{resumeLineLinkCheck();}
 });
 window.addEventListener('pagehide',function(){
   sessionStorage.setItem('ngo_last_active',String(Date.now()));
