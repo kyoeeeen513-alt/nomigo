@@ -23,6 +23,7 @@
       --wine:#48131b;
       --wine-2:#6b1d29;
       --gold:#cda765;
+      --gold-bright:#e8c887;
       --gold-pale:#f0d8a7;
       --paper:#f5ecdf;
       --muted:#bdaea3;
@@ -406,21 +407,88 @@
     .price-value small{font:700 13px/1.4 "Noto Sans JP",sans-serif;color:var(--muted)}
     .price-card p:last-child{margin:14px 0 0;color:var(--muted);font-size:12px}
     .campaign{
+      position:relative;
+      overflow:hidden;
       max-width:820px;
-      margin:18px auto 0;
-      padding:22px 26px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:24px;
-      border:1px solid rgba(205,167,101,.44);
-      border-radius:18px;
-      background:linear-gradient(135deg,rgba(205,167,101,.17),rgba(72,19,27,.5));
+      margin:26px auto 0;
+      padding:34px 30px 30px;
+      text-align:center;
+      border:1px solid rgba(205,167,101,.55);
+      border-radius:22px;
+      background:
+        radial-gradient(120% 150% at 50% 0%,rgba(205,167,101,.26),rgba(205,167,101,0) 60%),
+        linear-gradient(150deg,rgba(107,29,41,.72),rgba(18,9,11,.94));
+      box-shadow:0 0 0 1px rgba(205,167,101,.14) inset,0 22px 48px rgba(0,0,0,.42);
     }
-    .campaign-badge{display:inline-block;margin-right:10px;padding:4px 8px;border-radius:6px;background:var(--gold);color:#351117;font-size:11px;font-weight:900}
-    .campaign strong{font-size:16px}
-    .campaign p{margin:5px 0 0;color:var(--muted);font-size:12px}
-    .campaign .btn-primary{min-height:48px;padding-inline:22px;font-size:13px;flex:0 0 auto}
+    .campaign-eyebrow{
+      position:relative;
+      display:inline-flex;align-items:center;gap:9px;
+      margin:0 0 16px;padding:8px 17px;border-radius:999px;
+      background:linear-gradient(135deg,var(--gold-bright),var(--gold));
+      color:#351117;
+      font-size:11px;font-weight:900;letter-spacing:.14em;
+    }
+    .campaign-dot{width:7px;height:7px;border-radius:50%;background:#6b1d29;animation:promoBlink 1.4s infinite}
+    @keyframes promoBlink{0%,100%{opacity:1}50%{opacity:.2}}
+    .campaign-title{
+      position:relative;margin:0;
+      font:800 clamp(23px,5vw,34px)/1.45 "Shippori Mincho",serif;
+      color:#fff;letter-spacing:.02em;
+    }
+    .campaign-title .cp-date{
+      display:block;margin-bottom:8px;
+      color:var(--gold-pale);
+      font-size:clamp(15px,3.6vw,20px);letter-spacing:.06em;
+    }
+    .campaign-title b{color:var(--gold-pale)}
+    .campaign-price{
+      position:relative;
+      display:flex;align-items:baseline;justify-content:center;gap:14px;flex-wrap:wrap;
+      margin:20px 0 0;
+    }
+    .campaign-was{
+      color:var(--muted);font-size:17px;font-weight:700;
+      text-decoration:line-through;text-decoration-thickness:2px;
+      text-decoration-color:rgba(205,167,101,.85);
+    }
+    .campaign-arrow{color:var(--gold);font-size:18px;font-weight:900}
+    .campaign-now{
+      color:#fff;
+      font:800 clamp(38px,8vw,54px)/1 "Shippori Mincho",serif;
+      text-shadow:0 0 26px rgba(240,216,167,.35);
+    }
+    .campaign-now small{margin-left:7px;font:700 12px/1 "Noto Sans JP",sans-serif;color:var(--muted)}
+    .campaign-deadline{
+      position:relative;
+      max-width:520px;margin:24px auto 0;padding:18px 16px 15px;
+      border:1px solid rgba(205,167,101,.34);border-radius:16px;
+      background:rgba(10,5,6,.45);
+    }
+    .campaign-deadline-label{
+      margin:0 0 11px;color:var(--gold-pale);
+      font-size:11px;font-weight:900;letter-spacing:.2em;
+    }
+    .campaign-count{display:flex;justify-content:center;gap:10px}
+    .campaign-count span{
+      min-width:66px;padding:11px 6px 9px;border-radius:12px;
+      border:1px solid rgba(205,167,101,.28);background:rgba(255,255,255,.045);
+    }
+    .campaign-count b{
+      display:block;color:#fff;
+      font:800 26px/1 "Shippori Mincho",serif;font-variant-numeric:tabular-nums;
+    }
+    .campaign-count small{display:block;margin-top:6px;color:var(--muted);font-size:10px;letter-spacing:.08em}
+    .campaign-until{margin:12px 0 0;color:var(--muted);font-size:11.5px;line-height:1.7}
+    .campaign-cta{
+      position:relative;
+      display:inline-flex;align-items:center;justify-content:center;gap:12px;
+      min-height:58px;margin-top:24px;padding:0 34px;border-radius:999px;
+      background:linear-gradient(135deg,var(--gold-bright),var(--gold));
+      color:#351117;font-size:15px;font-weight:900;text-decoration:none;
+      box-shadow:0 14px 30px rgba(205,167,101,.26);
+    }
+    .campaign-cta:hover{filter:brightness(1.06)}
+    .campaign-note{margin:14px 0 0;color:var(--muted);font-size:11px}
     .price-note{max-width:820px;margin:15px auto 0;text-align:center}
 
     .areas{padding:90px 0;background:var(--wine)}
@@ -547,8 +615,11 @@
       .scene:first-child{grid-row:auto;min-height:500px}
       .scene{min-height:430px}
       .price-grid{grid-template-columns:1fr}
-      .campaign{align-items:flex-start;flex-direction:column}
-      .campaign .btn-primary{width:100%}
+      .campaign{padding:30px 18px 26px}
+      .campaign-cta{width:100%;padding-inline:18px}
+      .campaign-count{gap:7px}
+      .campaign-count span{min-width:0;flex:1}
+      .campaign-count b{font-size:22px}
       .area-card{min-height:150px}
     }
 
@@ -845,11 +916,28 @@ fbq('track','PageView');
           </article>
         </div>
         <div class="campaign" id="campaign">
-          <div>
-            <div><span class="campaign-badge">9月30日まで</span><strong>男性の新規登録でチケット1枚無料</strong></div>
-            <p>期間中に登録した男性へ、Nomi Goチケット1枚（3,980円分）を付与します。</p>
+          <p class="campaign-eyebrow"><span class="campaign-dot"></span>OPENING CAMPAIGN／開幕記念</p>
+          <h3 class="campaign-title">
+            <span class="cp-date">2026年9月30日まで</span>
+            男性の新規登録で<br>Nomi Goチケット<b>1枚無料</b>
+          </h3>
+          <div class="campaign-price">
+            <span class="campaign-was">通常 ¥3,980</span>
+            <span class="campaign-arrow">→</span>
+            <span class="campaign-now">¥0<small>／1枚</small></span>
           </div>
-          <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp/?start=register">無料で先行登録する</a>
+          <div class="campaign-deadline">
+            <p class="campaign-deadline-label">受付終了まで</p>
+            <div class="campaign-count" aria-label="キャンペーン終了までの残り時間">
+              <span><b id="pd-d">--</b><small>日</small></span>
+              <span><b id="pd-h">--</b><small>時間</small></span>
+              <span><b id="pd-m">--</b><small>分</small></span>
+              <span><b id="pd-s">--</b><small>秒</small></span>
+            </div>
+            <p class="campaign-until">9月30日 23:59 で受付終了。<br>10月1日以降は通常どおり1枚3,980円です。</p>
+          </div>
+          <a class="campaign-cta" href="https://www.nomi-go.jp/?start=register">今すぐ無料で登録してチケットを受け取る</a>
+          <p class="campaign-note">20歳以上限定。登録・本人確認の完了後に付与されます。</p>
         </div>
         <p class="small-note price-note">20歳以上限定。条件や利用状況により、マッチが成立しない場合があります。</p>
       </div>
@@ -942,8 +1030,8 @@ fbq('track','PageView');
         <div class="news-item" id="news-promo">
           <div class="news-date">2026.08.22</div>
           <div class="news-body">
-            <h4>9月中の登録で、男性のマッチング券が1枚無料<span class="news-new">NEW</span></h4>
-            <p>9月30日までにご登録いただいた男性に、マッチング券1枚（3,980円分）をお渡しします。登録するだけで受け取れます。10月からは通常どおり1枚3,980円です。</p>
+            <h4>【9月30日まで】男性の新規登録で、マッチング券1枚（3,980円分）が無料<span class="news-new">NEW</span></h4>
+            <p>9月30日23:59までにご登録いただいた男性に、マッチング券1枚（3,980円分）をお渡しします。登録するだけで受け取れます。10月1日以降は通常どおり1枚3,980円です。</p>
           </div>
         </div>
         <div class="news-item">
@@ -1127,12 +1215,32 @@ fbq('track','PageView');
       }
       tick();
       if(Date.now()<START) timer=setInterval(tick,1000);
-      if(Date.now()>=PROMO_END){
+      // キャンペーンの残り時間。PROMO_END（10/1 0:00）までを1秒ごとに表示する
+      var promoTimer;
+      function promoTick(){
+        var diff=PROMO_END-Date.now();
+        if(diff<=0){endPromo();return}
+        var values={
+          'pd-d':Math.floor(diff/86400000),
+          'pd-h':Math.floor(diff/3600000)%24,
+          'pd-m':Math.floor(diff/60000)%60,
+          'pd-s':Math.floor(diff/1000)%60
+        };
+        Object.keys(values).forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=pad(values[id])});
+      }
+      function endPromo(){
+        if(promoTimer) clearInterval(promoTimer);
         var campaign=document.getElementById('campaign');
         if(campaign)campaign.remove();
         // お知らせ欄のキャンペーン項目も同時に消す（手作業の消し忘れを防ぐため）
         var promoNews=document.getElementById('news-promo');
         if(promoNews)promoNews.remove();
+      }
+      if(Date.now()>=PROMO_END){
+        endPromo();
+      }else{
+        promoTick();
+        promoTimer=setInterval(promoTick,1000);
       }
 
       document.querySelectorAll('.faq-q').forEach(function(button){
