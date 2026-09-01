@@ -83,7 +83,19 @@ const crypto = require('crypto');
 const PRE_LAUNCH = false;
 
 // アプリのURL。返信に載せるリンク。変わったらここだけ直す。
-const APP_URL = 'https://www.nomi-go.jp';
+//
+// 【openExternalBrowser=1 について（2026/9/1追加）】
+//   LINEのトーク内のリンクは、既定では「LINEアプリの中の簡易ブラウザ」で開く。
+//   これは利用者が登録に使ったSafari／Chromeとは別のブラウザであり、
+//   ログイン情報（セッション）が引き継がれない。そのためリンクを押すと
+//   ログインしていない扱いになり、登録の続き（本人確認）へ進まず
+//   トップ画面に戻ってしまう。実際にこの症状が発生した（No.244）。
+//   このパラメータを付けると端末の既定ブラウザ（iPhoneはSafari、
+//   AndroidはChrome）が起動するため、登録時と同じブラウザで開かれ、
+//   ログイン状態が保たれる。LINE独自の指定で、他のアプリでは無視される。
+//   なお利用者側の設定によっては効かない場合があるため、これで100%
+//   外部ブラウザになることは保証されない。
+const APP_URL = 'https://www.nomi-go.jp?openExternalBrowser=1';
 
 const SUPABASE_URL = 'https://dwubothomxjwfudkeepy.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
