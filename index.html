@@ -661,6 +661,37 @@ body{font-size:15px;background:
   .area-grid .area-card img{height:124px}
 }
 </style>
+<script>
+(function(){
+  try{
+    var params=new URLSearchParams(window.location.search);
+    var keys=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ref'];
+    var touch={landing_page:window.location.pathname,recorded_at:new Date().toISOString()};
+    var hasCampaign=false;
+    keys.forEach(function(key){
+      var value=params.get(key);
+      if(value){touch[key]=value;hasCampaign=true;}
+    });
+    if(hasCampaign){
+      if(!localStorage.getItem('ngo_utm_first'))localStorage.setItem('ngo_utm_first',JSON.stringify(touch));
+      localStorage.setItem('ngo_utm_last',JSON.stringify(touch));
+    }
+  }catch(e){}
+  window.ngoTrackCompleteRegistration=function(userId){
+    try{
+      var key='ngo_complete_registration_'+String(userId||'unknown');
+      if(localStorage.getItem(key))return;
+      var first=null,last=null;
+      try{first=JSON.parse(localStorage.getItem('ngo_utm_first')||'null');}catch(e){}
+      try{last=JSON.parse(localStorage.getItem('ngo_utm_last')||'null');}catch(e){}
+      window.dataLayer=window.dataLayer||[];
+      window.dataLayer.push({event:'complete_registration',user_id:userId||null,utm_first:first,utm_last:last});
+      if(typeof window.fbq==='function')window.fbq('track','CompleteRegistration');
+      localStorage.setItem(key,new Date().toISOString());
+    }catch(e){}
+  };
+})();
+</script>
 </head>
 <body>
 <!-- 【最初に見える画面 2026/8/18／2026/8/20更新】
@@ -1345,6 +1376,15 @@ async function init(){
       return;
     }
 
+    var _startMode=null;
+    try{_startMode=_params.get('start');}catch(e){}
+    if(!sess&&_startMode==='register'){
+      S.authTab='register';
+      go('email');
+      loadStats();
+      return;
+    }
+
     if(sess&&sess.user){routeAfterLoad();}
     else{go('splash');}
     loadStats();
@@ -1385,6 +1425,7 @@ async function doSignUp(){
   go('loading');
   var res=await DB.auth.signUp({email:email,password:pass});
   if(res.error){var r2=await DB.auth.signInWithPassword({email:email,password:pass});if(r2.error){S.error='登録に失敗しました';go('email');return;}S.user=r2.data.user;await loadProfile();routeAfterLoad();return;}
+  if(res.data&&res.data.user&&window.ngoTrackCompleteRegistration)window.ngoTrackCompleteRegistration(res.data.user.id);
   if(res.data&&res.data.session){S.user=res.data.user;await loadProfile();if(!S.profile){await goEmailVerify();}else{routeAfterLoad();}return;}
   if(res.data&&res.data.user){var r3=await DB.auth.signInWithPassword({email:email,password:pass});if(r3.error){S.error='ログインタブからサインインしてください';go('email');return;}S.user=r3.data.user;await loadProfile();if(!S.profile){await goEmailVerify();}else{routeAfterLoad();}return;}
   S.error='登録に失敗しました';go('email');
