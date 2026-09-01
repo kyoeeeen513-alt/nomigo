@@ -623,7 +623,7 @@
         <a href="#price">料金</a>
         <a href="#area">エリア</a>
       </nav>
-      <a class="header-cta js-primary-cta" href="https://www.nomi-go.jp">無料で先行登録</a>
+      <a class="header-cta js-primary-cta" href="https://www.nomi-go.jp/?start=register">無料で先行登録</a>
     </div>
   </header>
 
@@ -642,7 +642,7 @@
             <span>本人確認後に募集可能</span>
           </div>
           <div class="hero-actions">
-            <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp">無料で先行登録する</a>
+            <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp/?start=register">無料で先行登録する</a>
             <p class="hero-micro">女性は無料｜男性は成立時にNomi Goチケット1枚（3,980円）</p>
           </div>
         </div>
@@ -666,7 +666,7 @@
             <strong>新宿・すすきので<br>募集受付を開始しました</strong>
             <p>今夜、一緒に飲める相手を今から探せます。</p>
           </div>
-          <a class="launch-cta" href="https://www.nomi-go.jp">無料で登録して募集する <span>→</span></a>
+          <a class="launch-cta" href="https://www.nomi-go.jp/?start=register">無料で登録して募集する <span>→</span></a>
         </div>
       </div>
     </div>
@@ -834,7 +834,7 @@
             <div><span class="campaign-badge">9月30日まで</span><strong>男性の新規登録でチケット1枚無料</strong></div>
             <p>期間中に登録した男性へ、Nomi Goチケット1枚（3,980円分）を付与します。</p>
           </div>
-          <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp">無料で先行登録する</a>
+          <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp/?start=register">無料で先行登録する</a>
         </div>
         <p class="small-note price-note">20歳以上限定。条件や利用状況により、マッチが成立しない場合があります。</p>
       </div>
@@ -894,7 +894,7 @@
         <p class="eyebrow">Nomi Go</p>
         <h2 id="final-title">帰るには、<br>まだ少し早い。</h2>
         <p>恋愛じゃなく、今夜の飲み友達を。</p>
-        <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp">無料で先行登録する</a>
+        <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp/?start=register">無料で先行登録する</a>
         <div class="sub-actions">
           <a class="line-link" href="https://line.me/R/ti/p/@098dhbub" target="_blank" rel="noopener">公式LINEで開始・エリア情報を受け取る</a>
         </div>
@@ -943,7 +943,7 @@
   </main>
 
   <div class="mobile-sticky">
-    <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp">無料で先行登録する</a>
+    <a class="btn-primary js-primary-cta" href="https://www.nomi-go.jp/?start=register">無料で先行登録する</a>
   </div>
 
   <footer>
@@ -966,6 +966,18 @@
   <script>
     (function(){
       var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var acquisitionKeys=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ref'];
+      var incomingParams=new URLSearchParams(window.location.search);
+      document.querySelectorAll('a[href^="https://www.nomi-go.jp/?start=register"]').forEach(function(link){
+        try{
+          var target=new URL(link.href);
+          acquisitionKeys.forEach(function(key){
+            var value=incomingParams.get(key);
+            if(value)target.searchParams.set(key,value);
+          });
+          link.href=target.toString();
+        }catch(e){}
+      });
       var entry = document.getElementById('entry-intro');
       var skip = entry ? entry.querySelector('.entry-skip') : null;
       function closeEntry(){
