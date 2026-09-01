@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.nomi-go.jp/</loc><lastmod>2026-09-01</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://www.nomi-go.jp/lp.html</loc><lastmod>2026-09-01</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.nomi-go.jp/safety.html</loc><lastmod>2026-09-01</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.nomi-go.jp/terms.html</loc><lastmod>2026-09-01</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.nomi-go.jp/privacy.html</loc><lastmod>2026-09-01</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.nomi-go.jp/tokushoho.html</loc><lastmod>2026-09-01</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.nomi-go.jp/contact.html</loc><lastmod>2026-09-01</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+</urlset>
