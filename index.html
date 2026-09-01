@@ -2193,7 +2193,15 @@ function idVerifyH(){
     +facePreview
     +(S._faceCameraError?'<div class="err-msg">'+S._faceCameraError+'</div>':'')
     +'<button class="btn" style="background:#FFFFFF;color:#6A4A50;border:1.5px solid var(--border)" onclick="'+(S._facePhotoPreview?'retakeFacePhoto()':'openFaceCamera()')+'">'+(S._facePhotoPreview?'📷 カメラで撮り直す':'📷 カメラで顔写真を撮影')+'</button>'
-    +'<button type="button" class="btn" style="background:transparent;color:var(--cream);border:1.5px solid var(--border)" onclick="openPhotoPicker(\'face_verify\')">'+(S._facePhotoPreview?'🖼 別の顔写真を選ぶ':'🖼 顔写真を写真から選択')+'</button><input type="file" accept="image/*" id="pf-photo-face" style="display:none" onchange="handleFacePhotoSelect(this)">'
+    // 【2026/9/1 削除】ここには「🖼 顔写真を写真から選択」ボタンがあり、
+    //   端末に保存済みの画像をそのまま顔写真として提出できた。
+    //   これでは他人の写真や加工済みの写真を出せてしまい、年齢確認の意味がなくなる。
+    //   実際に、身分証と自撮りが同一人物か判断できない提出が発生したため削除した（No.243）。
+    //   顔写真はカメラでその場で撮影したものだけを受け付ける。
+    //   ①身分証の方は「写真から選択」を残している。身分証は別の端末やスキャナで
+    //   撮っておいたものを提出する場面が現実にあり、かつ券面そのものは
+    //   読み取れるかどうかで真偽を判断できるため、撮影に限定する必要が薄い。
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:-8px">顔写真は、その場でカメラで撮影したもののみお受けしています。</div>'
     +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
     +'</div><div class="ftr"><button class="btn btn-wine" '+(bothReady&&!_idVerifySubmitting?'':'disabled ')+'onclick="submitIdVerify()">'+(_idVerifySubmitting?'送信中...':'アップロードして確認を依頼する →')+'</button></div></div>';
 }
