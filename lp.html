@@ -322,7 +322,9 @@
       color:#fff8ed;
       font:800 clamp(23px,2.5vw,35px)/1.35 "Shippori Mincho",serif;
       letter-spacing:.04em;
+      line-break:strict;
     }
+    .launch-copy strong span{display:inline-block}
     .launch-copy p{margin:7px 0 0;color:#e4d7cb;font-size:13px}
     .launch-cta{
       position:relative;z-index:1;
@@ -623,6 +625,14 @@
       .area-card{min-height:150px}
     }
 
+    /* 開始バナー：横並びだと文字とボタンが収まらず画面外へはみ出すため、900px以下では縦積みにする */
+    @media(max-width:900px){
+      .launch-live{display:block;text-align:center;min-height:0;padding:26px 20px}
+      .launch-kicker{margin:0 auto}
+      .launch-copy{flex:none}
+      .launch-copy strong{font-size:clamp(22px,4.6vw,30px)}
+      .launch-cta{display:flex;width:100%;margin-top:20px;padding-inline:16px;white-space:normal}
+    }
     @media(max-width:560px){
       body{padding-bottom:76px}
       .header-in{width:calc(100% - 28px)}
@@ -749,7 +759,7 @@ fbq('track','PageView');
         <div class="launch-box launch-live" data-live>
           <div class="launch-copy">
             <div class="launch-kicker"><span class="launch-pulse"></span>Nomi Go、本日スタート</div>
-            <strong>新宿・すすきので<br>募集受付を開始しました</strong>
+            <strong><span>新宿・すすきので</span><span>募集受付を開始しました</span></strong>
             <p>今夜、一緒に飲める相手を今から探せます。</p>
           </div>
           <a class="launch-cta" href="https://www.nomi-go.jp/?start=register">無料で登録して募集する <span>→</span></a>
@@ -1008,8 +1018,8 @@ fbq('track','PageView');
     <section class="line-cta" aria-labelledby="line-title">
       <div class="wrap">
         <div class="line-cta-box">
-          <h3 id="line-title">開幕のお知らせを受け取る</h3>
-          <p>9月1日の開始や、エリア拡大の情報をいち早くお届けします。<br>公式LINEを友だち追加するだけ、30秒で完了です。</p>
+          <h3 id="line-title">公式LINEでお知らせを受け取る</h3>
+          <p>マッチのお知らせや、エリア拡大の情報をお届けします。<br>公式LINEを友だち追加するだけ、30秒で完了です。</p>
           <a class="btn-line" href="https://line.me/R/ti/p/@098dhbub" target="_blank" rel="noopener">友だち追加する</a>
           <p class="line-cta-note">通知はいつでもオフにできます</p>
         </div>
@@ -1021,10 +1031,10 @@ fbq('track','PageView');
       <div class="news-in">
         <div class="news-head"><span class="en">NEWS</span><span class="ja" id="news-title">お知らせ</span></div>
         <div class="news-item">
-          <div class="news-date">2026.08.22</div>
+          <div class="news-date">2026.09.01</div>
           <div class="news-body">
-            <h4>先行登録の受付をはじめました<span class="news-new">NEW</span></h4>
-            <p>9月1日の開幕に先がけて、ご登録を受け付けています。いま登録しておくと、開幕と同時に募集できます。</p>
+            <h4>新宿・すすきのでサービスを開始しました<span class="news-new">NEW</span></h4>
+            <p>2026年9月1日より、新宿・すすきのでご利用いただけます。ご登録と本人確認の完了後、今夜の募集を作成できます。</p>
           </div>
         </div>
         <div class="news-item" id="news-promo">
@@ -1196,7 +1206,7 @@ fbq('track','PageView');
       function pad(n){return String(n).padStart(2,'0')}
       function setLive(){
         if(pre) pre.style.display='none';
-        if(live) live.style.display='flex';
+        if(live) live.removeAttribute('data-live');
         document.querySelectorAll('.js-primary-cta').forEach(function(a){a.textContent='無料で登録して募集する'});
         var faq=document.querySelector('.js-launch-faq');
         if(faq) faq.textContent='新宿・すすきので利用できます。登録・本人確認の完了後、今夜の募集を作成できます。';
