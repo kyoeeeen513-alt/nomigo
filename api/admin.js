@@ -20,6 +20,24 @@
 //    list_inquiries… 問い合わせ一覧を返す（can_reply が必要）
 //    mark_handled  … 問い合わせを対応済みにする（can_reply が必要）
 //
+// 【2026-09-02 の変更・No.253】
+//  否認するときに「理由の種類」を受け取るようにした（reason）。
+//  以前はどんな理由で否認しても、利用者には必ず
+//  「もう一度書類のご提出をお願いします」というLINEが届いていた。
+//  そのため、生年月日の打ち間違いが理由の方が写真を何度出し直しても通らず、
+//  行き止まりになっていた（実例：2026/9/2、利用者バンコ）。
+//  理由は3種類。
+//    mismatch … 登録内容が身分証と違う（写真の再提出は不要。入力を直してもらう）
+//    photo    … 写真が確認できない（撮り直しが必要）
+//    invalid  … 書類として受け付けられない（別の書類が必要）
+//  受け取った理由は profiles.reject_reason に保存する。
+//  この値を見て、アプリ側が利用者に出す画面を変える。
+//  また、mismatch のときだけデータベース側が本人による生年月日・本名の
+//  修正を許可する（guard_profiles_update トリガー）。
+//
+//  あわせて list_rejected を追加した。以前は否認した時点で一覧から消え、
+//  運営がその後の状況を追えなくなっていたため。
+//
 // 【必要な環境変数】すべて設定済み
 //   SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY / LINE_CHANNEL_ACCESS_TOKEN
 
@@ -33,6 +51,9 @@ const ADMIN_PAGE_URL = 'https://nomi-go.jp/admin.html';
 
 // 身分証を保存しているバケット名。ブラウザからは指定させない
 const ID_BUCKET = 'id_photos';
+
+// 否認の理由として受け付ける値。これ以外は受け取らない。
+const REJECT_REASONS = ['mismatch', 'photo', 'invalid'];
 
 // ログイン証明（トークン）の中身から「2段階認証を済ませたか」を読み取る。
 //
@@ -108,7 +129,7 @@ async function pushLine(lineUserId, text) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${LINE_TOKEN}`,
       },
-      body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text }] }),
+      body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: text }] }),
     });
     return r.ok;
   } catch (e) {
@@ -142,6 +163,41 @@ async function audit(actorId, action, targetTable, targetId, after, note) {
       },
     });
   } catch (e) {}
+}
+
+// 否認したときに本人へ送るLINEの文面を、理由の種類ごとに作る。
+//
+// 【なぜ分けるか】
+//  以前はどの理由でも「もう一度書類のご提出をお願いします」で固定だった。
+//  生年月日の打ち間違いが理由の方にこれを送ると、写真を出し直しても
+//  永久に通らないため、同じことを繰り返させてしまう。
+//  やるべきことを、理由ごとに正確に伝える。
+function rejectMessage(reason, note) {
+  const reasonLine = note ? '内容：' + note + '\n\n' : '';
+  if (reason === 'mismatch') {
+    return (
+      '⚠️ ご登録内容のご確認をお願いします\n\n' +
+      reasonLine +
+      'ご登録の内容と、ご提出の身分証の記載が一致しませんでした。\n\n' +
+      'お預かりしたお写真はそのままお預かりしていますので、撮り直しは必要ありません。\n' +
+      'Nomi Goを開いて「登録内容を修正する」から、身分証と同じ内容にご修正ください。'
+    );
+  }
+  if (reason === 'invalid') {
+    return (
+      '⚠️ ご提出の書類を確認できませんでした\n\n' +
+      reasonLine +
+      'この書類では年齢の確認ができませんでした。\n\n' +
+      '運転免許証・マイナンバーカード・パスポートなど、有効期限内の公的な身分証をご用意のうえ、Nomi Goからもう一度ご提出をお願いします。'
+    );
+  }
+  // photo、または理由が未指定の場合（従来どおりの案内）
+  return (
+    '⚠️ お写真を確認できませんでした\n\n' +
+    reasonLine +
+    '文字がぼやけていたり、一部が切れていた可能性があります。\n\n' +
+    '明るい場所で、四隅まで入るように撮り直して、Nomi Goからもう一度ご提出をお願いします。'
+  );
 }
 
 module.exports = async (req, res) => {
@@ -261,6 +317,25 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // ── 否認した方の一覧を返す（2026-09-02 追加） ──────────
+    // 以前は否認した時点で一覧から消え、その後どうなったかを追えなかった。
+    // 直近30日ぶんだけを新しい順に返す。
+    if (action === 'list_rejected') {
+      if (!admin.can_verify) {
+        res.status(403).json({ success: false, error: 'no_verify_permission' });
+        return;
+      }
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const rows = await db(
+        'profiles?id_verify_status=eq.rejected' +
+        '&updated_at=gte.' + since +
+        '&select=user_id,real_name,birthdate,nickname,gender,reject_reason,id_verify_note,id_photo_url,face_photo_url,updated_at' +
+        '&order=updated_at.desc&limit=100'
+      );
+      res.status(200).json({ success: true, list: rows || [] });
+      return;
+    }
+
     // ── 身分証・顔写真の一時URLを発行する ──────────────
     // どの画像かは「利用者ID＋種類」で指定させる。
     // ブラウザから任意のファイル名を渡させない（他人の画像を覗かせない）。
@@ -305,6 +380,8 @@ module.exports = async (req, res) => {
       const userId = body.userId;
       const decision = body.decision; // 'approved' か 'rejected'
       const note = (body.note || '').trim().slice(0, 300);
+      // 否認の理由の種類。決められた3つ以外は受け取らない。
+      const reason = REJECT_REASONS.indexOf(body.reason) !== -1 ? body.reason : null;
 
       if (!admin.can_verify) {
         res.status(403).json({ success: false, error: 'no_verify_permission' });
@@ -315,10 +392,18 @@ module.exports = async (req, res) => {
         res.status(400).json({ success: false, error: 'bad_request' });
         return;
       }
+      // 否認するときは理由の種類を必ず選んでもらう。
+      // 選ばれていないと、利用者側で何をすべきかを出し分けられないため。
+      if (decision === 'rejected' && !reason) {
+        res.status(400).json({ success: false, error: 'reason_required' });
+        return;
+      }
 
       const patch = {
         id_verify_status: decision,
         id_verify_note: note || null,
+        // 承認したときは、古い否認の理由が残らないよう必ず消す。
+        reject_reason: decision === 'rejected' ? reason : null,
         updated_at: new Date().toISOString(),
       };
       if (decision === 'approved') patch.verified_level = 2;
@@ -365,13 +450,11 @@ module.exports = async (req, res) => {
       const text =
         decision === 'approved'
           ? '✅ 年齢確認が完了しました！\n\nNomi Goを開いて、さっそく募集してみてください。'
-          : '⚠️ 年齢確認ができませんでした。\n\n' +
-            (note ? '理由：' + note + '\n\n' : '') +
-            'Nomi Goを開いて、もう一度書類のご提出をお願いします。';
+          : rejectMessage(reason, note);
       const sent = await pushLine(lineId, text);
 
       await audit(myId, 'verify_' + decision, 'profiles', userId,
-        { decision: decision, line_sent: sent }, note || null);
+        { decision: decision, reason: reason, line_sent: sent }, note || null);
 
       res.status(200).json({ success: true, lineSent: sent, hasLine: !!lineId });
       return;
