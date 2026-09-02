@@ -609,20 +609,59 @@ async function openPhoto(userId,kind,el){
   window.open(r.url,'_blank','noopener');
 }
 
+// 【2026/9/2 否認の理由を選ぶ形に変更・No.253】
+//   以前は自由入力のメモを1つ書くだけで、利用者側にはどんな理由でも
+//   「もう一度書類を提出してください」と表示されていた。
+//   そのため、生年月日の打ち間違いが理由の方が何度写真を出し直しても
+//   通らず、行き止まりになっていた（実例：2026/9/2）。
+//   ここで理由の種類を選ぶと、利用者の画面とLINEの案内が自動で変わる。
+var REJECT_REASONS = [
+  { key:'mismatch', label:'登録内容が身分証と違う（生年月日・氏名の誤り）',
+    hint:'写真の撮り直しは求めません。利用者は登録内容を直して再提出します。',
+    sample:'身分証の生年月日は◯月◯日ですが、ご登録は◯月◯日になっています。' },
+  { key:'photo', label:'写真が確認できない（ぼやけ・見切れ・反射）',
+    hint:'撮り直しをお願いする画面になります。',
+    sample:'書類の文字が読み取れませんでした。' },
+  { key:'invalid', label:'書類として受け付けられない（期限切れ・別人・身分証でない）',
+    hint:'別の書類の提出をお願いする画面になります。',
+    sample:'有効期限が切れているため、確認できませんでした。' }
+];
+
+function askRejectReason(){
+  var msg='否認の理由を番号で選んでください。\n\n';
+  for(var i=0;i<REJECT_REASONS.length;i++){
+    msg+=(i+1)+'. '+REJECT_REASONS[i].label+'\n   → '+REJECT_REASONS[i].hint+'\n\n';
+  }
+  var ans=prompt(msg,'1');
+  if(ans===null)return null;
+  var n=parseInt(String(ans).trim(),10);
+  if(!(n>=1&&n<=REJECT_REASONS.length)){
+    alert('1〜'+REJECT_REASONS.length+'の番号を入力してください。');
+    return askRejectReason();
+  }
+  return REJECT_REASONS[n-1];
+}
+
 async function setV(uid,val){
   var word=(val==='approved')?'承認':'否認';
   var note='';
+  var reason=null;
   if(val==='rejected'){
-    note=prompt('否認の理由を入力してください。\nここに書いた内容が本人のLINEに届きます。\n（空欄のままでも進められます）','書類の文字が読み取れませんでした');
+    reason=askRejectReason();
+    if(!reason)return;
+    note=prompt('この方へのご連絡を入力してください。\nここに書いた内容が、アプリの画面と本人のLINEに届きます。\n（空欄のままでも進められます）',reason.sample);
     if(note===null)return;
     note=note.trim();
+    var confirmMsg='この方を否認します。\n\n理由：'+reason.label+'\n'+reason.hint+'\n\nよろしいですか？';
+    if(!confirm(confirmMsg))return;
+  }else{
+    if(!confirm('この方を承認します。\n本人のLINEに通知が届きます。\nよろしいですか？'))return;
   }
-  if(!confirm('この方を'+word+'します。\n本人のLINEに通知が届きます。\nよろしいですか？'))return;
 
   var row=document.getElementById('v-'+uid);
   if(row)row.querySelectorAll('button').forEach(function(b){b.disabled=true;});
 
-  var r=await api({action:'verify',userId:uid,decision:val,note:note});
+  var r=await api({action:'verify',userId:uid,decision:val,note:note,reason:reason?reason.key:null});
   if(!r.success){
     alert('処理に失敗しました。もう一度お試しください。');
     if(row)row.querySelectorAll('button').forEach(function(b){b.disabled=false;});
