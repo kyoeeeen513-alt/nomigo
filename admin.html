@@ -583,9 +583,11 @@ async function loadVerify(){
     h+='<div class="meta">生年月日・書類名・発行元が読めるか／顔写真が同一人物か／20歳以上かを確認してください</div>';
     if(ME.can_verify){
       h+='<div class="acts">';
-      h+='<button class="btn-ok" onclick="setV(\''+p.user_id+'\',\'approved\')">承認する</button>';
-      h+='<button class="btn-ng" onclick="setV(\''+p.user_id+'\',\'rejected\')">否認する</button>';
+      h+='<button class="btn-ok" onclick="openApprove(\''+p.user_id+'\')">承認する</button>';
+      h+='<button class="btn-ng" onclick="openReject(\''+p.user_id+'\')">否認する</button>';
       h+='</div>';
+      // 理由の選択・メモ・処理結果は、この場所に開く（ポップアップを使わない）
+      h+='<div id="rp-'+p.user_id+'"></div>';
     }else{
       h+='<div class="meta" style="margin-top:8px;color:#ff9b9b">このアカウントでは承認操作ができません（担当外）</div>';
     }
@@ -635,54 +637,112 @@ var REJECT_REASONS = [
     sample:'有効期限が切れているため、確認できませんでした。' }
 ];
 
-function askRejectReason(){
-  var msg='否認の理由を番号で選んでください。\n\n';
-  for(var i=0;i<REJECT_REASONS.length;i++){
-    msg+=(i+1)+'. '+REJECT_REASONS[i].label+'\n   → '+REJECT_REASONS[i].hint+'\n\n';
-  }
-  var ans=prompt(msg,'1');
-  if(ans===null)return null;
-  var n=parseInt(String(ans).trim(),10);
-  if(!(n>=1&&n<=REJECT_REASONS.length)){
-    alert('1〜'+REJECT_REASONS.length+'の番号を入力してください。');
-    return askRejectReason();
-  }
-  return REJECT_REASONS[n-1];
+// 【2026/9/2 画面内のパネル方式へ変更】
+//   はじめは prompt（ブラウザのポップアップ）で番号とメモを聞いていたが、
+//   iPhoneのSafariには「ポップアップが連続して出るとき、2回目以降を止める」
+//   はたらきがあり、一度動いたあと理由の選択が出なくなる事象が起きた。
+//   ポップアップをやめ、否認ボタンを押すとその場に選択欄とメモ欄が開く形にした。
+//   承認の確認と、処理後のお知らせも同じ理由ですべて画面内に表示する。
+var _rejSel = {};   // 利用者IDごとに、いま選んでいる理由の番号を覚えておく
+
+// その方の行の下に出すお知らせ（処理の結果やエラー）
+function panelMsg(uid, text, isError){
+  var box=document.getElementById('rp-'+uid);
+  if(!box)return;
+  box.innerHTML='<div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:#1e0710;border-left:3px solid '+(isError?'#ff9b9b':'var(--gold)')+';font-size:13px;line-height:1.7">'+esc(text)+'</div>';
 }
 
-async function setV(uid,val){
+function closePanel(uid){
+  var box=document.getElementById('rp-'+uid);
+  if(box)box.innerHTML='';
+  delete _rejSel[uid];
+}
+
+// 承認の確認を、その場に開く
+function openApprove(uid){
+  var box=document.getElementById('rp-'+uid);
+  if(!box)return;
+  box.innerHTML=
+    '<div style="margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:#1e0710">'
+    +'<div style="font-size:13.5px;line-height:1.8;margin-bottom:10px">この方を<b style="color:var(--gold)">承認</b>します。本人のLINEに完了のお知らせが届きます。</div>'
+    +'<div class="acts"><button class="btn-ok" onclick="doVerify(\''+uid+'\',\'approved\')">承認する</button>'
+    +'<button class="btn-sm" style="flex:1" onclick="closePanel(\''+uid+'\')">やめる</button></div>'
+    +'</div>';
+}
+
+// 否認の理由とメモを、その場に開く
+function openReject(uid){
+  var box=document.getElementById('rp-'+uid);
+  if(!box)return;
+  if(_rejSel[uid]===undefined)_rejSel[uid]=0;
+  var sel=_rejSel[uid];
+  var opts='';
+  for(var i=0;i<REJECT_REASONS.length;i++){
+    var on=(i===sel);
+    opts+='<button onclick="pickReason(\''+uid+'\','+i+')" style="display:block;width:100%;text-align:left;margin-bottom:7px;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600;line-height:1.6;'
+      +(on?'background:var(--gold);color:#2a0a12':'background:#3a121c;color:var(--text);border:1px solid var(--line)')+'">'
+      +(on?'● ':'○ ')+esc(REJECT_REASONS[i].label)
+      +'<div style="font-size:11.5px;font-weight:400;margin-top:4px;opacity:.85">'+esc(REJECT_REASONS[i].hint)+'</div>'
+      +'</button>';
+  }
+  box.innerHTML=
+    '<div style="margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:#1e0710">'
+    +'<div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:8px">否認の理由を選んでください</div>'
+    +opts
+    +'<div style="font-size:12px;color:var(--gold);font-weight:700;margin-top:12px">この方へのご連絡</div>'
+    +'<div class="hint">ここに書いた内容が、アプリの画面と本人のLINEに届きます。空欄のままでも進められます。</div>'
+    +'<textarea id="rn-'+uid+'" style="min-height:70px">'+esc(REJECT_REASONS[sel].sample)+'</textarea>'
+    +'<div class="acts" style="margin-top:10px"><button class="btn-ng" onclick="doVerify(\''+uid+'\',\'rejected\')">この内容で否認する</button>'
+    +'<button class="btn-sm" style="flex:1" onclick="closePanel(\''+uid+'\')">やめる</button></div>'
+    +'</div>';
+}
+
+// 理由を選び直したとき。すでに書き換えたメモは消さない。
+function pickReason(uid, idx){
+  var ta=document.getElementById('rn-'+uid);
+  var cur=ta?ta.value.trim():'';
+  var prev=REJECT_REASONS[_rejSel[uid]||0].sample;
+  _rejSel[uid]=idx;
+  openReject(uid);
+  var ta2=document.getElementById('rn-'+uid);
+  // 文例のままなら新しい文例に差し替え、手で書き換えていればその内容を残す
+  if(ta2 && cur && cur!==prev.trim()) ta2.value=cur;
+}
+
+async function doVerify(uid,val){
   var word=(val==='approved')?'承認':'否認';
   var note='';
   var reason=null;
   if(val==='rejected'){
-    reason=askRejectReason();
-    if(!reason)return;
-    note=prompt('この方へのご連絡を入力してください。\nここに書いた内容が、アプリの画面と本人のLINEに届きます。\n（空欄のままでも進められます）',reason.sample);
-    if(note===null)return;
-    note=note.trim();
-    var confirmMsg='この方を否認します。\n\n理由：'+reason.label+'\n'+reason.hint+'\n\nよろしいですか？';
-    if(!confirm(confirmMsg))return;
-  }else{
-    if(!confirm('この方を承認します。\n本人のLINEに通知が届きます。\nよろしいですか？'))return;
+    var idx=_rejSel[uid];
+    if(idx===undefined){panelMsg(uid,'否認の理由を選んでください。',true);return;}
+    reason=REJECT_REASONS[idx];
+    var ta=document.getElementById('rn-'+uid);
+    note=ta?ta.value.trim():'';
   }
 
   var row=document.getElementById('v-'+uid);
   if(row)row.querySelectorAll('button').forEach(function(b){b.disabled=true;});
+  panelMsg(uid,'送信しています...',false);
 
   var r=await api({action:'verify',userId:uid,decision:val,note:note,reason:reason?reason.key:null});
   if(!r.success){
-    alert('処理に失敗しました。もう一度お試しください。');
+    panelMsg(uid,'処理に失敗しました。もう一度お試しください。',true);
     if(row)row.querySelectorAll('button').forEach(function(b){b.disabled=false;});
     return;
   }
+  var msg;
   if(r.lineSent){
-    alert(word+'しました。LINEに通知を送りました。');
+    msg=word+'しました。LINEに通知を送りました。';
   }else if(r.hasLine){
-    alert(word+'しました。ただしLINEの送信に失敗しました。\n（後ほど手動でご連絡ください）');
+    msg=word+'しました。ただしLINEの送信に失敗しました。（後ほど手動でご連絡ください）';
   }else{
-    alert(word+'しました。\nこの方はLINE未連携のため、通知は送っていません。');
+    msg=word+'しました。この方はLINE未連携のため、通知は送っていません。';
   }
-  loadVerify();
+  panelMsg(uid,msg,false);
+  delete _rejSel[uid];
+  // お知らせを読む時間をとってから一覧を作り直す
+  setTimeout(loadVerify,1800);
 }
 
 function calcAge(bd){
