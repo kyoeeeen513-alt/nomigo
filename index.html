@@ -1216,7 +1216,7 @@ function stopWaitMessageRotation(){
 // 画面の再描画のたびに通信が走るのを防ぐ。
 var _affiliateFired = false;
 
-function fireAffiliateTag(orderId){
+function fireAffiliateTag(orderId, genderCode){
   if(!orderId) return;
 
   // ここから下はレントラックスから受領したタグの中身。
@@ -1245,15 +1245,19 @@ function fireAffiliateTag(orderId){
       try{
         // _rt.sid / _rt.pid は先方指定の固定値。変更しない。
         // _rt.price は定額案件のため0固定。
-        // _rt.cname / _rt.ctel / _rt.cemail は氏名・電話・メールを入れる欄だが、
+        // _rt.ctel / _rt.cemail は電話・メールを入れる欄だが、
         //   成果の特定は注文番号だけで足り、個人情報を外部へ渡すことは
         //   プライバシーポリシー第4条・第6条の説明と食い違うため空にする。
         //   ここに個人情報を入れてはいけない。
+        // _rt.cname は本来は氏名を入れる欄だが、2026/9/2のレントラックスの
+        //   依頼（No.274）により、男女の別を示す固定記号だけを入れる。
+        //   男性＝'M'／女性＝'F'。先方はこの値で成果単価を出し分ける。
+        //   氏名は絶対に入れないこと。
         _rt.sid    = 11469;
         _rt.pid    = 16351;
         _rt.price  = 0;
         _rt.reward = -1;
-        _rt.cname  = '';
+        _rt.cname  = (genderCode==='M'||genderCode==='F') ? genderCode : '';
         _rt.ctel   = '';
         _rt.cemail = '';
         _rt.cinfo  = encodeURIComponent(String(orderId));
@@ -1274,7 +1278,10 @@ async function checkFirstMatchAndFire(){
     var row = res.data && res.data[0];
     if(row && row.out_ok === true && row.out_order_id){
       _affiliateFired = true;
-      fireAffiliateTag(row.out_order_id);
+      // 自分の性別を M / F に変換して渡す。値が取れないときは空のまま送る。
+      var g = (S.profile && S.profile.gender==='male') ? 'M'
+            : (S.profile && S.profile.gender==='female') ? 'F' : '';
+      fireAffiliateTag(row.out_order_id, g);
     }
   }catch(e){}
 }
