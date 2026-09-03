@@ -60,7 +60,7 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
      text-wrap:pretty で行末に1文字だけ残るような折り返しを減らす。
      どちらも対応していないブラウザでは無視されるだけで、害はない。 */
   line-break:strict;text-wrap:pretty;overflow-wrap:normal}
-#app{height:100%;min-height:100%;max-width:430px;margin:0 auto;background:transparent;display:flex;flex-direction:column;position:relative;z-index:1}
+#app{min-height:100%;max-width:430px;margin:0 auto;background:transparent;display:flex;flex-direction:column;position:relative;z-index:1}
 #ngo-fx{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;pointer-events:none;z-index:0;overflow:hidden}
 #ngo-fx::before{content:"";position:absolute;inset:0;background:
   radial-gradient(ellipse 320px 240px at 12% 4%,rgba(201,160,99,.10),transparent 60%),
@@ -91,7 +91,7 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
 .verify-dots span:nth-child(2){animation-delay:.2s}
 .verify-dots span:nth-child(3){animation-delay:.4s}
 @keyframes verifyDot{0%,80%,100%{opacity:0}40%{opacity:1}}
-.screen{flex:1;min-height:0;height:100%;display:flex;flex-direction:column}
+.screen{flex:1;display:flex;flex-direction:column}
 /* 画面遷移のときだけ演出する。選択のたびに再生すると重く感じるため */
 .anim-in{animation:fadeUp .32s cubic-bezier(.2,.8,.2,1) both}
 .hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:#241016;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
@@ -100,7 +100,7 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
 .hdr-info{flex:1}
 .hdr-step{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.24em;margin-bottom:3px;font-family:'Zen Kaku Gothic New',sans-serif}
 .hdr-title{font-size:20px;font-weight:800;letter-spacing:.01em;font-family:'Shippori Mincho',serif}
-.body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column}
+.body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 .body::-webkit-scrollbar{width:0}
 /* 下タブバー（2026/8/26追加）
    トップ画面が縦に短くて寂しいという指摘を受け、他のアプリと同じように
