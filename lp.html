@@ -1078,8 +1078,34 @@ fbq('track','PageView');
 
   <script>
     (function(){
+      // 広告の初回流入情報をアプリと同じドメインのlocalStorageへ保存する。
+      // 初回値は上書きせず、LPからアプリへ移動した後も引き継ぐ。
+      try{
+        var attributionKey='ngo_first_attribution';
+        if(!localStorage.getItem(attributionKey)){
+          var attributionParams=new URLSearchParams(window.location.search);
+          var attributionReferrer=document.referrer||'';
+          var attributionFbclid=attributionParams.get('fbclid')||'';
+          var attributionSource=attributionParams.get('utm_source')||'';
+          if(!attributionSource&&(attributionFbclid||/facebook\.com|instagram\.com/i.test(attributionReferrer)))attributionSource='meta';
+          var firstAttribution={
+            source:attributionSource,
+            medium:attributionParams.get('utm_medium')||'',
+            campaign:attributionParams.get('utm_campaign')||attributionParams.get('campaign')||'',
+            adset:attributionParams.get('utm_term')||attributionParams.get('adset')||'',
+            ad:attributionParams.get('utm_content')||attributionParams.get('ad')||'',
+            fbclid:attributionFbclid,
+            landing_url:window.location.href.slice(0,1000),
+            referrer:attributionReferrer.slice(0,1000)
+          };
+          if(firstAttribution.source||firstAttribution.campaign||firstAttribution.adset||firstAttribution.ad||firstAttribution.fbclid){
+            localStorage.setItem(attributionKey,JSON.stringify(firstAttribution));
+          }
+        }
+      }catch(e){}
+
       var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      var acquisitionKeys=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ref'];
+      var acquisitionKeys=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','ref'];
       var incomingParams=new URLSearchParams(window.location.search);
       document.querySelectorAll('a[href^="https://www.nomi-go.jp/?start=register"]').forEach(function(link){
         try{
