@@ -60,7 +60,7 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
      text-wrap:pretty で行末に1文字だけ残るような折り返しを減らす。
      どちらも対応していないブラウザでは無視されるだけで、害はない。 */
   line-break:strict;text-wrap:pretty;overflow-wrap:normal}
-#app{min-height:100%;max-width:430px;margin:0 auto;background:transparent;display:flex;flex-direction:column;position:relative;z-index:1}
+#app{height:100%;min-height:100%;max-width:430px;margin:0 auto;background:transparent;display:flex;flex-direction:column;position:relative;z-index:1}
 #ngo-fx{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;pointer-events:none;z-index:0;overflow:hidden}
 #ngo-fx::before{content:"";position:absolute;inset:0;background:
   radial-gradient(ellipse 320px 240px at 12% 4%,rgba(201,160,99,.10),transparent 60%),
@@ -91,7 +91,7 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
 .verify-dots span:nth-child(2){animation-delay:.2s}
 .verify-dots span:nth-child(3){animation-delay:.4s}
 @keyframes verifyDot{0%,80%,100%{opacity:0}40%{opacity:1}}
-.screen{flex:1;display:flex;flex-direction:column}
+.screen{flex:1;min-height:0;height:100%;display:flex;flex-direction:column}
 /* 画面遷移のときだけ演出する。選択のたびに再生すると重く感じるため */
 .anim-in{animation:fadeUp .32s cubic-bezier(.2,.8,.2,1) both}
 .hdr{padding:16px 20px;border-bottom:1px solid var(--border2);flex-shrink:0;background:#241016;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
@@ -100,7 +100,7 @@ html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Noto 
 .hdr-info{flex:1}
 .hdr-step{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.24em;margin-bottom:3px;font-family:'Zen Kaku Gothic New',sans-serif}
 .hdr-title{font-size:20px;font-weight:800;letter-spacing:.01em;font-family:'Shippori Mincho',serif}
-.body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column}
 .body::-webkit-scrollbar{width:0}
 /* 下タブバー（2026/8/26追加）
    トップ画面が縦に短くて寂しいという指摘を受け、他のアプリと同じように
@@ -679,6 +679,18 @@ body{font-size:15px;background:
 .job-item.on{background:var(--gold-bg);color:var(--gold-bright);font-weight:700}
 .job-item:active{background:rgba(255,255,255,.06)}
 .job-toggle:focus-visible,.job-item:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px}
+
+/* 【2026/9/3 登録フロー安定化】アプリ内ブラウザ案内・2段階プロフィール */
+.inapp-browser-note{margin:12px 20px 0;padding:12px 14px;border:1px solid rgba(224,176,96,.48);border-radius:10px;background:rgba(224,176,96,.12);color:var(--cream);font-size:12px;line-height:1.7}
+.inapp-browser-note strong{color:var(--gold-bright)}
+.profile-progress{padding:14px 20px 2px}
+.profile-progress-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:11px;color:var(--muted)}
+.profile-progress-top strong{color:var(--gold-bright)}
+.profile-progress-bar{height:5px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}
+.profile-progress-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--wine),var(--gold));transition:width .2s ease}
+.profile-required{color:var(--red);margin-left:4px;font-size:11px}
+.profile-step-note{margin:12px 20px 0;color:var(--muted);font-size:12px;line-height:1.7}
+
 </style>
 <script>
 (function(){
@@ -1097,6 +1109,12 @@ function render(){
   var tabKey=TAB_SCREENS[S.screen];
   if(tabKey&&S.user)html+=tabBarH(tabKey);
   app.innerHTML=html;
+  if(S.screen==='email'||S.screen==='profile_new'){
+    var registrationBody=app.querySelector('.body');
+    var browserNotice=inAppBrowserNoticeH();
+    if(registrationBody&&browserNotice)registrationBody.insertAdjacentHTML('afterbegin',browserNotice);
+  }
+  if(S.screen==='profile_new')setTimeout(trackProfileView,0);
   // タブバーの高さぶんだけ画面下に余白を作り、内容が隠れないようにする
   if(tabKey&&S.user&&app.firstElementChild)app.firstElementChild.classList.add('has-tabbar');
   if(_animateNext&&app.firstElementChild){app.firstElementChild.classList.add('anim-in');}
@@ -1927,6 +1945,104 @@ function onBirthdateChange(el){
 //   性別・タバコと同じく、自前のボタンで選ばせる形に置き換えた。
 //   選択肢は JOBS の添字で渡す。職業名に括弧や中点が含まれるため、
 //   文字列をそのまま onclick に埋め込むと壊れやすい。
+
+// ===== 登録フローの端末判定・離脱計測（2026/9/3） =====
+// 氏名・生年月日・入力内容は送らず、画面・停止項目・大まかな端末区分だけを記録する。
+function onboardingEnvironment(){
+  var ua=navigator.userAgent||'';
+  var browser='other';
+  if(/Instagram/i.test(ua))browser='instagram';
+  else if(/TikTok|Bytedance|musical_ly/i.test(ua))browser='tiktok';
+  else if(/Line\//i.test(ua))browser='line';
+  else if(/FBAN|FBAV/i.test(ua))browser='facebook';
+  else if(/SamsungBrowser/i.test(ua))browser='samsung';
+  else if(/CriOS|Chrome/i.test(ua))browser='chrome';
+  else if(/Safari/i.test(ua))browser='safari';
+  var device=/Android/i.test(ua)?'android':(/iPhone|iPad|iPod/i.test(ua)?'ios':'desktop');
+  return {browser:browser,device:device};
+}
+function inAppBrowserNoticeH(){
+  var env=onboardingEnvironment();
+  var names={instagram:'Instagram',tiktok:'TikTok',line:'LINE',facebook:'Facebook'};
+  var name=names[env.browser];
+  if(!name)return '';
+  var openText=env.device==='ios'?'Safari':'Chrome';
+  return '<div class="inapp-browser-note"><strong>'+name+'内で開いています。</strong><br>画面が止まる場合は、右上の「…」または共有ボタンを押し、「ブラウザで開く」→ '+openText+' で続けてください。登録済みの方は同じメールアドレスとパスワードでログインできます。</div>';
+}
+function trackOnboarding(eventName,step,checkpoint){
+  if(!DB||!S.user||!S.user.id)return;
+  var env=onboardingEnvironment();
+  DB.from('onboarding_events').insert({
+    user_id:S.user.id,
+    event_name:String(eventName||'').slice(0,40),
+    step:step===2?2:1,
+    checkpoint:String(checkpoint||'').slice(0,80),
+    browser_group:env.browser,
+    device_group:env.device
+  }).then(function(){}).catch(function(){});
+}
+function profileStep(){
+  if(S._profileStep===2)return 2;
+  try{if(sessionStorage.getItem('ngo_profile_step')==='2')return 2;}catch(e){}
+  return 1;
+}
+function setProfileStep(step){
+  S._profileStep=step===2?2:1;
+  try{sessionStorage.setItem('ngo_profile_step',String(S._profileStep));}catch(e){}
+}
+function calculateProfileAge(birthdate){
+  if(!birthdate)return null;
+  var bd=new Date(birthdate+'T00:00:00');
+  if(isNaN(bd.getTime()))return null;
+  var today=new Date();
+  var age=today.getFullYear()-bd.getFullYear();
+  var mdiff=today.getMonth()-bd.getMonth();
+  if(mdiff<0||(mdiff===0&&today.getDate()<bd.getDate()))age--;
+  return age;
+}
+function profileBasicIssue(p){
+  if(!p.realname||!p.realname.trim())return {message:'本名を入力してください',checkpoint:'real_name'};
+  if(!p.birthdate)return {message:'生年月日を入力してください',checkpoint:'birthdate'};
+  var age=calculateProfileAge(p.birthdate);
+  if(age===null)return {message:'生年月日を正しく入力してください',checkpoint:'birthdate_invalid'};
+  p.age=String(age);
+  if(age<20)return {message:'Nomi Goは20歳以上の方がご利用いただけます',checkpoint:'under_20'};
+  if(!p.nickname||!p.nickname.trim())return {message:'ニックネームを入力してください',checkpoint:'nickname'};
+  if(!p.gender)return {message:'性別を選択してください',checkpoint:'gender'};
+  if(p.gender==='male'&&!p.photoFile)return {message:'男性はご本人の顔写真の登録が必須です',checkpoint:'photo'};
+  return null;
+}
+function profileValidationError(step,message,checkpoint){
+  setProfileStep(step);
+  S.error=message;
+  trackOnboarding('profile_error',step,checkpoint);
+  re('profile_new');
+}
+function continueProfileSetup(){
+  saveInputs();
+  var issue=profileBasicIssue(S.pf);
+  if(issue){profileValidationError(1,issue.message,issue.checkpoint);return;}
+  S.error='';
+  setProfileStep(2);
+  trackOnboarding('profile_step_done',1,'basic_complete');
+  go('profile_new');
+}
+function backProfileStep(){
+  saveInputs();
+  S.error='';
+  setProfileStep(1);
+  go('profile_new');
+}
+function trackProfileView(){
+  if(!S.user)return;
+  var step=profileStep();
+  S._profileViews=S._profileViews||{};
+  var key=S.user.id+':'+step;
+  if(S._profileViews[key])return;
+  S._profileViews[key]=true;
+  trackOnboarding('profile_view',step,'view');
+}
+
 function jobSectionH(screen){
   var p=S.pf||{};
   var open=!!S._jobOpen;
@@ -1949,24 +2065,22 @@ function jobSectionH(screen){
 
 async function saveProfile(){
   S._jobOpen=false;
+  saveInputs();
   var p=S.pf;
-  if(!p.nickname||!p.age||!p.gender||!p.job||p.smoke===null||p.alcohol===null){S.error='すべての項目を入力してください';re('profile_new');return;}
-  if(!p.realname||!p.realname.trim()){S.error='本名を入力してください';re('profile_new');return;}
-  if(!p.birthdate){S.error='生年月日を入力してください';re('profile_new');return;}
-  if(parseInt(p.age)<20){S.error='Nomi Goは20歳以上の方がご利用いただけます';re('profile_new');return;}
-  var bd=new Date(p.birthdate);
-  var today=new Date();
-  var calcAge=today.getFullYear()-bd.getFullYear();
-  var mdiff=today.getMonth()-bd.getMonth();
-  if(mdiff<0||(mdiff===0&&today.getDate()<bd.getDate()))calcAge--;
-  if(calcAge<20){S.error='生年月日から20歳未満と判定されました。Nomi Goは20歳以上限定です';re('profile_new');return;}
-  if(parseInt(p.age)!==calcAge){S.error='年齢と生年月日が一致しません（生年月日からは'+calcAge+'歳です）。どちらかをご確認ください';re('profile_new');return;}
-  if(p.gender==='male'&&!p.photoFile){S.error='男性はご本人の顔写真の登録が必須です';re('profile_new');return;}
+  var issue=profileBasicIssue(p);
+  if(issue){profileValidationError(1,issue.message,issue.checkpoint);return;}
+  if(!p.job){profileValidationError(2,'職業を選択してください','job');return;}
+  if(p.smoke===null||typeof p.smoke==='undefined'){profileValidationError(2,'タバコについて選択してください','smoke');return;}
+  if(p.alcohol===null||typeof p.alcohol==='undefined'){profileValidationError(2,'お酒の強さを選択してください','alcohol');return;}
+  if(!p.agreed){profileValidationError(2,'利用規約とプライバシーポリシーへの同意が必要です','terms');return;}
+  trackOnboarding('profile_submit',2,'submit');
   go('loading');
   var photoUrl=null;
   try{
     photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
   }catch(e){
+    setProfileStep(1);
+    trackOnboarding('profile_error',1,'photo_upload');
     S.error='写真のアップロードに失敗しました。通信環境をご確認のうえ、写真を選び直してもう一度お試しください。';
     re('profile_new');
     return;
@@ -1989,8 +2103,12 @@ async function saveProfile(){
     }else{
       S.error=friendlyError(saved.error,'登録に失敗しました。もう一度お試しください。');
     }
+    trackOnboarding('profile_error',2,'profile_save');
     re('profile_new');return;
   }
+  trackOnboarding('profile_complete',2,'complete');
+  try{sessionStorage.removeItem('ngo_profile_step');sessionStorage.removeItem('ngo_pf');}catch(e){}
+  S._profileStep=1;
   await saveUserAttribution();
   await DB.from('user_stats').upsert({user_id:S.user.id});
   // 実際に付与されたチケット枚数をDBから読み直す。
@@ -4744,17 +4862,36 @@ function openPhotoPicker(where){
 
 function profileNewH(){
   var p=S.pf;
-  var photoPreview=p.photoPreview?'<img src="'+p.photoPreview+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':'<div style="width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">👤</div>';
-  var isMalePf=p.gender==='male';
-  var genderUnset=!p.gender;
-  var photoLabel=genderUnset?'プロフィール写真':(isMalePf?'プロフィール写真（男性は必須）':'プロフィール写真（任意）');
-  var photoNote=genderUnset
-    ?'※'+nb('男性は本人の顔写真の')+nb('登録が必須です')+nb('（下の「性別」を選ぶと')+nb('表示が変わります）')
-    :(isMalePf
-      ?nb('ご本人の顔がはっきり')+nb('写った写真を')+nb('登録してください。')+nb('加工・マスク・')+nb('複数人の写真は')+nb('承認されません。')+nb('本人確認の顔写真と')+nb('同一人物かどうか、')+nb('運営が確認します。')
-      :nb('写真を登録すると、')+nb('マッチが早くなる')+nb('傾向があります。'));
-  var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+photoLabel+(isMalePf?'<span style="color:var(--red);margin-left:4px">*必須</span>':'')+'</div><div style="display:flex;align-items:center;gap:14px"><div id="pf-prev-wrap" style="width:80px;height:80px;flex-shrink:0">'+photoPreview+'</div><button type="button" id="pf-pick-btn" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer" onclick="openPhotoPicker(\'profile_new\')">写真を選ぶ</button><input type="file" accept="image/*" id="pf-photo-new" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></div><div style="font-size:11px;color:'+(genderUnset?'var(--gold)':'var(--muted)')+';margin-top:6px;line-height:1.6">'+photoNote+'</div></div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','あなたのことを教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+'<div style="margin:16px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7"><div style="display:flex;gap:7px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">・</span><span><span style="color:var(--cream);font-weight:700">'+nb('本名と生年月日は')+nb('お相手に表示されません。')+'</span></span></div><div style="display:flex;gap:7px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">・</span><span>'+nb('本人確認（年齢確認）の')+nb('ためだけに使います。')+'</span></div><div style="display:flex;gap:7px"><span style="color:var(--gold);flex-shrink:0">・</span><span><span style="color:var(--cream);font-weight:700">'+nb('あとで提出する身分証と')+nb('同じ内容を')+'</span>'+nb('ご入力ください。')+nb('一致しないと')+nb('年齢確認が完了しません。')+'</span></div></div>'+photoSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（身分証と同じ表記で）</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+(escapeHtml(p.realname)||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日（身分証と同じもの）</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" onchange="onBirthdateChange(this)"></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="例：28" style="max-width:120px" value="'+(p.age||'')+'" oninput="digitsOnly(this);S.pf.age=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value);document.getElementById(\'ageWarnNew\').textContent=(this.value&&parseInt(this.value)<20)?\'Nomi Goは20歳以上の方がご利用いただけます\':\'\'"><div id="ageWarnNew" style="font-size:11px;color:var(--red);margin-top:4px"></div><div id="bdAgeNote" style="font-size:11px;color:var(--muted);margin-top:2px">'+((p.birthdate&&p.age)?'※生年月日から自動入力されました。違う場合は修正してください。':'')+'</div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div>'+jobSectionH('profile_new')+'<div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_new')+'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します（20歳以上であることを含みます）</span></label></div>'+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" '+(p.agreed?'':'disabled ')+'onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
+  var step=profileStep();
+  var progress='<div class="profile-progress"><div class="profile-progress-top"><strong>プロフィール '+step+'/2</strong><span>'+(step===1?'基本情報':'飲み方・確認')+'</span></div><div class="profile-progress-bar"><span style="width:'+(step===1?'50':'100')+'%"></span></div></div>';
+  var required='<span class="profile-required">*必須</span>';
+  var errorH=S.error?'<div class="err-msg" style="margin:12px 20px">'+escapeHtml(S.error)+'</div>':'';
+
+  if(step===1){
+    var photoPreview=p.photoPreview?'<img src="'+p.photoPreview+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':'<div style="width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">👤</div>';
+    var isMale=p.gender==='male';
+    var photoLabel=isMale?'プロフィール写真'+required:'プロフィール写真'+(p.gender==='female'?'（任意）':'');
+    var photoNote=isMale?'ご本人の顔がはっきり写った写真を選んでください。加工・マスク・複数人の写真は承認されません。':'男性は本人の顔写真が必須です。女性は任意です。';
+    var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+photoLabel+'</div><div style="display:flex;align-items:center;gap:14px"><div id="pf-prev-wrap" style="width:80px;height:80px;flex-shrink:0">'+photoPreview+'</div><button type="button" id="pf-pick-btn" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer" onclick="openPhotoPicker(\'profile_new\')">写真を選ぶ</button><input type="file" accept="image/*" id="pf-photo-new" style="display:none" onchange="handlePhotoSelect(this,\'profile_new\')"></div><div style="font-size:11px;color:var(--muted);margin-top:7px;line-height:1.6">'+photoNote+'</div></div>';
+    return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="saveInputs();go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','まず基本情報を入力してください')+'</div></div><div class="body" style="padding:0 0 20px">'+progress
+      +'<div style="margin:12px 20px 0;padding:12px 14px;background:rgba(224,176,96,.10);border:1px solid rgba(224,176,96,.3);border-radius:10px;font-size:11.5px;color:var(--muted);line-height:1.7"><span style="color:var(--cream);font-weight:700">本名と生年月日は相手に表示されません。</span><br>本人確認だけに使用します。身分証と同じ内容を入力してください。</div>'
+      +'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">本名（身分証と同じ表記）'+required+'</div><input class="inp'+(p.realname?' filled':'')+'" id="pf-rn" type="text" placeholder="例：山田太郎" maxlength="20" value="'+escapeHtml(p.realname||'')+'" oninput="S.pf.realname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div>'
+      +'<div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">生年月日'+required+'</div><input class="inp'+(p.birthdate?' filled':'')+'" id="pf-bd" type="date" style="max-width:200px" value="'+(p.birthdate||'')+'" onchange="onBirthdateChange(this)"></div>'
+      +'<div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢（生年月日から自動計算）</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" readonly style="max-width:120px;background:var(--card)" value="'+(p.age||'')+'" placeholder="自動入力"></div>'
+      +'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム'+required+'</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+escapeHtml(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div>'
+      +'<div class="sec-label">性別'+required+'</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button type="button" class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button type="button" class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div>'
+      +photoSection+errorH+'</div><div class="ftr"><button type="button" class="btn btn-wine" onclick="continueProfileSetup()">次へ（2/2）→</button></div></div>';
+  }
+
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="backProfileStep()">← 基本情報へ</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','飲み方を教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+progress
+    +'<div class="profile-step-note">あと少しです。<span style="color:var(--red)">*必須</span>の項目を入力してください。</div>'
+    +'<div class="sec-label">職業'+required+'</div>'+jobSectionH('profile_new')
+      .replace('<div class="sec-label">職業</div>','')
+    +'<div class="sec-label">タバコ'+required+'</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button type="button" class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button type="button" class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div>'
+    +'<div class="sec-label">お酒の強さ'+required+'</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button type="button" class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'
+    +tagSectionH('profile_new')
+    +'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します'+required+'（20歳以上であることを含みます）</span></label></div>'
+    +errorH+'</div><div class="ftr"><button type="button" class="btn btn-wine" onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
 }
 
 function profileEditH(){
