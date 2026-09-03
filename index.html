@@ -1832,10 +1832,26 @@ async function uploadProfilePhoto(userId,file){
   if(!file)return null;
   var ext=(file.name&&file.name.split('.').pop())||'jpg';
   var path=userId+'/'+Date.now()+'.'+ext;
-  var up=await DB.storage.from('avatars').upload(path,file,{upsert:true});
-  if(up.error)return null;
-  var pub=DB.storage.from('avatars').getPublicUrl(path);
-  return pub.data&&pub.data.publicUrl?pub.data.publicUrl:null;
+  var timeoutId=null;
+  try{
+    // 電波が不安定なアプリ内ブラウザでも、アップロード待ちで永久に止めない。
+    // 写真は縮小済みのため、20秒を超えたら画面へ戻して再試行を案内する。
+    var up=await Promise.race([
+      DB.storage.from('avatars').upload(path,file,{upsert:true}),
+      new Promise(function(resolve,reject){
+        timeoutId=setTimeout(function(){reject(new Error('profile_photo_upload_timeout'));},20000);
+      })
+    ]);
+    if(timeoutId)clearTimeout(timeoutId);
+    if(up.error)throw up.error;
+    var pub=DB.storage.from('avatars').getPublicUrl(path);
+    var publicUrl=pub.data&&pub.data.publicUrl?pub.data.publicUrl:null;
+    if(!publicUrl)throw new Error('profile_photo_url_missing');
+    return publicUrl;
+  }catch(e){
+    if(timeoutId)clearTimeout(timeoutId);
+    throw e;
+  }
 }
 
 // ===== エラー文の日本語化 =====
@@ -1947,7 +1963,14 @@ async function saveProfile(){
   if(parseInt(p.age)!==calcAge){S.error='年齢と生年月日が一致しません（生年月日からは'+calcAge+'歳です）。どちらかをご確認ください';re('profile_new');return;}
   if(p.gender==='male'&&!p.photoFile){S.error='男性はご本人の顔写真の登録が必須です';re('profile_new');return;}
   go('loading');
-  var photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
+  var photoUrl=null;
+  try{
+    photoUrl=p.photoFile?await uploadProfilePhoto(S.user.id,p.photoFile):null;
+  }catch(e){
+    S.error='写真のアップロードに失敗しました。通信環境をご確認のうえ、写真を選び直してもう一度お試しください。';
+    re('profile_new');
+    return;
+  }
   // 【チケット枚数と確認レベルは画面から送らない 2026/8/21】
   //   以前はここで ticket_count:1（男性）を送っていたが、
   //   枚数を画面側が決めて送る作りは、送る値を書き換えられると
@@ -4686,8 +4709,14 @@ async function saveProfileEdit(){
   go('loading');
   var photoUrl=S.profile.photo_url;
   if(p.photoFile){
-    var uploaded=await uploadProfilePhoto(S.user.id,p.photoFile);
-    if(uploaded)photoUrl=uploaded;
+    try{
+      var uploaded=await uploadProfilePhoto(S.user.id,p.photoFile);
+      if(uploaded)photoUrl=uploaded;
+    }catch(e){
+      S.error='写真のアップロードに失敗しました。通信環境をご確認のうえ、写真を選び直してもう一度お試しください。';
+      re('profile_edit');
+      return;
+    }
   }
   var upd=await DB.from('profiles').update({nickname:p.nickname,gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
   if(upd.error){S.error=friendlyError(upd.error,'保存に失敗しました。もう一度お試しください。');re('profile_edit');return;}
