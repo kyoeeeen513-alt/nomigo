@@ -694,29 +694,88 @@ body{font-size:15px;background:
 </style>
 <script>
 (function(){
-  try{
-    var params=new URLSearchParams(window.location.search);
-    var keys=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','ref'];
-    var touch={landing_page:window.location.pathname,recorded_at:new Date().toISOString()};
-    var hasCampaign=false;
-    keys.forEach(function(key){
-      var value=params.get(key);
-      if(value){touch[key]=value;hasCampaign=true;}
-    });
-    if(hasCampaign){
-      if(!localStorage.getItem('ngo_utm_first'))localStorage.setItem('ngo_utm_first',JSON.stringify(touch));
-      localStorage.setItem('ngo_utm_last',JSON.stringify(touch));
+  var FIRST_KEY='ngo_first_attribution';
+  var LAST_KEY='ngo_last_attribution';
+  var ATTRIBUTION_DAYS=30;
+  function readTouch(key){
+    try{
+      var value=JSON.parse(localStorage.getItem(key)||'null');
+      if(!value)return null;
+      if(value.expires_at&&new Date(value.expires_at).getTime()<=Date.now()){
+        localStorage.removeItem(key);
+        return null;
+      }
+      return value;
+    }catch(e){return null;}
+  }
+  function classifySource(q,ref){
+    var source=(q.get('utm_source')||'').toLowerCase();
+    var medium=q.get('utm_medium')||'';
+    var fbclid=q.get('fbclid')||'';
+    var clickId=fbclid||q.get('ttclid')||q.get('gclid')||q.get('msclkid')||'';
+    var refCode=q.get('ref')||'';
+    var hasExplicit=!!(source||medium||q.get('utm_campaign')||q.get('utm_content')||q.get('utm_term')||clickId||refCode);
+    var sameOrigin=false;
+    try{sameOrigin=!!ref&&new URL(ref).origin===window.location.origin;}catch(e){}
+    if(!hasExplicit&&sameOrigin)return null;
+    if(!source){
+      if(fbclid||/facebook\.com|instagram\.com/i.test(ref))source='meta';
+      else if(q.get('ttclid')||/tiktok\.com/i.test(ref))source='tiktok';
+      else if(/line\.me|liff\.line\.me/i.test(ref))source='line';
+      else if(q.get('gclid')||/google\./i.test(ref))source='google';
+      else if(refCode)source='referral';
+      else if(ref)source='referral';
+      else source='direct';
     }
-  }catch(e){}
+    if(!medium){
+      if(source==='direct')medium='none';
+      else if(source==='referral'||source==='line')medium='referral';
+      else if(clickId)medium='paid';
+      else medium='organic';
+    }
+    return {source:source,medium:medium,fbclid:fbclid,click_id:clickId,ref_code:refCode};
+  }
+  window.ngoCaptureAttribution=function(){
+    try{
+      var q=new URLSearchParams(window.location.search);
+      var ref=document.referrer||'';
+      var classified=classifySource(q,ref);
+      if(!classified)return;
+      var now=new Date();
+      var expires=new Date(now.getTime()+ATTRIBUTION_DAYS*86400000).toISOString();
+      var touch={
+        source:classified.source,
+        medium:classified.medium,
+        campaign:q.get('utm_campaign')||q.get('campaign')||'',
+        adset:q.get('utm_term')||q.get('adset')||'',
+        ad:q.get('utm_content')||q.get('ad')||'',
+        fbclid:classified.fbclid,
+        click_id:classified.click_id,
+        ref_code:classified.ref_code,
+        landing_url:window.location.href.slice(0,1000),
+        referrer:ref.slice(0,1000),
+        recorded_at:now.toISOString(),
+        expires_at:expires
+      };
+      var first=readTouch(FIRST_KEY);
+      var last=readTouch(LAST_KEY);
+      if(!first){
+        localStorage.setItem(FIRST_KEY,JSON.stringify(touch));
+        first=touch;
+      }
+      if(touch.source!=='direct'||!last)localStorage.setItem(LAST_KEY,JSON.stringify(touch));
+      localStorage.setItem('ngo_utm_first',JSON.stringify(first));
+      localStorage.setItem('ngo_utm_last',JSON.stringify(touch.source!=='direct'||!last?touch:last));
+    }catch(e){}
+  };
+  window.ngoCaptureAttribution();
   window.ngoTrackCompleteRegistration=function(userId){
     try{
       var key='ngo_complete_registration_'+String(userId||'unknown');
       if(localStorage.getItem(key))return;
-      var first=null,last=null;
-      try{first=JSON.parse(localStorage.getItem('ngo_utm_first')||'null');}catch(e){}
-      try{last=JSON.parse(localStorage.getItem('ngo_utm_last')||'null');}catch(e){}
+      var first=readTouch(FIRST_KEY),last=readTouch(LAST_KEY)||first;
       window.dataLayer=window.dataLayer||[];
-      window.dataLayer.push({event:'complete_registration',user_id:userId||null,utm_first:first,utm_last:last});
+      window.dataLayer.push({event:'complete_registration',user_id:userId||null,attribution_first:first,attribution_last:last});
       if(typeof window.fbq==='function')window.fbq('track','CompleteRegistration');
       localStorage.setItem(key,new Date().toISOString());
     }catch(e){}
@@ -844,51 +903,76 @@ const SHOW_LIVE_COUNT=false;
 //   ドメインを変えるときは、ここだけ直せばよい。
 const SITE_URL='https://www.nomi-go.jp';
 
-// ===== 広告流入の初回記録（2026/9/3 再適用） =====
-// LPで保存したUTM・fbclidをプロフィール登録完了時にDBへ保存する。
-// 初回流入は上書きせず、既存の登録・年齢確認フローには干渉しない。
+// ===== 流入元の初回・最終記録（2026/9/4） =====
+// LPまたはアプリで記録した30日間の流入情報を、プロフィール登録完了時にDBへ保存する。
+// 直接流入も保存するが、広告・検索・紹介の後に直接戻ってきた場合は最終の有効な流入元を維持する。
 const ATTRIBUTION_STORAGE_KEY='ngo_first_attribution';
+const LAST_ATTRIBUTION_STORAGE_KEY='ngo_last_attribution';
 function captureFirstAttribution(){
-  try{
-    if(localStorage.getItem(ATTRIBUTION_STORAGE_KEY))return;
-    var q=new URLSearchParams(window.location.search);
-    var ref=document.referrer||'';
-    var fbclid=q.get('fbclid')||'';
-    var source=q.get('utm_source')||'';
-    if(!source&&(fbclid||/facebook\.com|instagram\.com/i.test(ref)))source='meta';
-    var data={
-      source:source,
-      medium:q.get('utm_medium')||'',
-      campaign:q.get('utm_campaign')||q.get('campaign')||'',
-      adset:q.get('utm_term')||q.get('adset')||'',
-      ad:q.get('utm_content')||q.get('ad')||'',
-      fbclid:fbclid,
-      landing_url:window.location.href.slice(0,1000),
-      referrer:ref.slice(0,1000)
-    };
-    if(data.source||data.campaign||data.adset||data.ad||data.fbclid){
-      localStorage.setItem(ATTRIBUTION_STORAGE_KEY,JSON.stringify(data));
-    }
-  }catch(e){}
+  try{if(window.ngoCaptureAttribution)window.ngoCaptureAttribution();}catch(e){}
 }
 captureFirstAttribution();
 
+function readStoredAttribution(key){
+  try{
+    var value=JSON.parse(localStorage.getItem(key)||'null');
+    if(!value)return null;
+    if(value.expires_at&&new Date(value.expires_at).getTime()<=Date.now()){
+      localStorage.removeItem(key);
+      return null;
+    }
+    return value;
+  }catch(e){return null;}
+}
+function attributionValue(touch,key){
+  return touch&&touch[key]?String(touch[key]).slice(0,1000):null;
+}
 async function saveUserAttribution(){
   if(!S.user)return;
   try{
-    var raw=localStorage.getItem(ATTRIBUTION_STORAGE_KEY);
-    if(!raw)return;
-    var a=JSON.parse(raw);
+    captureFirstAttribution();
+    var first=readStoredAttribution(ATTRIBUTION_STORAGE_KEY);
+    var last=readStoredAttribution(LAST_ATTRIBUTION_STORAGE_KEY)||first;
+    if(!first&&!last)return;
+    var effective=last||first;
+    var completedAt=new Date().toISOString();
     var saved=await DB.from('user_attributions').upsert({
       user_id:S.user.id,
-      source:a.source||null,
-      medium:a.medium||null,
-      campaign:a.campaign||null,
-      adset:a.adset||null,
-      ad:a.ad||null,
-      fbclid:a.fbclid||null,
-      landing_url:a.landing_url||null,
-      referrer:a.referrer||null
+      source:attributionValue(effective,'source'),
+      medium:attributionValue(effective,'medium'),
+      campaign:attributionValue(effective,'campaign'),
+      adset:attributionValue(effective,'adset'),
+      ad:attributionValue(effective,'ad'),
+      fbclid:attributionValue(effective,'fbclid'),
+      click_id:attributionValue(effective,'click_id'),
+      ref_code:attributionValue(effective,'ref_code'),
+      landing_url:attributionValue(effective,'landing_url'),
+      referrer:attributionValue(effective,'referrer'),
+      first_source:attributionValue(first,'source'),
+      first_medium:attributionValue(first,'medium'),
+      first_campaign:attributionValue(first,'campaign'),
+      first_adset:attributionValue(first,'adset'),
+      first_ad:attributionValue(first,'ad'),
+      first_fbclid:attributionValue(first,'fbclid'),
+      first_click_id:attributionValue(first,'click_id'),
+      first_ref_code:attributionValue(first,'ref_code'),
+      first_landing_url:attributionValue(first,'landing_url'),
+      first_referrer:attributionValue(first,'referrer'),
+      first_recorded_at:attributionValue(first,'recorded_at'),
+      last_source:attributionValue(last,'source'),
+      last_medium:attributionValue(last,'medium'),
+      last_campaign:attributionValue(last,'campaign'),
+      last_adset:attributionValue(last,'adset'),
+      last_ad:attributionValue(last,'ad'),
+      last_fbclid:attributionValue(last,'fbclid'),
+      last_click_id:attributionValue(last,'click_id'),
+      last_ref_code:attributionValue(last,'ref_code'),
+      last_landing_url:attributionValue(last,'landing_url'),
+      last_referrer:attributionValue(last,'referrer'),
+      last_recorded_at:attributionValue(last,'recorded_at'),
+      attribution_expires_at:attributionValue(last||first,'expires_at'),
+      registration_completed_at:completedAt,
+      tracking_version:2
     },{onConflict:'user_id'});
     if(saved.error)console.warn('Attribution save failed',saved.error);
   }catch(e){console.warn('Attribution save failed',e);}
@@ -1561,7 +1645,6 @@ async function doSignUp(){
   go('loading');
   var res=await DB.auth.signUp({email:email,password:pass});
   if(res.error){var r2=await DB.auth.signInWithPassword({email:email,password:pass});if(r2.error){S.error='登録に失敗しました';go('email');return;}S.user=r2.data.user;await loadProfile();routeAfterLoad();return;}
-  if(res.data&&res.data.user&&window.ngoTrackCompleteRegistration)window.ngoTrackCompleteRegistration(res.data.user.id);
   if(res.data&&res.data.session){S.user=res.data.user;await loadProfile();if(!S.profile){await goEmailVerify();}else{routeAfterLoad();}return;}
   if(res.data&&res.data.user){var r3=await DB.auth.signInWithPassword({email:email,password:pass});if(r3.error){S.error='ログインタブからサインインしてください';go('email');return;}S.user=r3.data.user;await loadProfile();if(!S.profile){await goEmailVerify();}else{routeAfterLoad();}return;}
   S.error='登録に失敗しました';go('email');
@@ -2110,6 +2193,7 @@ async function saveProfile(){
   try{sessionStorage.removeItem('ngo_profile_step');sessionStorage.removeItem('ngo_pf');}catch(e){}
   S._profileStep=1;
   await saveUserAttribution();
+  if(window.ngoTrackCompleteRegistration)window.ngoTrackCompleteRegistration(S.user.id);
   await DB.from('user_stats').upsert({user_id:S.user.id});
   // 実際に付与されたチケット枚数をDBから読み直す。
   // 画面側で枚数を決めていないため、DBに聞かないと本当の枚数が分からない。
