@@ -2437,16 +2437,17 @@ async function submitIdVerify(){
 
 // 申請があったことを運営に知らせる。送り先と文面はサーバーが決めるため、ここでは渡さない。
 // 失敗しても申請そのものには影響させない。
+//
+// 【2026/9/4 変更・No.275】呼び先を /api/admin から /api/notify-verify-worker へ移した。
+//  以前は、この通信が失敗すると通知が飛ばず、しかも記録が一切残らなかった。
+//  そのため2026/9/2の申請が約40時間放置されても誰も気づけなかった。
+//  現在は、申請が確認待ちになった時点でデータベース側が受付台帳へ1行を残すため、
+//  ここでの通信が失敗しても通知は失われない（1分おきの見張りが拾い直す）。
+//  この呼び出しは「すぐ届かせる」ためのものであり、確実性はデータベース側が担保する。
+//  ログイン証明は不要（送る係は台帳を見て動き、呼び出し側からは何も指定できない）。
 async function notifyIdVerifyPending(){
   try{
-    var s=await DB.auth.getSession();
-    var token=s&&s.data&&s.data.session?s.data.session.access_token:null;
-    if(!token)return;
-    await fetch('/api/admin',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({action:'notify_pending'})
-    });
+    await fetch('/api/notify-verify-worker',{method:'POST'});
   }catch(e){}
 }
 
