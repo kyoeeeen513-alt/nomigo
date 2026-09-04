@@ -1043,29 +1043,71 @@ fbq('track','PageView');
 
   <script>
     (function(){
-      // 広告の初回流入情報をアプリと同じドメインのlocalStorageへ保存する。
-      // 初回値は上書きせず、LPからアプリへ移動した後も引き継ぐ。
+      // 初回・最終流入を30日間保存し、登録完了時にアプリからDBへ記録する。
+      // 同一ドメイン内の移動は新しい流入として数えず、広告後の直接再訪でも広告情報を維持する。
       try{
-        var attributionKey='ngo_first_attribution';
-        if(!localStorage.getItem(attributionKey)){
-          var attributionParams=new URLSearchParams(window.location.search);
-          var attributionReferrer=document.referrer||'';
-          var attributionFbclid=attributionParams.get('fbclid')||'';
-          var attributionSource=attributionParams.get('utm_source')||'';
-          if(!attributionSource&&(attributionFbclid||/facebook\.com|instagram\.com/i.test(attributionReferrer)))attributionSource='meta';
-          var firstAttribution={
-            source:attributionSource,
-            medium:attributionParams.get('utm_medium')||'',
-            campaign:attributionParams.get('utm_campaign')||attributionParams.get('campaign')||'',
-            adset:attributionParams.get('utm_term')||attributionParams.get('adset')||'',
-            ad:attributionParams.get('utm_content')||attributionParams.get('ad')||'',
-            fbclid:attributionFbclid,
-            landing_url:window.location.href.slice(0,1000),
-            referrer:attributionReferrer.slice(0,1000)
-          };
-          if(firstAttribution.source||firstAttribution.campaign||firstAttribution.adset||firstAttribution.ad||firstAttribution.fbclid){
-            localStorage.setItem(attributionKey,JSON.stringify(firstAttribution));
+        var firstKey='ngo_first_attribution';
+        var lastKey='ngo_last_attribution';
+        function readTouch(key){
+          try{
+            var value=JSON.parse(localStorage.getItem(key)||'null');
+            if(!value)return null;
+            if(value.expires_at&&new Date(value.expires_at).getTime()<=Date.now()){
+              localStorage.removeItem(key);
+              return null;
+            }
+            return value;
+          }catch(e){return null;}
+        }
+        var q=new URLSearchParams(window.location.search);
+        var ref=document.referrer||'';
+        var source=(q.get('utm_source')||'').toLowerCase();
+        var medium=q.get('utm_medium')||'';
+        var fbclid=q.get('fbclid')||'';
+        var clickId=fbclid||q.get('ttclid')||q.get('gclid')||q.get('msclkid')||'';
+        var refCode=q.get('ref')||'';
+        var hasExplicit=!!(source||medium||q.get('utm_campaign')||q.get('utm_content')||q.get('utm_term')||clickId||refCode);
+        var sameOrigin=false;
+        try{sameOrigin=!!ref&&new URL(ref).origin===window.location.origin;}catch(e){}
+        if(hasExplicit||!sameOrigin){
+          if(!source){
+            if(fbclid||/facebook\.com|instagram\.com/i.test(ref))source='meta';
+            else if(q.get('ttclid')||/tiktok\.com/i.test(ref))source='tiktok';
+            else if(/line\.me|liff\.line\.me/i.test(ref))source='line';
+            else if(q.get('gclid')||/google\./i.test(ref))source='google';
+            else if(refCode||ref)source='referral';
+            else source='direct';
           }
+          if(!medium){
+            if(source==='direct')medium='none';
+            else if(source==='referral'||source==='line')medium='referral';
+            else if(clickId)medium='paid';
+            else medium='organic';
+          }
+          var now=new Date();
+          var touch={
+            source:source,
+            medium:medium,
+            campaign:q.get('utm_campaign')||q.get('campaign')||'',
+            adset:q.get('utm_term')||q.get('adset')||'',
+            ad:q.get('utm_content')||q.get('ad')||'',
+            fbclid:fbclid,
+            click_id:clickId,
+            ref_code:refCode,
+            landing_url:window.location.href.slice(0,1000),
+            referrer:ref.slice(0,1000),
+            recorded_at:now.toISOString(),
+            expires_at:new Date(now.getTime()+30*86400000).toISOString()
+          };
+          var first=readTouch(firstKey);
+          var last=readTouch(lastKey);
+          if(!first){
+            localStorage.setItem(firstKey,JSON.stringify(touch));
+            first=touch;
+          }
+          if(touch.source!=='direct'||!last)localStorage.setItem(lastKey,JSON.stringify(touch));
+          localStorage.setItem('ngo_utm_first',JSON.stringify(first));
+          localStorage.setItem('ngo_utm_last',JSON.stringify(touch.source!=='direct'||!last?touch:last));
         }
       }catch(e){}
 
