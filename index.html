@@ -2838,7 +2838,29 @@ function ageBand(age){
 }
 async function loadWaitFeed(){
   try{
-    if(!S.user||!S.profile||!S.profile.gender){S._waitFeed=[];return;}
+    // 【2026/9/6追加】まだ登録していない人のトップにも「今こんな人が募集中」を出す。
+    //   理由：登録前に実際の募集が見えたほうが、登録に進む動機になる（奈良の判断）。
+    //   未ログインの人は registrations を直接読めない（RLSで拒否される）ため、
+    //   個人が特定できない項目だけを返す専用の関数 get_public_feed を経由する。
+    //   年齢は関数の中で「20代後半」の形に丸めており、実年齢・氏名・IDは一切返らない。
+    if(!S.user||!S.profile||!S.profile.gender){
+      var pubRes=await DB.rpc('get_public_feed');
+      var rows=(pubRes&&pubRes.data)||[];
+      S._waitFeed=rows.map(function(r){
+        return {
+          live:true,
+          band:r.band||'',
+          gender:r.gender==='male'?'男性':'女性',
+          job:r.job||'',
+          area:areaName(r.area_id),
+          slot:r.slot||'',
+          style:r.drink_style||'',
+          purpose:r.purpose?purposeLabel(r.purpose):'',
+          tag:r.tag||''
+        };
+      });
+      return;
+    }
     var opp=S.profile.gender==='male'?'female':'male';
     // 本当に現在募集している人だけを表示する。成立済み・終了済み・期限切れは混ぜない。
     // slot（今すぐ／19:00〜22:00）も取得する。何時からの募集かが分からないと、
@@ -2907,7 +2929,11 @@ function stopWaitFeed(){
 }
 function waitFeedCardH(){
   if(!S._waitFeed||!S._waitFeed.length)return '';
-  return '<div class="home-feed"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="font-size:14px">🍷</span><span style="font-size:11px;font-weight:800;color:var(--gold);letter-spacing:.08em">今夜のノミゴー待ち</span></div><div id="wait-feed-body" style="min-height:44px">'+waitFeedItemH(S._waitFeed[S._waitFeedIdx||0])+'</div></div>';
+  // 未ログインの人には、この一覧が「登録すると相手になり得る人」だと分かる一言を添える。
+  var note=!S.user
+    ?'<div style="font-size:11px;color:rgba(237,229,224,.6);margin-top:8px;padding-top:8px;border-top:1px solid rgba(237,229,224,.1);line-height:1.7">登録して本人確認が済むと、この方たちに募集を出せます。</div>'
+    :'';
+  return '<div class="home-feed"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="font-size:14px">🍷</span><span style="font-size:11px;font-weight:800;color:var(--gold);letter-spacing:.08em">今夜のノミゴー待ち</span></div><div id="wait-feed-body" style="min-height:44px">'+waitFeedItemH(S._waitFeed[S._waitFeedIdx||0])+'</div>'+note+'</div>';
 }
 
 // エリアごとの現在募集中の人数を取得する（エリア選択画面で「今このエリアで◯人が募集中」を出すため）
@@ -4516,7 +4542,7 @@ function splashH(){
       +'<div class="home-primary-action">'+recruitBtn+idPendingNote+'</div>'
       +matchCard
       +audienceContext
-      +(li&&!isMatched&&!isWaiting?waitFeedCardH():'')
+      +(!isMatched&&!isWaiting?waitFeedCardH():'')
       +preLaunchCard
       +ticketCard
       +facts
