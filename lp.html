@@ -856,14 +856,17 @@ fbq('track','PageView');
               if(saved&&saved.adset) term=String(saved.adset).toLowerCase();
             }catch(e){}
           }
-          var title=document.getElementById('hero-title');
-          if(title){
-            if(term.indexOf('sapporo')>=0){
-              title.innerHTML='今夜、すすきので。<br><span>飲める人を、今から探す。</span>';
-            }else if(term.indexOf('kanto')>=0){
-              title.innerHTML='今夜、新宿で。<br><span>飲める人を、今から探す。</span>';
-            }
-          }
+          /* 2026/9/6（No.283）：見出しのエリア別の出し分けを廃止した。
+             理由は2つ。
+             (1)提供エリアは新宿・すすきのの2つあり、片方の地名を大きく出すと
+                もう片方の広告から来た人に「自分の街ではない」と見えてしまう。
+             (2)utm_term が付いていない再訪でも、保存済みの流入情報（ngo_utm_last）を
+                読んでいたため、一度でも札幌向けの広告から来た端末では、その後ずっと
+                見出しが「今夜、すすきので。」のまま固定されていた。
+                実際にこの状態が本番で発生している。
+             見出しはHTMLに書いてある「今夜、飲める人を。／今から探す。」を常に使い、
+             エリアは下の一文（新宿・すすきので利用できます）とエリア欄で示す。
+             CTAの文言の出し分け（男性・女性）はそのまま残している。 */
           var cta=document.getElementById('hero-cta');
           if(cta){
             /* female が male を含むため、女性を先に判定する */
