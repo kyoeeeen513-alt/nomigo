@@ -1178,7 +1178,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
   var app=document.getElementById('app');
   app.dataset.screen=S.screen;
   var html=(map[S.screen]||loadingH)();
@@ -1803,7 +1803,7 @@ async function routeAfterLoad(){
     return;
   }
   var lastScreen2=sessionStorage.getItem('ngo_screen');
-  var restorable=['area_select','mode_select','recruit','profile_edit','terms','privacy','inquiry','faqbot','forgot_password'];
+  var restorable=['area_select','mode_select','recruit','profile_edit','drink_profile_setup','terms','privacy','inquiry','faqbot','forgot_password'];
   var recruitFlowScreens=['area_select','mode_select','recruit'];
   var lastActive=parseInt(sessionStorage.getItem('ngo_last_active')||'0');
   var awayMs=Date.now()-lastActive;
@@ -1823,6 +1823,9 @@ async function routeAfterLoad(){
     }
     if(lastScreen2==='profile_edit'){
       goProfileEdit();
+    }else if(lastScreen2==='drink_profile_setup'){
+      S.pf={nickname:S.profile.nickname,age:String(S.profile.age||''),gender:S.profile.gender,job:S.profile.job||null,smoke:S.profile.smoke==null?null:S.profile.smoke,alcohol:S.profile.alcohol==null?null:S.profile.alcohol,tags:(S.profile.tags||[]).slice()};
+      go('drink_profile_setup');
     }else if(lastScreen2==='faqbot'){
       if(!S.faqMsgs||!S.faqMsgs.length){goFaqBot();}else{go('faqbot');}
     }else{
@@ -2152,9 +2155,6 @@ async function saveProfile(){
   var p=S.pf;
   var issue=profileBasicIssue(p);
   if(issue){profileValidationError(1,issue.message,issue.checkpoint);return;}
-  if(!p.job){profileValidationError(2,'職業を選択してください','job');return;}
-  if(p.smoke===null||typeof p.smoke==='undefined'){profileValidationError(2,'タバコについて選択してください','smoke');return;}
-  if(p.alcohol===null||typeof p.alcohol==='undefined'){profileValidationError(2,'お酒の強さを選択してください','alcohol');return;}
   if(!p.agreed){profileValidationError(2,'利用規約とプライバシーポリシーへの同意が必要です','terms');return;}
   trackOnboarding('profile_submit',2,'submit');
   go('loading');
@@ -2174,7 +2174,7 @@ async function saveProfile(){
   //   いくらでもチケットを増やせてしまう。
   //   無料付与を行うかどうかはDB側（app_settings と trg_grant_welcome_ticket）が判断する。
   //   verified_level も同じ理由で送らない。DB側の既定値に任せる。
-  var saved=await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',updated_at:new Date().toISOString()});
+  var saved=await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:null,smoke:null,alcohol:null,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',updated_at:new Date().toISOString()});
   if(saved.error){
     // 同一人物（本名＋生年月日）での2つ目のアカウント作成は、DB側で禁止している。
     // お一人につき1アカウントという規約（第4条）を、実際に担保するための処理。
@@ -2204,7 +2204,7 @@ async function saveProfile(){
     var tc=await DB.from('profiles').select('ticket_count').eq('user_id',S.user.id).single();
     if(tc.data&&tc.data.ticket_count)granted=tc.data.ticket_count;
   }catch(e){}
-  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:granted};
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:null,smoke:null,alcohol:null,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:granted};
   // 実際に配られたときだけ知らせる。配られていないのに文言を出すと嘘になる。
   // 【2026/8/22 表示時期を変更】以前はこの直後にお祝いを出していたが、
   //   本人確認もLINE連携もこれからという段階で出るため早すぎるとの指摘を受けた。
@@ -3022,6 +3022,21 @@ async function goRecruit(){
   if(S.profile.gender==='male'&&!S.profile.photo_url){
     alert('募集にはご本人の顔写真の登録が必要になりました。プロフィール編集から顔写真を登録してください。');
     goProfileEdit();
+    return;
+  }
+  // 職業・喫煙・お酒の強さは、登録時ではなく初めて募集するときに設定する。
+  // 既存ユーザーはすでに値があるため、この画面は表示されない。
+  if(!S.profile.job||S.profile.smoke==null||S.profile.alcohol==null){
+    S.pf={
+      nickname:S.profile.nickname,
+      age:String(S.profile.age||''),
+      gender:S.profile.gender,
+      job:S.profile.job||null,
+      smoke:S.profile.smoke==null?null:S.profile.smoke,
+      alcohol:S.profile.alcohol==null?null:S.profile.alcohol,
+      tags:(S.profile.tags||[]).slice()
+    };
+    go('drink_profile_setup');
     return;
   }
   _goRecruitBusy=true;
@@ -4933,7 +4948,7 @@ function goProfileEdit(){
 
 async function saveProfileEdit(){
   var p=S.pf;
-  if(!p.nickname||!p.gender||!p.job||p.smoke===null||p.alcohol===null){S.error='すべての項目を入力してください';re('profile_edit');return;}
+  if(!p.nickname||!p.gender){S.error='ニックネームと性別を入力してください';re('profile_edit');return;}
   if(p.gender==='male'&&!p.photoFile&&!(S.profile&&S.profile.photo_url)){S.error='男性はご本人の顔写真の登録が必須です';re('profile_edit');return;}
   go('loading');
   var photoUrl=S.profile.photo_url;
@@ -4974,7 +4989,7 @@ function openPhotoPicker(where){
 function profileNewH(){
   var p=S.pf;
   var step=profileStep();
-  var progress='<div class="profile-progress"><div class="profile-progress-top"><strong>プロフィール '+step+'/2</strong><span>'+(step===1?'基本情報':'飲み方・確認')+'</span></div><div class="profile-progress-bar"><span style="width:'+(step===1?'50':'100')+'%"></span></div></div>';
+  var progress='<div class="profile-progress"><div class="profile-progress-top"><strong>プロフィール '+step+'/2</strong><span>'+(step===1?'基本情報':'確認')+'</span></div><div class="profile-progress-bar"><span style="width:'+(step===1?'50':'100')+'%"></span></div></div>';
   var required='<span class="profile-required">*必須</span>';
   var errorH=S.error?'<div class="err-msg" style="margin:12px 20px">'+escapeHtml(S.error)+'</div>':'';
 
@@ -4994,15 +5009,48 @@ function profileNewH(){
       +photoSection+errorH+'</div><div class="ftr"><button type="button" class="btn btn-wine" onclick="continueProfileSetup()">次へ（2/2）→</button></div></div>';
   }
 
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="backProfileStep()">← 基本情報へ</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','飲み方を教えてください')+'</div></div><div class="body" style="padding:0 0 20px">'+progress
-    +'<div class="profile-step-note">あと少しです。<span style="color:var(--red)">*必須</span>の項目を入力してください。</div>'
-    +'<div class="sec-label">職業'+required+'</div>'+jobSectionH('profile_new')
-      .replace('<div class="sec-label">職業</div>','')
-    +'<div class="sec-label">タバコ'+required+'</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button type="button" class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'yes\';re(\'profile_new\')">🚬 吸う</button><button type="button" class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="saveInputs();S.pf.smoke=\'no\';re(\'profile_new\')">🚭 吸わない</button></div>'
-    +'<div class="sec-label">お酒の強さ'+required+'</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button type="button" class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="saveInputs();S.pf.alcohol='+i+';re(\'profile_new\')">'+a+'</button>';}).join('')+'</div>'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="backProfileStep()">← 基本情報へ</button><div class="hdr-info">'+stepHeadH(2,'プロフィール','内容を確認してください')+'</div></div><div class="body" style="padding:0 0 20px">'+progress
+    +'<div class="profile-step-note">職業・タバコ・お酒の強さは、初めて募集するときに設定します。</div>'
     +tagSectionH('profile_new')
     +'<div style="padding:16px 20px 0"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();saveInputs();S.pf.agreed=!S.pf.agreed;re(\'profile_new\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(p.agreed?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(p.agreed?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.6"><span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'terms\')">利用規約</span>・<span style="text-decoration:underline;color:var(--cream)" onclick="event.stopPropagation();saveInputs();S._legalBackTo=\'profile_new\';go(\'privacy\')">プライバシーポリシー</span>に同意します'+required+'（20歳以上であることを含みます）</span></label></div>'
     +errorH+'</div><div class="ftr"><button type="button" class="btn btn-wine" onclick="saveInputs();saveProfile()">登録して始める →</button></div></div>';
+}
+
+// 初回募集に必要な飲み方プロフィール。
+// 登録完了の前に求めると離脱につながるため、募集する意思がある時点で一度だけ設定する。
+function drinkProfileSetupH(){
+  var p=S.pf||{};
+  var required='<span class="profile-required">*必須</span>';
+  var errorH=S.error?'<div class="err-msg" style="margin:12px 20px">'+escapeHtml(S.error)+'</div>':'';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">初回のみ</div><div class="hdr-title">募集用プロフィール</div></div></div>'
+    +'<div class="body" style="padding:0 0 20px">'
+    +'<div class="profile-step-note">募集相手に伝える情報です。次回からは入力不要で、マイページから変更できます。</div>'
+    +'<div class="sec-label">職業'+required+'</div>'+jobSectionH('drink_profile_setup').replace('<div class="sec-label">職業</div>','')
+    +'<div class="sec-label">タバコ'+required+'</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button type="button" class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'drink_profile_setup\')">🚬 吸う</button><button type="button" class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'drink_profile_setup\')">🚭 吸わない</button></div>'
+    +'<div class="sec-label">お酒の強さ'+required+'</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button type="button" class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'drink_profile_setup\')">'+a+'</button>';}).join('')+'</div>'
+    +errorH+'</div><div class="ftr"><button type="button" class="btn btn-wine" onclick="saveDrinkProfileSetup()">保存して募集へ進む →</button></div></div>';
+}
+
+async function saveDrinkProfileSetup(){
+  S._jobOpen=false;
+  var p=S.pf||{};
+  if(!p.job){S.error='職業を選択してください';re('drink_profile_setup');return;}
+  if(p.smoke==null){S.error='タバコについて選択してください';re('drink_profile_setup');return;}
+  if(p.alcohol==null){S.error='お酒の強さを選択してください';re('drink_profile_setup');return;}
+  showBusy();
+  try{
+    var upd=await DB.from('profiles').update({job:p.job,smoke:p.smoke,alcohol:p.alcohol,updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
+    if(upd.error){S.error=friendlyError(upd.error,'保存に失敗しました。もう一度お試しください。');re('drink_profile_setup');return;}
+    S.profile.job=p.job;
+    S.profile.smoke=p.smoke;
+    S.profile.alcohol=p.alcohol;
+    await goRecruit();
+  }catch(e){
+    S.error=friendlyError(e,'保存に失敗しました。もう一度お試しください。');
+    re('drink_profile_setup');
+  }finally{
+    hideBusy();
+  }
 }
 
 function profileEditH(){
