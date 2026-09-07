@@ -221,6 +221,7 @@
     .price-card .p-who{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;letter-spacing:.12em;color:var(--gold-pale);font-weight:800}
     .price-card .p-who .ico{font-size:17px}
     .price-card .p-val{font-family:"Shippori Mincho",serif;font-size:clamp(27px,7.6vw,40px);font-weight:800;color:var(--gold-pale);margin:10px 0 0;line-height:1.15}
+    .price-card:not(.men) .p-val{font-size:clamp(21px,6vw,34px);white-space:nowrap;max-width:100%}
     .price-card .p-val small{font-size:14px;color:var(--paper);font-family:"Noto Sans JP",sans-serif;font-weight:700}
     .price-card .p-pre{display:block;font-size:13px;color:var(--paper);font-family:"Noto Sans JP",sans-serif;font-weight:700;margin-bottom:2px}
     .price-card p.p-note{margin:9px 0 0;font-size:11.5px;color:var(--muted);line-height:1.6}
@@ -241,11 +242,11 @@
     /* ===== エリア ===== */
     .areas{background:linear-gradient(180deg,rgba(27,11,14,.8),var(--ink))}
     .area-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-    .area-card{position:relative;padding:18px 10px;border-radius:14px;text-align:center;border:1px solid var(--line);background:var(--card)}
-    .area-card .ico{font-size:20px;margin-bottom:5px}
-    .area-card span{display:block;font-size:9.5px;letter-spacing:.16em;color:var(--gold)}
-    .area-card strong{display:block;font-family:"Shippori Mincho",serif;font-size:20px;margin-top:3px}
-    .area-card.coming{opacity:.55;border-color:var(--line-soft)}
+    .area-card{position:relative;padding:18px 10px;border-radius:14px;text-align:center;border:1px solid var(--line);background-image:linear-gradient(rgba(18,9,11,.48),rgba(72,19,27,.68)),var(--area-image);background-position:center;background-size:cover;overflow:hidden}
+    .area-card .ico{font-size:20px;margin-bottom:5px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.85))}
+    .area-card span{display:block;font-size:9.5px;letter-spacing:.16em;color:var(--gold);text-shadow:0 2px 8px rgba(0,0,0,.95)}
+    .area-card strong{display:block;font-family:"Shippori Mincho",serif;font-size:20px;margin-top:3px;text-shadow:0 2px 10px rgba(0,0,0,.95)}
+    .area-card.coming{opacity:.55;border-color:var(--line-soft);background-image:linear-gradient(rgba(18,9,11,.78),rgba(18,9,11,.88)),var(--area-image);filter:saturate(.45)}
     .area-card.coming span{color:var(--muted)}
     @media(min-width:760px){.area-grid{grid-template-columns:repeat(3,1fr)}}
 
@@ -373,7 +374,6 @@ fbq('track','PageView');
         <div class="hero-copy">
           <h1 id="hero-title">今夜、<br><span>飲める人を。</span></h1>
           <p class="hero-sub">恋愛じゃなく、今夜の飲み友達を。</p>
-          <p class="hero-area"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg>新宿・すすきので利用できます。</p>
           <div class="hero-rule"></div>
 
           <ul class="hero-info">
@@ -651,12 +651,12 @@ fbq('track','PageView');
           <p>現在利用できる2エリアと、今後展開予定のエリアです。</p>
         </div>
         <div class="area-grid">
-          <article class="area-card"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NOW AVAILABLE</span><strong>新宿</strong></article>
-          <article class="area-card"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NOW AVAILABLE</span><strong>すすきの</strong></article>
-          <article class="area-card coming"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>上野</strong></article>
-          <article class="area-card coming"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>梅田</strong></article>
-          <article class="area-card coming"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>名古屋</strong></article>
-          <article class="area-card coming"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>博多</strong></article>
+          <article class="area-card" style="--area-image:url('https://images.unsplash.com/photo-1543961112-fb4748ddf637?auto=format&amp;fit=crop&amp;w=900&amp;q=82')"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NOW AVAILABLE</span><strong>新宿</strong></article>
+          <article class="area-card" style="--area-image:url('https://www.t-marche.com/wp-content/uploads/2025/04/%E3%81%99%E3%81%99%E3%81%8D%E3%81%AE_01.jpg')"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NOW AVAILABLE</span><strong>すすきの</strong></article>
+          <article class="area-card coming" style="--area-image:url('https://cdn.fstoppers.com/photos/219602/02/16/cecd651698d4469c2a8d7160f8685e14.jpg')"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>上野</strong></article>
+          <article class="area-card coming" style="--area-image:url('https://cdn-ak.f.st-hatena.com/images/fotolife/R/RECO/20171006/20171006202943.jpg')"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>梅田</strong></article>
+          <article class="area-card coming" style="--area-image:url('https://anniversarys-mag.jp/img/p/pixta_70247684_M.jpg')"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>名古屋</strong></article>
+          <article class="area-card coming" style="--area-image:url('https://japan-food.jetro.go.jp/library/feature/762/3-3_nakasu.jpg')"><svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg><span>NEXT AREA</span><strong>博多</strong></article>
         </div>
       </div>
     </section>
