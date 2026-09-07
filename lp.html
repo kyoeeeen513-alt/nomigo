@@ -53,6 +53,13 @@
     }
     img{max-width:100%;display:block}
     a{color:inherit}
+    :where(h1,h2,h3,h4,p,li,.promo-bar,.trust-chip,.safety-card strong,.area-card,.faq-q,.btn-primary,.btn-ghost,.header-cta){
+      line-break:strict;
+      overflow-wrap:break-word;
+      word-break:auto-phrase;
+    }
+    :where(h1,h2,h3,h4,.promo-bar,.trust-chip,.safety-card strong,.area-card,.faq-q,.btn-primary,.btn-ghost,.header-cta){text-wrap:balance}
+    :where(p,li){text-wrap:pretty}
     .wrap{width:min(1100px,92vw);margin:0 auto}
     .mincho{font-family:"Shippori Mincho",serif}
     .ico{width:1em;height:1em;flex:none;stroke:var(--gold-bright);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
