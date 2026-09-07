@@ -4,10 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#12090B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nomi Go">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Nomi Go｜今日一緒に飲む・食事する相手を探す</title>
 <meta name="description" content="Nomi Goは、20歳以上・本人確認必須の飲食同行者マッチングサービスです。東京・新宿、札幌・すすきので利用できます。女性は無料、男性はチケット1枚3,980円（税込）。">
 <meta name="robots" content="index,follow">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -2055,6 +2059,50 @@ function inAppBrowserNoticeH(){
   var openText=env.device==='ios'?'Safari':'Chrome';
   return '<div class="inapp-browser-note"><strong>'+name+'内で開いています。</strong><br>画面が止まる場合は、右上の「…」または共有ボタンを押し、「ブラウザで開く」→ '+openText+' で続けてください。登録済みの方は同じメールアドレスとパスワードでログインできます。</div>';
 }
+
+// ===== ホーム画面への追加案内 =====
+// Webアプリだと知らない利用者が多いため、登録前ではなく本人確認提出後とホームで案内する。
+// キャッシュは使わず、追加後も常に最新の本番を読み込む。
+var _homeInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  _homeInstallPrompt=e;
+  if(S.screen==='splash'||S.screen==='id_verify_pending')render();
+});
+window.addEventListener('appinstalled',function(){
+  _homeInstallPrompt=null;
+  try{localStorage.setItem('ngo_home_installed','1');}catch(e){}
+  if(S.screen==='splash'||S.screen==='id_verify_pending')render();
+});
+function isHomeStandalone(){
+  return !!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;
+}
+function homeInstallGuideH(compact){
+  if(isHomeStandalone())return '';
+  var env=onboardingEnvironment();
+  var title='ホーム画面に追加すると、アプリのように使えます';
+  var guide,button='';
+  if(_homeInstallPrompt){
+    guide='次からアイコンを押すだけで、すぐNomi Goを開けます。';
+    button='<button type="button" class="btn btn-wine" style="padding:11px 14px;margin-top:10px;font-size:13px" onclick="requestHomeInstall()">ホーム画面に追加する →</button>';
+  }else if(env.browser==='instagram'||env.browser==='tiktok'||env.browser==='line'||env.browser==='facebook'){
+    guide='右上の「…」または共有からSafari・Chromeで開き、共有メニューの「ホーム画面に追加」を選んでください。';
+  }else if(env.device==='ios'){
+    guide='Safariの共有ボタンを押し、「ホーム画面に追加」を選んでください。';
+  }else{
+    guide='ブラウザ右上のメニューから「ホーム画面に追加」または「アプリをインストール」を選んでください。';
+  }
+  return '<div style="'+(compact?'margin:14px 0 0;':'width:100%;margin-top:4px;')+'padding:14px 15px;background:linear-gradient(135deg,rgba(205,167,101,.16),rgba(107,29,41,.20));border:1.5px solid rgba(205,167,101,.45);border-radius:13px;text-align:left">'
+    +'<div style="display:flex;align-items:flex-start;gap:11px"><img src="/apple-touch-icon.png" alt="" style="width:44px;height:44px;border-radius:10px;flex-shrink:0"><div><div style="font-size:13px;font-weight:900;color:var(--cream);line-height:1.55">'+title+'</div><div style="font-size:11.5px;color:var(--muted);line-height:1.7;margin-top:4px">'+guide+'</div></div></div>'+button+'</div>';
+}
+async function requestHomeInstall(){
+  if(!_homeInstallPrompt)return;
+  var prompt=_homeInstallPrompt;
+  _homeInstallPrompt=null;
+  await prompt.prompt();
+  try{await prompt.userChoice;}catch(e){}
+  if(S.screen==='splash'||S.screen==='id_verify_pending')render();
+}
 function trackOnboarding(eventName,step,checkpoint){
   if(!DB||!S.user||!S.user.id)return;
   var env=onboardingEnvironment();
@@ -2699,6 +2747,7 @@ function idVerifyPendingH(){
     +'<div class="verify-waiting"><div class="verify-waiting-ring"></div><div class="verify-waiting-ring verify-waiting-ring2"></div><div class="verify-waiting-core">🔍</div></div>'
     +'<div style="font-size:16px;font-weight:800;color:var(--cream)">運営が確認しています<span class="verify-dots"><span>.</span><span>.</span><span>.</span></span></div>'
     +'<div style="font-size:13px;color:var(--muted);line-height:1.7">身分証の確認には、しばらくお時間をいただく場合があります。<br>確認が完了すると、自動で次の画面に進みます。</div>'
+    +homeInstallGuideH(false)
     +'</div><div class="ftr"><button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="checkIdVerifyNow()">今すぐ確認する</button></div></div>';
 }
 
@@ -4547,6 +4596,7 @@ function splashH(){
     +'<div class="home-fact"><div class="home-fact-k">男性</div><div class="home-fact-v">3,980円</div><div class="home-fact-s">チケット1枚</div></div>'
     +'<div class="home-fact"><div class="home-fact-k">対象</div><div class="home-fact-v">20歳以上</div><div class="home-fact-s">本人確認必須</div></div>'
     +'</div>';
+  var homeInstallCard=li?homeInstallGuideH(true):'';
   return '<div class="screen" style="padding:0;position:relative">'
     +'<div class="home-stage">'
       +introAnim
@@ -4557,6 +4607,7 @@ function splashH(){
       +'<div class="home-primary-action">'+recruitBtn+idPendingNote+'</div>'
       +matchCard
       +audienceContext
+      +homeInstallCard
       +(!isMatched&&!isWaiting?waitFeedCardH():'')
       +preLaunchCard
       +ticketCard
@@ -5492,6 +5543,14 @@ function showCheersFx(){
 
 init();
 setInterval(loadStats,30000);
+
+// インストール可能なWebアプリとして認識させるための登録。
+// sw.js は通信を横取り・キャッシュしないので、常に最新の本番画面を表示する。
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  });
+}
 
 </script>
 </body>
