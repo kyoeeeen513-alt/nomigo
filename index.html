@@ -875,7 +875,7 @@ var DB;
 // '*' だと決済識別子や本名・生年月日・身分証の保存先まで端末に降りてくるため、
 // 必要な列だけを列挙する。
 // DB側で該当列の閲覧権限を剥奪する前提のため、ここに決済列を足してはいけない。
-const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,expires_at,drink_style,timing,age_pref,age,smoke,alcohol,partner_age,age_min,age_max,age_any,duration_pref,purpose,ok_nodrink';
+const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,expires_at,drink_style,timing,age_pref,age,smoke,alcohol,partner_age,age_min,age_max,age_any,duration_pref,purpose,ok_nodrink,sns_share_ok';
 // マッチ相手のプロフィール。本名・生年月日・身分証・顔写真・決済識別子は含めない。
 // line_user_id は通知処理が使うため現時点では残す。
 // 自分自身のプロフィール。本名・生年月日・身分証および顔写真の保存先は画面で使わないため取得しない。
@@ -1741,7 +1741,7 @@ async function loadProfile(){
   var matchedReg=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('status','matched').order('created_at',{ascending:false}).limit(1).single();
   if(matchedReg.data&&matchedReg.data.match_id){
     S.registration=matchedReg.data;
-    S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,mode:matchedReg.data.mode,drink_style:matchedReg.data.drink_style,purpose:matchedReg.data.purpose,ok_nodrink:matchedReg.data.ok_nodrink,duration_pref:matchedReg.data.duration_pref,timing:matchedReg.data.timing,age_min:matchedReg.data.age_min,age_max:matchedReg.data.age_max,age_any:matchedReg.data.age_any};
+    S.form={area:matchedReg.data.area_id,slot:matchedReg.data.slot,mode:matchedReg.data.mode,drink_style:matchedReg.data.drink_style,purpose:matchedReg.data.purpose,ok_nodrink:matchedReg.data.ok_nodrink,duration_pref:matchedReg.data.duration_pref,timing:matchedReg.data.timing,age_min:matchedReg.data.age_min,age_max:matchedReg.data.age_max,age_any:matchedReg.data.age_any,sns_share_ok:!!matchedReg.data.sns_share_ok};
     var m=await DB.from('matches').select('*').eq('id',matchedReg.data.match_id).single();
     if(m.data)S.match=m.data;
     await loadMatchMembers();
@@ -1756,7 +1756,7 @@ async function loadProfile(){
   var reg=await DB.from('registrations').select(REG_COLS).eq('user_id',S.user.id).eq('status','waiting').order('created_at',{ascending:false}).limit(1).single();
   if(reg.data){
     S.registration=reg.data;
-    S.form={area:reg.data.area_id,slot:reg.data.slot,mode:reg.data.mode,drink_style:reg.data.drink_style,purpose:reg.data.purpose,ok_nodrink:reg.data.ok_nodrink,duration_pref:reg.data.duration_pref,timing:reg.data.timing,age_min:reg.data.age_min,age_max:reg.data.age_max,age_any:reg.data.age_any};
+    S.form={area:reg.data.area_id,slot:reg.data.slot,mode:reg.data.mode,drink_style:reg.data.drink_style,purpose:reg.data.purpose,ok_nodrink:reg.data.ok_nodrink,duration_pref:reg.data.duration_pref,timing:reg.data.timing,age_min:reg.data.age_min,age_max:reg.data.age_max,age_any:reg.data.age_any,sns_share_ok:!!reg.data.sns_share_ok};
   }
 }
 
@@ -3778,6 +3778,19 @@ async function chargeForTicket(){
 }
 
 
+async function notifyRecruitmentCreated(registrationId){
+  try{
+    var session=await DB.auth.getSession();
+    var token=session&&session.data&&session.data.session?session.data.session.access_token:null;
+    if(!token)return;
+    await fetch('/api/admin',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({action:'notify_recruitment',registrationId:registrationId})
+    });
+  }catch(e){}
+}
+
 async function doRegister(){
   go('loading');
   var timeoutFlag={hit:false};
@@ -3808,12 +3821,15 @@ async function doRegister(){
       age:S.profile.age,
       smoke:S.profile.smoke,
       alcohol:S.profile.alcohol,
+      sns_share_ok:!!S.form.sns_share_ok,
       status:'waiting'
     }).select(REG_COLS).single();
     if(timeoutFlag.hit)return;
     if(ins.error){clearTimeout(timeoutId);_isSubmitting=false;S.error=friendlyError(ins.error,'募集の登録に失敗しました。もう一度お試しください。');re('recruit');return;}
     clearTimeout(timeoutId);
     S.registration=ins.data;
+    // 運営への通知は募集処理と分離する。通知に失敗しても募集・マッチングは止めない。
+    notifyRecruitmentCreated(ins.data.id);
     var matched=await tryMatch();
     if(matched==='choice'){_isSubmitting=false;return;}
     // 登録が成功した場合も「送信中」の札を必ず下ろす。
@@ -5224,6 +5240,7 @@ function recruitH(){
         +'<button class="btn btn-wine" style="padding:13px;font-size:14px;margin-top:10px" onclick="goPairInvite()">お友だちを招待する →</button></div></section>';
     }
   }
+  html+='<section class="form-section"><div class="sec-label">SNSへの掲載</div><div style="padding:0 20px"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="event.preventDefault();S.form.sns_share_ok=!S.form.sns_share_ok;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.sns_share_ok?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;margin-top:1px">'+(f.sns_share_ok?'✓':'')+'</span><span style="font-size:12px;color:var(--muted);line-height:1.7"><span style="color:var(--cream);font-weight:700">この募集をNomi Go公式SNSでも紹介してよい</span><br>本名・ニックネーム・顔写真・正確な年齢は掲載しません。年代、性別、エリア、時間、飲み方など、個人を特定しにくい情報だけを使用します。</span></label></div></section>';
   html+='<div class="form-footnote">飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。<br>募集は'+(f.slot==='今すぐ'?'60分で':'選んだ時間の30分後に')+'自動的に終了します。時間が経ちすぎたお相手とマッチしないための仕組みです。</div>';
   if(S.ticketPurchaseSuccess){
     html+='<div style="margin:8px 20px;padding:14px;background:rgba(90,170,112,.15);border:1px solid rgba(90,170,112,.3);border-radius:10px;color:var(--green);font-size:13px;line-height:1.7">✓ 購入完了！チケット残数：'+(S.profile&&S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div>';
