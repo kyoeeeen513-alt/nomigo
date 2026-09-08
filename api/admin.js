@@ -38,6 +38,37 @@
 //  あわせて list_rejected を追加した。以前は否認した時点で一覧から消え、
 //  運営がその後の状況を追えなくなっていたため。
 //
+// 【2026-09-08 の変更・No.24 / No.296】
+//  退会（アカウントの利用停止）を行えるようにした。
+//
+//  これまで「退会希望の方はこちら」を押しても、問い合わせが1件届くだけで、
+//  アカウントを止める手段がどこにも無かった。利用者には
+//  「運営が確認後、アカウントを利用できない状態にします」と表示していたため、
+//  表示と実態が食い違っていた。
+//
+//  追加した action：
+//    withdraw   … 本人の申請による退会。再登録できる（can_suspend が必要）
+//    ban        … 運営による強制退会。blacklist にも登録し再登録も拒否（can_suspend が必要）
+//    restore    … 退会・凍結を解除して元に戻す（can_suspend が必要）
+//
+//  【消さずに止める理由】
+//   auth.users から利用者を削除すると、外部キーの連鎖削除により
+//   profiles・registrations・messages・match_members などが一緒に消える。
+//   registrations には本人確認記録（本名・生年月日・身分証画像）が入っており、
+//   これが消えると保存義務との関係で問題になりうる（No.297 で弁護士に確認中）。
+//   また payments・ticket_ledger・refunds は連鎖削除が禁止されているため、
+//   課金履歴のある利用者はそもそも削除自体が失敗する。
+//   よって「消す」のではなく profiles.account_status で「入れなくする」。
+//
+//  【チケットを消さない理由】
+//   誤操作で退会させた場合に元へ戻せるようにするため。
+//   また購入済みのチケットを消すと返金請求の根拠を与えかねない。
+//   ログインできない時点で使用はできないため、残しても実害がない。
+//
+//  【進行中のマッチがあるときは退会させない理由】
+//   相手が待ちぼうけになり、ドタキャン扱いのトラブルになるため。
+//   先にマッチを終わらせてから退会させる。
+//
 // 【必要な環境変数】すべて設定済み
 //   SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY / LINE_CHANNEL_ACCESS_TOKEN
 
@@ -200,6 +231,120 @@ function rejectMessage(reason, note) {
   );
 }
 
+// 【2026-09-08 追加】退会・凍結の共通処理。
+//
+// withdraw（本人申請）と ban（強制）で共通する部分をまとめる。
+// 違いは3つだけ。
+//   ・profiles.account_status に入れる値
+//   ・blacklist に登録するかどうか
+//   ・本人へ送るLINEの文面
+//
+// 進行中のマッチがある場合は、どちらであっても止める。
+// 相手が待ちぼうけになるため。
+async function doDeactivate(myId, admin, userId, mode, reason) {
+  // 対象の現状を読む
+  const rows = await db(
+    `profiles?user_id=eq.${userId}` +
+    `&select=user_id,nickname,real_name,birthdate,line_user_id,account_status,ticket_count`
+  );
+  if (!rows || !rows[0]) return { code: 404, body: { success: false, error: 'user_not_found' } };
+  const p = rows[0];
+
+  // すでに止まっているなら二重に処理しない
+  if (p.account_status && p.account_status !== 'active') {
+    return { code: 200, body: { success: false, error: 'already_inactive', status: p.account_status } };
+  }
+
+  // 進行中のマッチがあるなら止める。
+  // 相手が待っている状態で消すと、ドタキャン扱いのトラブルになる。
+  const mm = await db(`match_members?user_id=eq.${userId}&status=eq.active&select=match_id`);
+  if (mm && mm.length > 0) {
+    return { code: 200, body: { success: false, error: 'active_match' } };
+  }
+
+  const now = new Date().toISOString();
+
+  // 募集中のものがあれば取り下げる。
+  // 残したままだと、退会後もマッチの候補として拾われてしまう。
+  try {
+    await db(`registrations?user_id=eq.${userId}&status=eq.waiting`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { status: 'cancelled' },
+    });
+  } catch (e) {}
+
+  // アカウントを止める。チケットは消さない（誤操作の復旧と返金対応のため）
+  const patch = {
+    account_status: mode === 'ban' ? 'banned' : 'withdrawn',
+    status_changed_at: now,
+    status_reason: reason || null,
+    updated_at: now,
+  };
+  const updated = await db(`profiles?user_id=eq.${userId}`, { method: 'PATCH', body: patch });
+  if (!updated || updated.length === 0) {
+    return { code: 404, body: { success: false, error: 'user_not_found' } };
+  }
+
+  // 強制退会のときは blacklist にも登録する。
+  // 本名と生年月日を入れることで、別のメールアドレスで登録し直しても
+  // reject_blacklisted_profile トリガーが弾く。
+  let banned = false;
+  if (mode === 'ban') {
+    try {
+      await db('blacklist', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: {
+          user_id: userId,
+          real_name: p.real_name || null,
+          birthdate: p.birthdate || null,
+          line_user_id: p.line_user_id || null,
+          reason: reason || '運営による強制退会',
+          banned_by: 'admin',
+          severity: 'perm',
+        },
+      });
+      banned = true;
+    } catch (e) {
+      // blacklist への登録に失敗しても、アカウントは止まっている。
+      // 呼び出し元へ知らせて手当てできるようにする。
+      banned = false;
+    }
+  }
+
+  const text =
+    mode === 'ban'
+      ? 'ご利用の停止についてのお知らせ\n\n' +
+        (reason ? '理由：' + reason + '\n\n' : '') +
+        'ご利用規約に沿わない行為が確認されたため、アカウントのご利用を停止いたしました。\n' +
+        '再度のご登録はお受けしておりません。\n\n' +
+        'お心当たりのない場合は、お手数ですが info@nomi-go.jp までご連絡ください。'
+      : '退会のお手続きが完了しました\n\n' +
+        'ご利用いただきありがとうございました。\n' +
+        'アカウントは利用できない状態になりました。\n\n' +
+        'またご利用になりたくなったときは、あらためてご登録いただけます。\n' +
+        '（初回無料チケットは、お一人さま1回までとなります）';
+  const sent = await pushLine(p.line_user_id, text);
+
+  await audit(myId, mode === 'ban' ? 'account_ban' : 'account_withdraw', 'profiles', userId,
+    { status: patch.account_status, blacklisted: banned, line_sent: sent,
+      ticket_count_kept: p.ticket_count },
+    reason || null);
+
+  return {
+    code: 200,
+    body: {
+      success: true,
+      status: patch.account_status,
+      blacklisted: banned,
+      lineSent: sent,
+      hasLine: !!p.line_user_id,
+      nickname: p.nickname || null,
+    },
+  };
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ success: false, error: 'method_not_allowed' });
@@ -277,10 +422,22 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const adminRows = await db(
-      `admin_users?user_id=eq.${myId}&enabled=is.true&select=user_id,label,can_verify,can_reply`
-    );
-    const admin = adminRows && adminRows[0] ? adminRows[0] : null;
+    // 【2026-09-08】can_suspend を追加で読む。
+    // 列がまだ無い場合に一覧の取得ごと失敗すると運営ページが開かなくなるため、
+    // まず can_suspend 付きで試し、失敗したら従来の項目だけで読み直す。
+    // 列を追加したあとは1回目で成功する。
+    let admin = null;
+    try {
+      const rows = await db(
+        `admin_users?user_id=eq.${myId}&enabled=is.true&select=user_id,label,can_verify,can_reply,can_suspend`
+      );
+      admin = rows && rows[0] ? rows[0] : null;
+    } catch (e) {
+      const rows = await db(
+        `admin_users?user_id=eq.${myId}&enabled=is.true&select=user_id,label,can_verify,can_reply`
+      );
+      admin = rows && rows[0] ? rows[0] : null;
+    }
     if (!admin) {
       res.status(403).json({ success: false, error: 'forbidden' });
       return;
@@ -297,6 +454,7 @@ module.exports = async (req, res) => {
         label: admin.label || null,
         can_verify: !!admin.can_verify,
         can_reply: !!admin.can_reply,
+        can_suspend: !!admin.can_suspend,
       });
       return;
     }
@@ -461,6 +619,9 @@ module.exports = async (req, res) => {
     }
 
     // ── 問い合わせ一覧を返す ────────────────────────
+    // 【2026-09-08】退会申請の行に操作ボタンを出せるよう、
+    //   送信者の現在の状態（account_status とニックネーム）も一緒に返す。
+    //   すでに退会済みの人に、もう一度「退会させる」ボタンを出さないため。
     if (action === 'list_inquiries') {
       if (!admin.can_reply) {
         res.status(403).json({ success: false, error: 'no_reply_permission' });
@@ -470,7 +631,34 @@ module.exports = async (req, res) => {
         'inquiries?select=id,user_id,name,email,content,handled,reply_content,replied_at,created_at' +
         '&order=created_at.desc&limit=100'
       );
-      res.status(200).json({ success: true, list: rows || [] });
+      const list = rows || [];
+
+      // 送信者の状態をまとめて引く。問い合わせごとに1回ずつ引くと遅いため、
+      // 重複を除いた利用者IDで1回だけ問い合わせる。
+      try {
+        const ids = [];
+        for (const q of list) {
+          if (q.user_id && ids.indexOf(q.user_id) === -1) ids.push(q.user_id);
+        }
+        if (ids.length > 0) {
+          const ps = await db(
+            'profiles?user_id=in.(' + ids.join(',') + ')' +
+            '&select=user_id,nickname,account_status'
+          );
+          const map = {};
+          for (const p of (ps || [])) map[p.user_id] = p;
+          for (const q of list) {
+            const p = q.user_id ? map[q.user_id] : null;
+            q.sender_nickname = p ? (p.nickname || null) : null;
+            q.sender_status = p ? (p.account_status || 'active') : null;
+          }
+        }
+      } catch (e) {
+        // 状態が取れなくても一覧そのものは返す。
+        // account_status 列を追加する前でもページが開けるようにするため。
+      }
+
+      res.status(200).json({ success: true, list: list });
       return;
     }
 
@@ -550,6 +738,74 @@ module.exports = async (req, res) => {
         hasLine: !!lineId,
         email: inq.email || null,
       });
+      return;
+    }
+
+    // ── 退会させる（本人の申請による） ─────────────────
+    // 【2026-09-08 追加・No.296】
+    //   アカウントを消さずに、ログインできない状態にする。
+    //   本人が希望した退会なので、あらためて登録し直すことはできる。
+    //   ただし初回無料チケットは1人1回までのため、2度目は付かない
+    //   （データベース側の grant_welcome_ticket_on_approve が判定する）。
+    if (action === 'withdraw' || action === 'ban') {
+      const userId = body.userId;
+      const reason = (body.reason || '').trim().slice(0, 300);
+
+      if (!admin.can_suspend) {
+        res.status(403).json({ success: false, error: 'no_suspend_permission' });
+        return;
+      }
+      if (!userId || !isUuid.test(userId)) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      // 強制退会は理由を必ず書いてもらう。
+      // あとから「なぜ止めたのか」を説明できないと、問い合わせに答えられない。
+      if (action === 'ban' && !reason) {
+        res.status(400).json({ success: false, error: 'reason_required' });
+        return;
+      }
+      // 自分自身は止められないようにする。運営が締め出される事故を防ぐ。
+      if (userId === myId) {
+        res.status(400).json({ success: false, error: 'cannot_suspend_self' });
+        return;
+      }
+
+      const out = await doDeactivate(myId, admin, userId, action, reason);
+      res.status(out.code).json(out.body);
+      return;
+    }
+
+    // ── 退会・凍結を解除して元に戻す ───────────────────
+    // 誤操作の取り消し用。blacklist に入れた分は自動では消さない。
+    // 消すと「強制退会を解除したのに再登録も許す」ことになり、
+    // 意図しない結果になりうるため、必要なら別途手で消す。
+    if (action === 'restore') {
+      const userId = body.userId;
+      if (!admin.can_suspend) {
+        res.status(403).json({ success: false, error: 'no_suspend_permission' });
+        return;
+      }
+      if (!userId || !isUuid.test(userId)) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      const now = new Date().toISOString();
+      const updated = await db(`profiles?user_id=eq.${userId}`, {
+        method: 'PATCH',
+        body: {
+          account_status: 'active',
+          status_changed_at: now,
+          status_reason: null,
+          updated_at: now,
+        },
+      });
+      if (!updated || updated.length === 0) {
+        res.status(404).json({ success: false, error: 'user_not_found' });
+        return;
+      }
+      await audit(myId, 'account_restore', 'profiles', userId, { status: 'active' }, null);
+      res.status(200).json({ success: true });
       return;
     }
 
