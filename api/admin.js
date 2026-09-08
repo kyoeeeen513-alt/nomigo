@@ -228,7 +228,6 @@ function publicRecruitment(registration, profile, socialPost) {
     purpose: purposeLabel(registration.purpose),
     duration_pref: registration.duration_pref || '',
     tags: tags,
-    sns_share_ok: !!registration.sns_share_ok,
     social_posted_at: socialPost ? socialPost.posted_at : null,
     social_posted_by: socialPost ? socialPost.posted_by_label : null,
   };
@@ -503,7 +502,7 @@ module.exports = async (req, res) => {
       const uid = (await u.json()).id;
       const regs = await db(
         `registrations?id=eq.${registrationId}&user_id=eq.${uid}` +
-        '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,smoke,alcohol,drink_style,purpose,duration_pref,sns_share_ok'
+        '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,smoke,alcohol,drink_style,purpose,duration_pref'
       );
       if (!regs || !regs[0]) {
         res.status(404).json({ success: false, error: 'registration_not_found' });
@@ -527,7 +526,7 @@ module.exports = async (req, res) => {
         '🍻 新しい募集が入りました\n\n' +
         [item.area, item.slot, [item.age_band, item.gender].filter(Boolean).join(''), item.mode].filter(Boolean).join('／') + '\n' +
         (item.drink_style ? item.drink_style + '\n' : '') +
-        'SNS掲載：' + (item.sns_share_ok ? 'OK' : '不可') + '\n\n' +
+        '匿名SNS掲載用の文章を管理画面で確認できます。\n\n' +
         '運営ページで確認してください。\n' + ADMIN_PAGE_URL;
       const sentCount = await notifyAllAdmins(text);
       await db(`recruitment_admin_notifications?registration_id=eq.${registrationId}`, {
@@ -609,7 +608,7 @@ module.exports = async (req, res) => {
       const now = new Date().toISOString();
       const regs = await db(
         'registrations?status=eq.waiting&expires_at=gt.' + encodeURIComponent(now) +
-        '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,smoke,alcohol,drink_style,purpose,duration_pref,sns_share_ok' +
+        '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,smoke,alcohol,drink_style,purpose,duration_pref' +
         '&order=created_at.desc&limit=100'
       );
       const list = [];
@@ -637,7 +636,7 @@ module.exports = async (req, res) => {
         return;
       }
       const rows = await db(
-        `registrations?id=eq.${registrationId}&status=eq.waiting&sns_share_ok=is.true` +
+        `registrations?id=eq.${registrationId}&status=eq.waiting` +
         '&select=id,expires_at'
       );
       if (!rows || !rows[0] || (rows[0].expires_at && new Date(rows[0].expires_at) <= new Date())) {
