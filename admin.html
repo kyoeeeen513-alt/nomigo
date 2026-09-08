@@ -277,7 +277,7 @@ var DB=supabase.createClient(SB_URL,SB_KEY,{
   }
 });
 var CUR='verify';
-var ME={can_verify:true,can_reply:true,label:''};
+var ME={can_verify:true,can_reply:true,can_suspend:false,label:''};
 var SETUP_FACTOR=null;   // 初回設定中の認証アプリの登録ID
 
 // ---------- サーバー窓口の呼び出し ----------
@@ -778,9 +778,16 @@ async function loadInq(){
   for(var i=0;i<list.length;i++){
     var q=list[i];
     var isWithdraw=(q.content||'').indexOf('【退会申請】')>=0;
+    // 【2026/9/8 追加・No.296】送信者の現在の状態。
+    //   sender_status は list_inquiries がサーバー側で付けて返す。
+    //   'active' なら通常、'withdrawn' は退会済み、'banned' は強制退会済み。
+    //   列を追加する前は null が返るため、その場合はボタンを出さない。
+    var st=q.sender_status||null;
     h+='<div class="row" style="opacity:'+(q.handled?'0.45':'1')+'">';
     h+='<div class="nm">'+esc(q.name||'（お名前未入力）');
     if(isWithdraw)h+='<span class="tag">退会申請</span>';
+    if(st==='withdrawn')h+='<span class="tag" style="background:#5a2431">退会済み</span>';
+    if(st==='banned')h+='<span class="tag" style="background:var(--ng);color:#fff">利用停止中</span>';
     if(q.handled)h+='<span class="tag">対応済み</span>';
     h+='</div>';
     h+='<div class="meta">'+esc(q.email||'（メール未入力）')+' ／ '+fmtDate(q.created_at)+'</div>';
@@ -793,6 +800,16 @@ async function loadInq(){
       h+='<div class="acts">';
       h+='<button class="btn-send" onclick="sendReply(\''+q.id+'\')">返信を送る</button>';
       h+='<button class="btn-sm" onclick="setH(\''+q.id+'\')">返信せず対応済みにする</button>';
+      h+='</div>';
+    }
+    // 【2026/9/8 追加・No.296】退会の操作。
+    //   ここに出すのは、退会申請の問い合わせで、送信者が今まだ使える状態
+    //   （active）で、かつ自分に停止の権限がある場合だけ。
+    //   返信済みでも出す。返信してから退会させる流れが自然なため。
+    if(isWithdraw&&st==='active'&&ME.can_suspend&&q.user_id){
+      h+='<div id="wd-'+q.id+'"></div>';
+      h+='<div class="acts" style="margin-top:8px">';
+      h+='<button class="btn-sm" style="flex:1" onclick="openWithdraw(\''+q.id+'\',\''+q.user_id+'\')">退会させる</button>';
       h+='</div>';
     }
     h+='</div>';
@@ -821,6 +838,99 @@ async function sendReply(id){
     alert('返信内容を保存しました。\nただしLINEに送れませんでした。\nメール（'+(r.email||'未登録')+'）でご返信ください。');
   }
   loadInq();
+}
+
+// ---------- 退会の操作（2026/9/8 追加・No.296） ----------
+//
+// 【なぜ2種類に分けるか】
+//  本人が希望した退会と、荒らし等による強制退会はまったく別物です。
+//  強制退会は本名と生年月日を控えて再登録も拒否するため、
+//  普通に辞めたい方に誤って使うと、その方を永久に締め出すことになります。
+//  そのため押し間違いが起きないよう、確認の画面を挟み、
+//  強制退会のときは理由の入力を必須にしています。
+//
+// 【アカウントは消しません】
+//  ログインできない状態にするだけです。本人確認の記録は残ります。
+//  チケットも残します（誤って退会させたときに元へ戻せるようにするため）。
+
+function wdMsg(id,text,isError){
+  var box=document.getElementById('wd-'+id);
+  if(!box)return;
+  box.innerHTML='<div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:#1e0710;border-left:3px solid '+(isError?'#ff9b9b':'var(--gold)')+';font-size:13px;line-height:1.7">'+esc(text)+'</div>';
+}
+
+function closeWithdraw(id){
+  var box=document.getElementById('wd-'+id);
+  if(box)box.innerHTML='';
+}
+
+// どちらの退会にするかを選ぶ画面を、その場に開く
+function openWithdraw(id,uid){
+  var box=document.getElementById('wd-'+id);
+  if(!box)return;
+  box.innerHTML=
+    '<div style="margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:#1e0710">'
+    +'<div style="font-size:13.5px;line-height:1.8;margin-bottom:12px">この方のアカウントを<b style="color:var(--gold)">ログインできない状態</b>にします。アカウントは削除しません。本人確認の記録とチケットは残ります。</div>'
+
+    +'<div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:6px">1. 通常の退会</div>'
+    +'<div class="tiny" style="margin-bottom:8px">本人のご希望による退会です。あらためてご登録いただくことはできます（初回無料チケットは付きません）。通常はこちらを選びます。</div>'
+    +'<button class="btn-ng" style="width:100%" onclick="doWithdraw(\''+id+'\',\''+uid+'\',\'withdraw\')">退会させる</button>'
+
+    +'<div style="font-size:12px;color:var(--gold);font-weight:700;margin:16px 0 6px">2. 利用停止（強制退会）</div>'
+    +'<div class="tiny" style="margin-bottom:8px">規約違反など、運営の判断で止める場合です。<b>お名前と生年月日を控えるため、別のメールアドレスでも登録できなくなります。</b>通常の退会には使わないでください。</div>'
+    +'<textarea id="wr-'+id+'" style="min-height:60px" placeholder="停止の理由（必須。記録に残り、本人にも通知されます）"></textarea>'
+    +'<button class="btn-ng" style="width:100%;margin-top:8px;background:#7a1f1f" onclick="doWithdraw(\''+id+'\',\''+uid+'\',\'ban\')">利用停止にする</button>'
+
+    +'<button class="btn-sm" style="width:100%;margin-top:14px" onclick="closeWithdraw(\''+id+'\')">やめる</button>'
+    +'</div>';
+}
+
+// 二重押しを防ぐ。通信が重なると同じ処理が2回走る。
+var _wdBusy={};
+async function doWithdraw(id,uid,mode){
+  if(_wdBusy[id])return;
+  var reason='';
+  if(mode==='ban'){
+    var ta=document.getElementById('wr-'+id);
+    reason=ta?ta.value.trim():'';
+    if(!reason){wdMsg(id,'利用停止にするときは、理由を入力してください。',true);return;}
+    if(!confirm('この方を利用停止にします。\n\nお名前と生年月日を控えるため、今後は別のメールアドレスでも登録できなくなります。\n\n本当によろしいですか？'))return;
+  }else{
+    if(!confirm('この方を退会させます。\nログインできない状態になります。\n\nよろしいですか？'))return;
+  }
+
+  _wdBusy[id]=true;
+  wdMsg(id,'処理しています...',false);
+  var r=await api({action:mode,userId:uid,reason:reason});
+  _wdBusy[id]=false;
+
+  if(!r.success){
+    var m='処理に失敗しました。もう一度お試しください。';
+    if(r.error==='active_match'){
+      m='この方は進行中のマッチがあります。お相手が待っている状態のため、退会させられません。飲み会が終わってから、あらためて操作してください。';
+    }else if(r.error==='already_inactive'){
+      m='この方はすでに退会または利用停止の状態です。';
+    }else if(r.error==='no_suspend_permission'){
+      m='このアカウントでは退会の操作ができません（担当外）。';
+    }else if(r.error==='reason_required'){
+      m='利用停止にするときは、理由を入力してください。';
+    }else if(r.error==='cannot_suspend_self'){
+      m='ご自身のアカウントは停止できません。';
+    }
+    wdMsg(id,m,true);
+    return;
+  }
+
+  var msg=(mode==='ban')?'利用停止にしました。':'退会させました。';
+  if(mode==='ban'){
+    msg+=r.blacklisted?'お名前と生年月日を控えたため、再登録もできません。'
+                      :'ただし再登録を拒否する登録に失敗しました。奈良までご連絡ください。';
+  }
+  if(r.lineSent){msg+='本人のLINEにお知らせを送りました。';}
+  else if(r.hasLine){msg+='ただしLINEの送信に失敗しました。';}
+  else{msg+='この方はLINE未連携のため、通知は送っていません。';}
+  wdMsg(id,msg,false);
+  setTimeout(loadInq,2200);
 }
 
 async function setH(id){
