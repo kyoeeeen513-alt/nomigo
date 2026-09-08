@@ -178,6 +178,90 @@ async function notifyTarget(role) {
   }
 }
 
+function ageBand(age) {
+  const n = Number(age);
+  if (!Number.isFinite(n) || n < 20) return null;
+  return Math.floor(n / 10) * 10 + '代';
+}
+
+function areaLabel(id) {
+  return ({ shinjuku: '新宿', susukino: 'すすきの' })[id] || id || '';
+}
+
+function genderLabel(value) {
+  return value === 'female' ? '女性' : value === 'male' ? '男性' : '';
+}
+
+function alcoholLabel(value) {
+  const labels = ['とても弱い', '弱い', '普通', '強い', 'とても強い'];
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n < labels.length ? labels[n] : '';
+}
+
+function purposeLabel(value) {
+  return ({
+    fun: 'とにかく楽しく飲みたい',
+    chill: 'まったり話したい',
+    vent: '愚痴OK・話を聞くよ',
+    meet: '出会いも多少は期待',
+  })[value] || '';
+}
+
+function publicRecruitment(registration, profile, socialPost) {
+  const tags = Array.isArray(profile && profile.tags)
+    ? profile.tags.filter((x) => typeof x === 'string').slice(0, 3)
+    : [];
+  const item = {
+    id: registration.id,
+    area: areaLabel(registration.area_id),
+    slot: registration.slot || '',
+    mode: registration.mode === '2v2' ? '2対2' : '1対1',
+    status: registration.status || '',
+    created_at: registration.created_at || null,
+    expires_at: registration.expires_at || null,
+    gender: genderLabel(registration.gender),
+    age_band: ageBand(registration.age),
+    job: profile && profile.job ? profile.job : '',
+    smoke: registration.smoke === 'yes' ? '吸う' : registration.smoke === 'no' ? '吸わない' : '',
+    alcohol: alcoholLabel(registration.alcohol),
+    drink_style: registration.drink_style || '',
+    purpose: purposeLabel(registration.purpose),
+    duration_pref: registration.duration_pref || '',
+    tags: tags,
+    sns_share_ok: !!registration.sns_share_ok,
+    social_posted_at: socialPost ? socialPost.posted_at : null,
+    social_posted_by: socialPost ? socialPost.posted_by_label : null,
+  };
+  const lines = [
+    '🍻 今夜、' + item.area + 'で飲める方を募集中！',
+    '',
+    '👤 ' + [item.age_band, item.gender, item.mode].filter(Boolean).join('・'),
+    '🕗 ' + item.slot + '〜',
+    item.smoke ? '🚬 タバコ：' + item.smoke : '',
+    item.alcohol ? '🍺 お酒の強さ：' + item.alcohol : '',
+    item.drink_style ? '🥂 ' + item.drink_style : '',
+    item.purpose ? '💬 ' + item.purpose : '',
+    tags.length ? '✨ ' + tags.join('・') : '',
+    '',
+    '気が合いそうな方はNomi Goから確認👇',
+    'https://www.nomi-go.jp/lp.html?utm_source=x&utm_medium=organic&utm_campaign=recruitment_posts',
+  ].filter((line, index, all) => line !== '' || (index > 0 && all[index - 1] !== ''));
+  item.x_text = lines.join('\n');
+  return item;
+}
+
+async function notifyAllAdmins(text) {
+  const admins = await db('admin_users?enabled=is.true&select=user_id');
+  let sent = 0;
+  for (const admin of admins || []) {
+    try {
+      const rows = await db(`profiles?user_id=eq.${admin.user_id}&select=line_user_id`);
+      if (rows && rows[0] && await pushLine(rows[0].line_user_id, text)) sent += 1;
+    } catch (e) {}
+  }
+  return sent;
+}
+
 // 操作の記録を残す。失敗しても本体の処理は止めない
 async function audit(actorId, action, targetTable, targetId, after, note) {
   try {
@@ -398,6 +482,67 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // ── 新しい募集を運営2名へ知らせる ──────────────────
+    // 募集者本人のログインを確認し、本人が実際に作った募集だけを通知する。
+    // 通知に失敗しても募集やマッチング処理には影響させない。
+    if (body0.action === 'notify_recruitment') {
+      const auth0 = req.headers.authorization || '';
+      const registrationId = body0.registrationId;
+      if (!auth0.startsWith('Bearer ') ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(registrationId || '')) {
+        res.status(401).json({ success: false, error: 'unauthorized' });
+        return;
+      }
+      const u = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { apikey: ANON_KEY, Authorization: auth0 },
+      });
+      if (!u.ok) {
+        res.status(401).json({ success: false, error: 'unauthorized' });
+        return;
+      }
+      const uid = (await u.json()).id;
+      const regs = await db(
+        `registrations?id=eq.${registrationId}&user_id=eq.${uid}` +
+        '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,smoke,alcohol,drink_style,purpose,duration_pref,sns_share_ok'
+      );
+      if (!regs || !regs[0]) {
+        res.status(404).json({ success: false, error: 'registration_not_found' });
+        return;
+      }
+
+      // 同じ募集で複数回LINEが飛ばないよう、専用台帳の主キーで重複を止める。
+      try {
+        await db('recruitment_admin_notifications', {
+          method: 'POST',
+          body: { registration_id: registrationId, status: 'processing' },
+        });
+      } catch (e) {
+        res.status(200).json({ success: true, skipped: true });
+        return;
+      }
+
+      const profiles = await db(`profiles?user_id=eq.${uid}&select=job,tags`);
+      const item = publicRecruitment(regs[0], profiles && profiles[0] ? profiles[0] : {}, null);
+      const text =
+        '🍻 新しい募集が入りました\n\n' +
+        [item.area, item.slot, [item.age_band, item.gender].filter(Boolean).join(''), item.mode].filter(Boolean).join('／') + '\n' +
+        (item.drink_style ? item.drink_style + '\n' : '') +
+        'SNS掲載：' + (item.sns_share_ok ? 'OK' : '不可') + '\n\n' +
+        '運営ページで確認してください。\n' + ADMIN_PAGE_URL;
+      const sentCount = await notifyAllAdmins(text);
+      await db(`recruitment_admin_notifications?registration_id=eq.${registrationId}`, {
+        method: 'PATCH',
+        prefer: 'return=minimal',
+        body: {
+          status: sentCount > 0 ? 'sent' : 'failed',
+          sent_count: sentCount,
+          sent_at: sentCount > 0 ? new Date().toISOString() : null,
+        },
+      });
+      res.status(200).json({ success: true, sentCount: sentCount });
+      return;
+    }
+
     // ── 運営として登録された人かどうかを確認する ──────────
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) {
@@ -456,6 +601,68 @@ module.exports = async (req, res) => {
         can_reply: !!admin.can_reply,
         can_suspend: !!admin.can_suspend,
       });
+      return;
+    }
+
+    // ── 現在募集中の一覧（SNS用の匿名プロフィールのみ） ───────
+    if (action === 'list_recruitments') {
+      const now = new Date().toISOString();
+      const regs = await db(
+        'registrations?status=eq.waiting&expires_at=gt.' + encodeURIComponent(now) +
+        '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,smoke,alcohol,drink_style,purpose,duration_pref,sns_share_ok' +
+        '&order=created_at.desc&limit=100'
+      );
+      const list = [];
+      for (const reg of regs || []) {
+        const profiles = await db(`profiles?user_id=eq.${reg.user_id}&select=job,tags`);
+        const posts = await db(
+          `recruitment_social_posts?registration_id=eq.${reg.id}` +
+          '&select=posted_at,posted_by_label'
+        );
+        list.push(publicRecruitment(
+          reg,
+          profiles && profiles[0] ? profiles[0] : {},
+          posts && posts[0] ? posts[0] : null
+        ));
+      }
+      res.status(200).json({ success: true, list: list });
+      return;
+    }
+
+    // SNSへ掲載した記録。募集条件やマッチング状態は一切変更しない。
+    if (action === 'mark_social_posted') {
+      const registrationId = body.registrationId;
+      if (!registrationId || !isUuid.test(registrationId)) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      const rows = await db(
+        `registrations?id=eq.${registrationId}&status=eq.waiting&sns_share_ok=is.true` +
+        '&select=id,expires_at'
+      );
+      if (!rows || !rows[0] || (rows[0].expires_at && new Date(rows[0].expires_at) <= new Date())) {
+        res.status(400).json({ success: false, error: 'not_shareable' });
+        return;
+      }
+      const existing = await db(
+        `recruitment_social_posts?registration_id=eq.${registrationId}&select=registration_id`
+      );
+      const postBody = {
+        posted_at: new Date().toISOString(),
+        posted_by: myId,
+        posted_by_label: admin.label || null,
+      };
+      if (existing && existing[0]) {
+        await db(`recruitment_social_posts?registration_id=eq.${registrationId}`, {
+          method: 'PATCH', body: postBody,
+        });
+      } else {
+        await db('recruitment_social_posts', {
+          method: 'POST', body: Object.assign({ registration_id: registrationId }, postBody),
+        });
+      }
+      await audit(myId, 'social_post_marked', 'registrations', registrationId, null, null);
+      res.status(200).json({ success: true });
       return;
     }
 
