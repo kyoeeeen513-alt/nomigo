@@ -67,6 +67,11 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 .btn-copy.done{background:var(--ok);color:#fff;}
 .foldbtn{background:#4a1c28;color:var(--text);width:100%;margin-top:10px;font-size:13px;}
 .link{background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:8px 0;width:100%;}
+.recruit-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.recruit-chip{font-size:11.5px;padding:4px 8px;border-radius:999px;background:#1e0710;border:1px solid var(--line);color:var(--text);}
+.share-ok{color:#8ad39b;font-size:12px;font-weight:700;margin-top:9px;}
+.share-ng{color:#ffb3b3;font-size:12px;font-weight:700;margin-top:9px;}
+.x-preview{font-size:12.5px;line-height:1.65;white-space:pre-wrap;background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:9px;}
 </style>
 </head>
 <body>
@@ -226,11 +231,13 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
     <div class="tabs">
       <div class="tab on" id="t1" onclick="show('verify')">本人確認<span class="tag" id="c1">0</span></div>
       <div class="tab" id="t2" onclick="show('inq')">お客様対応<span class="tag" id="c2">0</span></div>
+      <div class="tab" id="t4" onclick="show('recruits')">募集<span class="tag" id="c3">0</span></div>
       <div class="tab" id="t3" onclick="show('pw')">パスワード</div>
     </div>
 
     <div id="verify"></div>
     <div id="inq" class="hide"></div>
+    <div id="recruits" class="hide"></div>
 
     <!-- 【パスワード変更 2026/8/28 追加】
          なぜアプリ側ではなくここに置くか：
@@ -279,6 +286,8 @@ var DB=supabase.createClient(SB_URL,SB_KEY,{
 var CUR='verify';
 var ME={can_verify:true,can_reply:true,can_suspend:false,label:''};
 var SETUP_FACTOR=null;   // 初回設定中の認証アプリの登録ID
+var RECRUIT_SEEN=null;
+var RECRUIT_TIMER=null;
 
 // ---------- サーバー窓口の呼び出し ----------
 // 承認・返信はサーバー側で処理する。LINEの送り先と文面もサーバーが決める。
@@ -374,6 +383,8 @@ async function checkAdmin(){
   if(!ME.can_verify&&ME.can_reply)show('inq');
   if(ME.can_verify)loadVerify();
   if(ME.can_reply)loadInq();
+  loadRecruitments();
+  if(!RECRUIT_TIMER)RECRUIT_TIMER=setInterval(loadRecruitments,20000);
 }
 
 // ---------- 2段階認証：初回設定 ----------
@@ -502,9 +513,11 @@ function show(which){
   CUR=which;
   document.getElementById('verify').className=(which==='verify')?'':'hide';
   document.getElementById('inq').className=(which==='inq')?'':'hide';
+  document.getElementById('recruits').className=(which==='recruits')?'':'hide';
   document.getElementById('pwpane').className=(which==='pw')?'':'hide';
   document.getElementById('t1').className=(which==='verify')?'tab on':'tab';
   document.getElementById('t2').className=(which==='inq')?'tab on':'tab';
+  document.getElementById('t4').className=(which==='recruits')?'tab on':'tab';
   document.getElementById('t3').className=(which==='pw')?'tab on':'tab';
   // 画面を離れるときは入力を消す。表示したまま端末を置かれると
   // 新しいパスワードが画面に残るため。
@@ -514,6 +527,90 @@ function show(which){
     var e=document.getElementById('pwerr'),o=document.getElementById('pwok');
     if(e)e.textContent='';if(o)o.textContent='';
   }
+}
+
+// ---------- 募集一覧・SNS投稿 ----------
+// 20秒ごとにサーバーから現在の募集だけを読み直す。
+// 募集テーブルをブラウザから直接読まないため、運営者以外には開示されない。
+async function loadRecruitments(){
+  var r=await api({action:'list_recruitments'});
+  if(!r.success)return;
+  var list=r.list||[];
+  document.getElementById('c3').textContent=list.length;
+
+  var ids={};
+  for(var n=0;n<list.length;n++)ids[list[n].id]=true;
+  if(RECRUIT_SEEN!==null){
+    for(var j=0;j<list.length;j++){
+      if(!RECRUIT_SEEN[list[j].id]){
+        showRecruitNotification(list[j]);
+        break;
+      }
+    }
+  }
+  RECRUIT_SEEN=ids;
+
+  var box=document.getElementById('recruits');
+  if(list.length===0){
+    box.innerHTML='<div class="card"><div class="empty">現在募集中の方はいません</div></div>';
+    return;
+  }
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><h2 style="margin:0">現在の募集</h2><button class="btn-sm" onclick="enableRecruitNotifications()">画面通知を許可</button></div>';
+  for(var i=0;i<list.length;i++){
+    var x=list[i];
+    var chips=[x.age_band,x.gender,x.mode,x.job,x.smoke?('タバコ：'+x.smoke):'',x.alcohol?('お酒：'+x.alcohol):'',x.drink_style,x.duration_pref,x.purpose].concat(x.tags||[]).filter(Boolean);
+    h+='<div class="row">';
+    h+='<div class="nm">'+esc(x.area)+'・'+esc(x.slot)+'<span class="tag">'+esc(fmtDate(x.created_at))+'</span></div>';
+    h+='<div class="recruit-chips">'+chips.map(function(c){return '<span class="recruit-chip">'+esc(c)+'</span>';}).join('')+'</div>';
+    if(x.sns_share_ok){
+      h+='<div class="share-ok">✓ SNS掲載OK</div>';
+      h+='<div class="x-preview" id="xt-'+x.id+'">'+esc(x.x_text||'')+'</div>';
+      h+='<div class="acts"><button class="btn-send" onclick="copyRecruitText(\''+x.id+'\')">X投稿文をコピー</button>';
+      h+='<button class="btn-sm" onclick="markSocialPosted(\''+x.id+'\')">'+(x.social_posted_at?'投稿済みを更新':'投稿済みにする')+'</button></div>';
+      if(x.social_posted_at)h+='<div class="meta">投稿済み：'+esc(x.social_posted_by||'運営')+'／'+esc(fmtDate(x.social_posted_at))+'</div>';
+    }else{
+      h+='<div class="share-ng">SNS掲載不可（本人が許可していません）</div>';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  box.innerHTML=h;
+}
+
+function enableRecruitNotifications(){
+  if(!('Notification' in window)){alert('この端末では画面通知を利用できません。LINE通知は届きます。');return;}
+  Notification.requestPermission().then(function(p){
+    alert(p==='granted'?'画面通知を許可しました。':'画面通知は許可されませんでした。LINE通知は届きます。');
+  });
+}
+
+function showRecruitNotification(item){
+  if('Notification' in window&&Notification.permission==='granted'){
+    try{new Notification('Nomi Go：新しい募集',{body:[item.area,item.slot,item.age_band,item.gender].filter(Boolean).join('／')});}catch(e){}
+  }
+}
+
+function copyRecruitText(id){
+  var el=document.getElementById('xt-'+id);
+  if(!el)return;
+  var value=el.textContent||'';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(value).then(function(){alert('X投稿文をコピーしました。');},function(){fallbackCopy(value);});
+  }else fallbackCopy(value);
+}
+
+function fallbackCopy(value){
+  var ta=document.createElement('textarea');
+  ta.value=value;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');alert('X投稿文をコピーしました。');}catch(e){alert('コピーできませんでした。文章を長押ししてコピーしてください。');}
+  document.body.removeChild(ta);
+}
+
+async function markSocialPosted(id){
+  if(!confirm('この募集を「X投稿済み」にしますか？'))return;
+  var r=await api({action:'mark_social_posted',registrationId:id});
+  if(!r.success){alert('更新できませんでした。募集が終了している可能性があります。');return;}
+  loadRecruitments();
 }
 
 // ---------- パスワードの変更 ----------
