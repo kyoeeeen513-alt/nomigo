@@ -652,6 +652,13 @@ body{font-size:15px;background:
 #app[data-screen="profile_edit"] [style*="font-size:11px"],
 #app[data-screen="id_verify"] [style*="font-size:11px"],
 #app[data-screen="line_connect"] [style*="font-size:11px"]{font-size:12px !important}
+/* 本人確認は説明・身分証・顔写真まで縦に長い。
+   iOSのアプリ内ブラウザでスクロール領域が作られず、身分証ボタンより下へ
+   進めないことがあるため、この画面だけ表示領域を固定して.bodyをスクロール
+   担当にする。ほかの画面のスクロール設定には触れない。 */
+#app[data-screen="id_verify"]{height:100vh;height:100dvh;min-height:100vh;min-height:100dvh;overflow:hidden}
+#app[data-screen="id_verify"] .screen{height:100%;min-height:0;overflow:hidden}
+#app[data-screen="id_verify"] .body{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior-y:contain}
 #app[data-screen="profile_new"] .body,#app[data-screen="profile_edit"] .body{padding-bottom:28px !important}
 #app[data-screen="profile_new"] .sec-label,#app[data-screen="profile_edit"] .sec-label{letter-spacing:.1em}
 .cardreg-hero,.cardreg-notes{box-shadow:none}
@@ -2425,10 +2432,17 @@ async function openFaceCamera(){
   _faceCountdownValue=0;
   if(_faceCountdownTimer){clearInterval(_faceCountdownTimer);_faceCountdownTimer=null;}
   re('id_verify');
+  // LINE/TikTok等のアプリ内ブラウザや一部のiPhoneでは getUserMedia 自体が
+  // 提供されないことがある。その場合も画面を行き止まりにせず、端末標準の
+  // カメラ入力へ切り替える。
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    openNativeFaceCamera();
+    return;
+  }
   try{
     _faceStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
   }catch(e){
-    S._faceCameraError='カメラを起動できませんでした。カメラの利用を許可してください。';
+    S._faceCameraError='カメラを起動できませんでした。下の「端末のカメラで撮影」をお試しください。';
     re('id_verify');
     return;
   }
@@ -2438,10 +2452,27 @@ async function openFaceCamera(){
     var video=document.getElementById('face-camera-video');
     if(video){
       video.srcObject=_faceStream;
-      video.play();
-      startFaceDetectLoop(video);
+      var playResult=video.play();
+      if(playResult&&playResult.catch){
+        playResult.catch(function(){
+          S._faceCameraError='映像を開始できませんでした。端末のカメラで撮影してください。';
+          closeFaceCamera();
+        });
+      }
+      video.addEventListener('loadedmetadata',function(){startFaceDetectLoop(video);},{once:true});
     }
   },150);
+}
+
+function openNativeFaceCamera(){
+  var el=document.getElementById('pf-photo-face-camera');
+  if(!el){
+    S._faceCameraError='カメラを開けませんでした。画面を読み込み直してからお試しください。';
+    re('id_verify');
+    return;
+  }
+  el.value='';
+  el.click();
 }
 
 // 枠の中央エリアを一定間隔でサンプリングし、「顔らしきもの（肌色・十分な明るさ）」が
@@ -2555,6 +2586,10 @@ function closeFaceCamera(){
 function captureFacePhoto(){
   var video=document.getElementById('face-camera-video');
   if(!video)return;
+  if(!video.videoWidth||!video.videoHeight){
+    S._faceCameraError='カメラの準備中です。映像が表示されてからもう一度押してください。';
+    return;
+  }
   if(_faceDetectTimer){clearInterval(_faceDetectTimer);_faceDetectTimer=null;}
   if(_faceCountdownTimer){clearInterval(_faceCountdownTimer);_faceCountdownTimer=null;}
   var canvas=document.createElement('canvas');
@@ -2744,6 +2779,7 @@ function idVerifyH(){
     +facePreview
     +(S._faceCameraError?'<div class="err-msg">'+S._faceCameraError+'</div>':'')
     +'<button class="btn" style="background:#FFFFFF;color:#6A4A50;border:1.5px solid var(--border)" onclick="'+(S._facePhotoPreview?'retakeFacePhoto()':'openFaceCamera()')+'">'+(S._facePhotoPreview?'📷 カメラで撮り直す':'📷 カメラで顔写真を撮影')+'</button>'
+    +(!S._facePhotoPreview?'<button type="button" class="btn" style="background:transparent;color:var(--cream);border:1.5px solid var(--border)" onclick="openNativeFaceCamera()">端末のカメラで撮影</button><input type="file" accept="image/*" capture="user" id="pf-photo-face-camera" style="display:none" onchange="handleFacePhotoSelect(this)">':'')
     // 【2026/9/1 削除】ここには「🖼 顔写真を写真から選択」ボタンがあり、
     //   端末に保存済みの画像をそのまま顔写真として提出できた。
     //   これでは他人の写真や加工済みの写真を出せてしまい、年齢確認の意味がなくなる。
