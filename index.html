@@ -886,6 +886,21 @@ const REG_COLS='id,user_id,area_id,slot,mode,gender,status,match_id,created_at,e
 //   TikTok等でアプリのリンクを配る際に誤って押されると、利用者に不信感を与える。
 //   開通が完了したら true に戻し、再デプロイすること。
 const TICKET_SALES_OPEN=true;
+// 【2026/9/8 追加】CREDIXのサイト審査必須表記（No.293）。
+//   加盟店様側用チェックシートの「サイト審査用チェックシート＞クレジット表記」により、
+//   決済ページへ進むボタンの前後に、決済代行会社がCREDIXであることと、
+//   カード決済に関する問い合わせ先を表示することが義務づけられている。
+//   文面・電話番号・メールアドレスはCREDIX指定のものをそのまま使う（改変しない）。
+//   購入導線は2箇所（トップのチケットカード／チケット0枚時の募集画面）あるため、
+//   同じ文字列を定数にして両方へ差し込む。
+const CREDIX_NOTE_HTML='<div style="margin-top:10px;padding-top:9px;border-top:1px solid rgba(237,229,224,.12);font-size:11px;line-height:1.75;color:rgba(237,229,224,.6)">'
+  +'<div style="font-weight:700;color:rgba(237,229,224,.75)">クレジットカード決済に関するご説明</div>'
+  +'<div>決済システムは（株）CREDIXを利用しています</div>'
+  +'<div style="font-weight:700;color:rgba(237,229,224,.75);margin-top:6px">カード決済に関するお問い合わせ</div>'
+  +'<div>カスタマーサポート（24時間365日）</div>'
+  +'<div>TEL：<a href="tel:0368321339" style="color:inherit">03-6832-1339</a></div>'
+  +'<div><a href="mailto:creditinfo@credix-web.co.jp" style="color:inherit">creditinfo@credix-web.co.jp</a></div>'
+  +'</div>';
 
 // 【2026/8/31追加】トップ画面右上の「◯人が募集中」を出すかどうかの切り替え。
 //   false＝出さない（現在）／true＝出す。
@@ -4568,7 +4583,7 @@ function splashH(){
   var preLaunchCard='';
   var ticketCard=(li&&S.profile&&S.profile.gender==='male')?'<div class="home-ticket" style="background:rgba(0,0,0,.25);padding:14px 16px;margin-bottom:20px">'
     +(TICKET_SALES_OPEN
-      ? '<div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div><button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button></div>'
+      ? '<div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;color:rgba(237,229,224,.6);margin-bottom:3px">現在のチケット</div><div style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div></div><button onclick="goBuyTicket()" style="background:var(--wine);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">チケット購入</button></div>'+CREDIX_NOTE_HTML
       : '<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:11px;color:rgba(237,229,224,.6)">現在のチケット</span><span style="font-size:20px;font-weight:900;color:var(--cream)">'+(S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</span></div>'
         // 【2026/9/1 変更】以前は「チケットの販売は9月1日からです。」と日付を出していたが、
         //   9月1日を過ぎたため事実と合わない。販売の開始はCREDIXの開通日次第であり、
@@ -5178,7 +5193,7 @@ function recruitH(){
   var noTicket=S.profile&&S.profile.gender==='male'&&(!S.profile.ticket_count||S.profile.ticket_count<1);
   if(S.error==='ticket_zero'){
     if(TICKET_SALES_OPEN){
-      html+='<div style="margin:8px 20px;padding:14px;background:var(--red-bg);border:1px solid rgba(204,64,64,.3);border-radius:10px;color:var(--red);font-size:13px;line-height:1.7">チケットがありません。チケットを購入してください。</div><div style="margin:8px 20px"><button class="btn btn-wine" onclick="goBuyTicket()">チケットを購入する →</button></div>';
+      html+='<div style="margin:8px 20px;padding:14px;background:var(--red-bg);border:1px solid rgba(204,64,64,.3);border-radius:10px;color:var(--red);font-size:13px;line-height:1.7">チケットがありません。チケットを購入してください。</div><div style="margin:8px 20px"><button class="btn btn-wine" onclick="goBuyTicket()">チケットを購入する →</button>'+CREDIX_NOTE_HTML+'</div>';
     }else{
       html+='<div style="margin:8px 20px;padding:14px;background:var(--red-bg);border:1px solid rgba(204,64,64,.3);border-radius:10px;color:var(--red);font-size:13px;line-height:1.7">チケットがありません。ただいまチケットの販売を準備中です。開始まで今しばらくお待ちください。</div>';
     }
