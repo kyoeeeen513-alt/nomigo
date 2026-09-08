@@ -69,8 +69,6 @@ textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px so
 .link{background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:8px 0;width:100%;}
 .recruit-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
 .recruit-chip{font-size:11.5px;padding:4px 8px;border-radius:999px;background:#1e0710;border:1px solid var(--line);color:var(--text);}
-.share-ok{color:#8ad39b;font-size:12px;font-weight:700;margin-top:9px;}
-.share-ng{color:#ffb3b3;font-size:12px;font-weight:700;margin-top:9px;}
 .x-preview{font-size:12.5px;line-height:1.65;white-space:pre-wrap;background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:9px;}
 </style>
 </head>
@@ -562,15 +560,10 @@ async function loadRecruitments(){
     h+='<div class="row">';
     h+='<div class="nm">'+esc(x.area)+'・'+esc(x.slot)+'<span class="tag">'+esc(fmtDate(x.created_at))+'</span></div>';
     h+='<div class="recruit-chips">'+chips.map(function(c){return '<span class="recruit-chip">'+esc(c)+'</span>';}).join('')+'</div>';
-    if(x.sns_share_ok){
-      h+='<div class="share-ok">✓ SNS掲載OK</div>';
-      h+='<div class="x-preview" id="xt-'+x.id+'">'+esc(x.x_text||'')+'</div>';
-      h+='<div class="acts"><button class="btn-send" onclick="copyRecruitText(\''+x.id+'\')">X投稿文をコピー</button>';
-      h+='<button class="btn-sm" onclick="markSocialPosted(\''+x.id+'\')">'+(x.social_posted_at?'投稿済みを更新':'投稿済みにする')+'</button></div>';
-      if(x.social_posted_at)h+='<div class="meta">投稿済み：'+esc(x.social_posted_by||'運営')+'／'+esc(fmtDate(x.social_posted_at))+'</div>';
-    }else{
-      h+='<div class="share-ng">SNS掲載不可（本人が許可していません）</div>';
-    }
+    h+='<div class="x-preview" id="xt-'+x.id+'">'+esc(x.x_text||'')+'</div>';
+    h+='<div class="acts"><button class="btn-send" onclick="copyRecruitText(\''+x.id+'\')">X投稿文をコピー</button>';
+    h+='<button class="btn-sm" onclick="markSocialPosted(\''+x.id+'\')">'+(x.social_posted_at?'投稿済みを更新':'投稿済みにする')+'</button></div>';
+    if(x.social_posted_at)h+='<div class="meta">投稿済み：'+esc(x.social_posted_by||'運営')+'／'+esc(fmtDate(x.social_posted_at))+'</div>';
     h+='</div>';
   }
   h+='</div>';
