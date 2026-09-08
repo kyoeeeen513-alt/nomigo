@@ -806,10 +806,16 @@ async function loadInq(){
     //   ここに出すのは、退会申請の問い合わせで、送信者が今まだ使える状態
     //   （active）で、かつ自分に停止の権限がある場合だけ。
     //   返信済みでも出す。返信してから退会させる流れが自然なため。
+    //   【2026/9/8 修正】対応済みの行は opacity:0.45 で薄く表示される作りのため、
+    //   その中に置いた退会ボタンが押しづらくなっていた（実際に押せない事象が発生）。
+    //   退会の操作だけは opacity を元に戻し、はっきり押せるようにする。
+    //   問い合わせ自体を対応済みにしても、退会させる作業はまだ残っているため。
     if(isWithdraw&&st==='active'&&ME.can_suspend&&q.user_id){
+      h+='<div style="opacity:1;position:relative;z-index:1">';
       h+='<div id="wd-'+q.id+'"></div>';
       h+='<div class="acts" style="margin-top:8px">';
-      h+='<button class="btn-sm" style="flex:1" onclick="openWithdraw(\''+q.id+'\',\''+q.user_id+'\')">退会させる</button>';
+      h+='<button class="btn-sm" style="flex:1;background:var(--ng);color:#fff" onclick="openWithdraw(\''+q.id+'\',\''+q.user_id+'\')">退会させる</button>';
+      h+='</div>';
       h+='</div>';
     }
     h+='</div>';
