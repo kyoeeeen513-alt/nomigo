@@ -4616,7 +4616,6 @@ function splashH(){
       +'<div class="home-bar"><div class="home-wordmark">Nomi Go<div style="font-size:9px;font-weight:500;letter-spacing:.34em;color:rgba(247,240,230,.65);margin-top:2px;text-indent:.34em">ノミゴー</div></div><div style="display:flex;align-items:center;gap:8px">'+liveBadge+hamburgerBtn+'</div></div>'
       +welcomeToastH()
       +'<div class="home-title">今夜、一緒に<br><span class="home-title-accent">飲みませんか？</span></div>'
-      +'<div class="home-lead">恋愛じゃなく、今夜一緒に飲む友達を。</div>'
       +'<div class="home-primary-action">'+recruitBtn+idPendingNote+'</div>'
       +matchCard
       +audienceContext
@@ -4626,7 +4625,7 @@ function splashH(){
       +ticketCard
       +facts
     +'</div>'
-    +'<div class="body"><div style="padding:17px 20px;font-size:12px;color:var(--lgray);text-align:center;line-height:1.75">恋愛目的ではなく、今日一緒に飲む友達を探すサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>募集は、本人確認が完了した20歳以上の方のみ</div><div style="padding:0 20px 12px;text-align:center;font-size:11.5px;color:var(--muted);line-height:2"><a href="/terms.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'terms\');return false;">利用規約</a><span style="margin:0 8px">・</span><a href="/privacy.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'privacy\');return false;">プライバシーポリシー</a><span style="margin:0 8px">・</span><a href="/tokushoho.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="go(\'tokushoho\');return false;">特定商取引法に基づく表記</a><span style="margin:0 8px">・</span><a href="/safety.html" style="color:var(--cream);text-decoration:underline;display:inline-block" target="_blank" rel="noopener">安心・安全への取り組み</a><span style="margin:0 8px">・</span><a href="/contact.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="go(\'inquiry\');return false;">お問い合わせ</a></div><div style="padding:0 20px 22px;text-align:center;font-size:11px;color:var(--muted);line-height:1.9">運営：TRP<br>20歳以上限定・本人確認必須<br>インターネット異性紹介事業 届出済み<br>受付番号：1012601342</div></div>'
+    +'<div class="body"><div style="padding:17px 20px;font-size:12px;color:var(--lgray);text-align:center;line-height:1.75">今日一緒に飲む相手を探すサービスです。<br>無理な勧誘・迷惑行為は禁止です。<br>募集は、本人確認が完了した20歳以上の方のみ</div><div style="padding:0 20px 12px;text-align:center;font-size:11.5px;color:var(--muted);line-height:2"><a href="/terms.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'terms\');return false;">利用規約</a><span style="margin:0 8px">・</span><a href="/privacy.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="S._legalBackTo=\'splash\';go(\'privacy\');return false;">プライバシーポリシー</a><span style="margin:0 8px">・</span><a href="/tokushoho.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="go(\'tokushoho\');return false;">特定商取引法に基づく表記</a><span style="margin:0 8px">・</span><a href="/safety.html" style="color:var(--cream);text-decoration:underline;display:inline-block" target="_blank" rel="noopener">安心・安全への取り組み</a><span style="margin:0 8px">・</span><a href="/contact.html" style="color:var(--cream);text-decoration:underline;display:inline-block" onclick="go(\'inquiry\');return false;">お問い合わせ</a></div><div style="padding:0 20px 22px;text-align:center;font-size:11px;color:var(--muted);line-height:1.9">運営：TRP<br>20歳以上限定・本人確認必須<br>インターネット異性紹介事業 届出済み<br>受付番号：1012601342</div></div>'
     +profileMenuBackdrop+profileMenuDropdown
     +'</div>';
 }
@@ -5479,6 +5478,17 @@ function tapFaqQuestion(label,answer){
   setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
 }
 
+// 【2026/9/8 追加】FAQのクイックボタン用。答えの本文の書き出しで FAQ_QA を探す。
+//   番号（配列の何番目か）で指定していたため、項目を挿入したときにボタンと答えが
+//   ズレる事故が起きた。書き出しで引けば、項目を足しても順番が変わっても崩れない。
+//   見つからない場合は空文字を返す（ボタンは表示されるが答えが出ない状態になるので、
+//   FAQ_QA の本文を書き換えたときは、ここの文言も合わせて直すこと）。
+function faqAnsBy(head){
+  for(var i=0;i<FAQ_QA.length;i++){
+    if(FAQ_QA[i].answer&&FAQ_QA[i].answer.indexOf(head)===0)return FAQ_QA[i].answer;
+  }
+  return '';
+}
 function faqBotH(){
   var msgsHtml=(S.faqMsgs||[]).map(function(m){
     var isBot=m.type==='bot';
@@ -5486,12 +5496,17 @@ function faqBotH(){
     return '<div class="msg-row '+(isBot?'':'mine')+'">'+(isBot?'<div class="msg-av" style="background:var(--wine-bg);color:var(--wine)">🤖</div>':'')+'<div><div class="msg-bubble" style="background:'+(isBot?'var(--card)':'var(--wine)')+';color:'+(isBot?'var(--cream)':'#fff')+'">'+escapeHtml(m.content)+'</div>'+inquiryBtn+'</div></div>';
   }).join('');
   var quickList=[
-    {label:'料金はいくら?',ans:FAQ_QA[0].answer},
-    {label:'キャンセルしたら?',ans:FAQ_QA[2].answer},
-    {label:'2対2ってどういうこと?',ans:FAQ_QA[6].answer},
-    {label:'対応エリアは?',ans:FAQ_QA[4].answer},
-    {label:'退会したい',ans:FAQ_QA[10].answer},
-    {label:'安全性が心配',ans:FAQ_QA[16].answer}
+    // 【2026/9/8 修正】ボタンと答えの対応がズレていた（2対2・退会・安全性の3つ）。
+    //   原因：FAQ_QA の6番目に「お問い合わせ受付時間」が後から挿入され、
+    //   それ以降の番号が1つずつ後ろへズレたのに、ここの番号を直していなかった。
+    //   再発防止のため、番号ではなく answer の先頭文言で引く方式に変更する。
+    //   FAQ_QA に項目を足しても、ここは直さなくてよくなる。
+    {label:'料金はいくら?',ans:faqAnsBy('女性は無料でご利用いただけます')},
+    {label:'キャンセルしたら?',ans:faqAnsBy('マッチ成立前のキャンセルは無料です')},
+    {label:'2対2ってどういうこと?',ans:faqAnsBy('2対2は、友達1人と一緒に参加して')},
+    {label:'対応エリアは?',ans:faqAnsBy('現在対応しているエリアは')},
+    {label:'退会したい',ans:faqAnsBy('退会をご希望の場合は')},
+    {label:'安全性が心配',ans:faqAnsBy('通報機能や評価機能により')}
   ];
   var quickHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2)">'+quickList.map(function(q){return '<button class="tag-chip" onclick="tapFaqQuestion(\''+q.label+'\',\''+q.ans.replace(/'/g,"\\'")+'\')" style="font-size:12px">'+q.label+'</button>';}).join('')+'</div>';
   return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">サポート</div><div class="hdr-title">よくある質問</div></div></div>'+quickHtml+'<div class="chat-wrap"><div class="chat-msgs" id="faqmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="faq-input" type="text" placeholder="質問を入力..." onkeydown="if(event.key===\'Enter\')sendFaqMsg()"><button class="chat-send" onclick="sendFaqMsg()">↑</button></div></div></div>';
