@@ -2942,59 +2942,35 @@ function ageBand(age){
 }
 async function loadWaitFeed(){
   try{
-    // 【2026/9/6追加】まだ登録していない人のトップにも「今こんな人が募集中」を出す。
-    //   理由：登録前に実際の募集が見えたほうが、登録に進む動機になる（奈良の判断）。
-    //   未ログインの人は registrations を直接読めない（RLSで拒否される）ため、
-    //   個人が特定できない項目だけを返す専用の関数 get_public_feed を経由する。
-    //   年齢は関数の中で「20代後半」の形に丸めており、実年齢・氏名・IDは一切返らない。
-    if(!S.user||!S.profile||!S.profile.gender){
-      var pubRes=await DB.rpc('get_public_feed');
-      var rows=(pubRes&&pubRes.data)||[];
-      S._waitFeed=rows.map(function(r){
-        return {
-          live:true,
-          band:r.band||'',
-          gender:r.gender==='male'?'男性':'女性',
-          job:r.job||'',
-          area:areaName(r.area_id),
-          slot:r.slot||'',
-          style:r.drink_style||'',
-          purpose:r.purpose?purposeLabel(r.purpose):'',
-          tag:r.tag||''
-        };
-      });
-      return;
+    // ログイン状態にかかわらず、個人が特定できない項目だけを返す
+    // get_public_feed を使う。registrations の直接取得はRLSにより
+    // ログイン中でも他人の募集を取得できず、人数だけ出てプロフィールが
+    // 表示されない原因になるため使用しない。
+    var pubRes=await DB.rpc('get_public_feed');
+    if(pubRes&&pubRes.error)throw pubRes.error;
+    var rows=(pubRes&&pubRes.data)||[];
+    // ログイン中は相手候補（異性）だけ、未ログイン時は現在の募集全体を表示する。
+    if(S.user&&S.profile&&S.profile.gender){
+      var opp=S.profile.gender==='male'?'female':'male';
+      rows=rows.filter(function(r){return r.gender===opp;});
     }
-    var opp=S.profile.gender==='male'?'female':'male';
-    // 本当に現在募集している人だけを表示する。成立済み・終了済み・期限切れは混ぜない。
-    // slot（今すぐ／19:00〜22:00）も取得する。何時からの募集かが分からないと、
-    // 見た人が「自分と合うか」を判断できず、募集ボタンを押す動機にならないため。
-    var regs=await DB.from('registrations').select('user_id,area_id,slot,drink_style,purpose,gender,age,status,created_at,expires_at').eq('gender',opp).eq('status','waiting').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(12);
-    if(!regs.data||!regs.data.length){S._waitFeed=[];return;}
-    // 同じ人が複数回募集していても1回だけ表示
-    var seen={},uniq=[];
-    regs.data.forEach(function(r){if(!seen[r.user_id]){seen[r.user_id]=true;uniq.push(r);}});
-    uniq=uniq.slice(0,6);
-    var feed=[];
-    for(var i=0;i<uniq.length;i++){
-      var r=uniq[i];
-      // 他人のプロフィールは直接読めない（RLS）。表示に必要な項目だけ関数経由で取得する。
-      var prRes=await DB.rpc('get_feed_profile',{p_user_id:r.user_id});
-      var pr={data:(prRes.data&&prRes.data[0])||null};
-      feed.push({
+    S._waitFeed=rows.slice(0,6).map(function(r){
+      return {
         live:true,
-        band:ageBand(r.age),
+        band:r.band||'',
         gender:r.gender==='male'?'男性':'女性',
-        job:pr.data&&pr.data.job?pr.data.job:'',
+        job:r.job||'',
         area:areaName(r.area_id),
         slot:r.slot||'',
         style:r.drink_style||'',
         purpose:r.purpose?purposeLabel(r.purpose):'',
-        tag:pr.data&&pr.data.tags&&pr.data.tags.length?pr.data.tags[0]:''
-      });
-    }
-    S._waitFeed=feed;
-  }catch(e){S._waitFeed=[];}
+        tag:r.tag||''
+      };
+    });
+  }catch(e){
+    console.error('[loadWaitFeed] exception:',e);
+    S._waitFeed=[];
+  }
 }
 function waitFeedItemH(f){
   var line1=[f.band,f.gender,f.job].filter(function(x){return x;}).join('・');
