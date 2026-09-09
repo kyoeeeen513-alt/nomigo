@@ -2549,26 +2549,28 @@ function retryIdVerify(){
 }
 
 function idVerifyH(){
-  var preview=S._idPhotoPreview?'<img src="'+S._idPhotoPreview+'" style="width:100%;border-radius:12px;display:block;object-fit:cover">':'<div style="width:100%;aspect-ratio:1.6;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">身分証の写真がここに表示されます</div>';
+  var preview=S._idPhotoPreview?'<img src="'+S._idPhotoPreview+'" style="width:100%;max-height:230px;border-radius:12px;display:block;object-fit:contain;background:#080506">':'<div style="width:100%;height:150px;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">身分証の写真がここに表示されます</div>';
   var ready=!!S._idPhotoFile;
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','年齢の確認')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
-    +'<div style="background:rgba(0,0,0,.26);border:1px solid rgba(224,176,96,.35);border-radius:12px;padding:14px">'
-      +'<div style="font-size:13px;font-weight:900;color:var(--gold-bright);line-height:1.5;margin-bottom:9px">身分証画像の取り扱いについて</div>'
-      +'<div style="font-size:12px;color:var(--lgray);line-height:1.7"><span style="color:var(--cream);font-weight:800">他の利用者には公開されません。</span>年齢確認・登録内容の確認・不正防止のためにのみ利用し、適切に管理します。</div>'
+  var realName=escapeHtml(S.profile&&S.profile.real_name?S.profile.real_name:'（未登録）');
+  var birthdate=escapeHtml(S.profile&&S.profile.birthdate?S.profile.birthdate:'（未登録）');
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','年齢の確認')+'</div></div>'
+    +'<div class="body" style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
+      +'<div style="background:rgba(0,0,0,.25);border:1px solid rgba(224,176,96,.34);border-radius:12px;padding:14px">'
+        +'<div style="font-size:15px;font-weight:900;color:var(--gold-bright);margin-bottom:8px">身分証1枚で確認できます</div>'
+        +'<div style="font-size:12px;color:var(--cream);line-height:1.75">運転免許証・マイナンバーカード・パスポートなど、<b>生年月日が確認できる有効な身分証</b>をご提出ください。</div>'
+        +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2);font-size:12px;color:var(--lgray);line-height:1.7">登録内容：<b style="color:var(--cream)">'+realName+'／'+birthdate+'</b><br>身分証の記載と一致していることをご確認ください。</div>'
+        +'<details style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">'
+          +'<summary style="font-size:12px;font-weight:800;color:var(--gold);cursor:pointer">写真の取り扱い・注意事項を見る</summary>'
+          +'<div style="font-size:11.5px;color:var(--lgray);line-height:1.75;margin-top:9px">画像は他の利用者に公開されず、年齢確認・登録内容の確認・不正防止のためにのみ使用します。<br>マイナンバーカードは表面のみ提出してください。<br>他人名義や偽造・改ざんされた書類は禁止です。不正が疑われる場合は利用停止等を行い、必要に応じて警察その他の関係機関へ相談・通報することがあります。</div>'
+        +'</details>'
+      +'</div>'
+      +preview
+      +'<button type="button" style="width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'身分証を撮り直す・選び直す':'身分証を撮影・選択')+'</button>'
+      +'<input type="file" accept="image/*" id="pf-photo-id" style="display:none" onchange="handleIdPhotoSelect(this)">'
+      +'<div style="font-size:11px;color:var(--muted);line-height:1.55;text-align:center">文字・生年月日・書類全体が鮮明に見える写真を選んでください。</div>'
+      +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
     +'</div>'
-    +'<div style="font-size:12.5px;color:var(--cream);line-height:1.75;background:rgba(0,0,0,.22);border-radius:10px;padding:12px 14px">20歳未満の方の利用を防ぐため、生年月日を確認できる有効な公的身分証（運転免許証・マイナンバーカード・パスポートなど）をご提出ください。<br><span style="color:var(--muted)">※マイナンバーカードは表面のみ。個人番号が記載された裏面は提出しないでください。</span></div>'
-    +'<div style="background:rgba(176,48,64,.10);border:1px solid rgba(224,112,124,.35);border-radius:10px;padding:12px 14px;font-size:11.5px;color:var(--cream);line-height:1.75">他人名義の書類、偽造・改ざんされた書類の提出は禁止です。不正が疑われる場合は、確認の拒否・アカウント停止等を行い、必要に応じて警察その他の関係機関へ相談・通報することがあります。</div>'
-    +'<div style="background:rgba(0,0,0,.26);border:1px solid var(--border2);border-radius:12px;padding:13px 15px">'
-      +'<div style="font-size:11px;font-weight:800;color:var(--gold);letter-spacing:.1em;margin-bottom:8px">ご登録の内容</div>'
-      +'<div style="font-size:13px;color:var(--cream);line-height:1.9">本名：'+escapeHtml(S.profile&&S.profile.real_name?S.profile.real_name:'（未登録）')+'<br>生年月日：'+escapeHtml(S.profile&&S.profile.birthdate?S.profile.birthdate:'（未登録）')+'</div>'
-      +'<div style="font-size:11px;color:var(--muted);line-height:1.65;margin-top:8px">この内容と一致する身分証をご提出ください。一致しない場合、確認は完了しません。</div>'
-    +'</div>'
-    +'<div class="sec-label" style="padding:0">身分証の写真</div>'
-    +preview
-    +'<button type="button" style="width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'身分証を撮り直す・選び直す':'身分証を撮影・選択')+'</button><input type="file" accept="image/*" id="pf-photo-id" style="display:none" onchange="handleIdPhotoSelect(this)">'
-    +'<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:-8px">文字・生年月日・書類名・発行元が鮮明に見える写真を選んでください。</div>'
-    +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
-    +'</div><div class="ftr"><button class="btn btn-wine" '+(ready&&!_idVerifySubmitting?'':'disabled ')+'onclick="submitIdVerify()">'+(_idVerifySubmitting?'送信中...':'アップロードして確認を依頼する →')+'</button></div></div>';
+    +'<div class="ftr"><button class="btn btn-wine" '+(ready&&!_idVerifySubmitting?'':'disabled ')+'onclick="submitIdVerify()">'+(_idVerifySubmitting?'送信中...':'確認を依頼する →')+'</button></div></div>';
 }
 
 function idVerifyPendingH(){
