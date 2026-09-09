@@ -168,6 +168,142 @@ async function pushLine(lineUserId, text) {
   }
 }
 
+
+const NOTIFICATION_PREFECTURES = {
+  shinjuku: ['東京都', '神奈川県', '埼玉県', '千葉県'],
+  susukino: ['北海道'],
+};
+
+function jstDayRange(now) {
+  const shifted = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const date = shifted.toISOString().slice(0, 10);
+  const start = new Date(date + 'T00:00:00+09:00');
+  return { start: start.toISOString(), end: new Date(start.getTime() + 86400000).toISOString() };
+}
+
+function recruitmentNotificationText(reg) {
+  const lines = [
+    '🍻 新しい募集が入りました！',
+    '',
+    '📍 ' + areaLabel(reg.area_id),
+    '🕗 ' + (reg.slot || ''),
+    '👥 ' + (reg.mode === '2v2' ? '2対2' : '1対1'),
+    reg.drink_style ? '🥂 ' + reg.drink_style : '',
+    reg.purpose ? '💬 ' + purposeLabel(reg.purpose) : '',
+    '',
+    '気になる方は募集内容をご確認ください。',
+  ];
+  return lines.filter((v, i, all) => v !== '' || (i > 0 && all[i - 1] !== '')).join('\n');
+}
+
+async function pushRecruitmentLine(lineUserId, reg) {
+  if (!lineUserId) return false;
+  const text = recruitmentNotificationText(reg);
+  const url = 'https://www.nomi-go.jp/?recruitment=' + encodeURIComponent(reg.id);
+  try {
+    const r = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${LINE_TOKEN}`,
+      },
+      body: JSON.stringify({
+        to: lineUserId,
+        messages: [{
+          type: 'flex',
+          altText: 'Nomi Goに新しい募集が入りました',
+          contents: {
+            type: 'bubble',
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'md',
+              contents: [
+                { type: 'text', text: '新しい募集が入りました！', weight: 'bold', size: 'lg', wrap: true },
+                { type: 'text', text: text.replace('🍻 新しい募集が入りました！\n\n', ''), size: 'sm', wrap: true, color: '#555555' },
+              ],
+            },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [{
+                type: 'button',
+                style: 'primary',
+                color: '#7A1F3D',
+                action: { type: 'uri', label: 'この募集を見てみる', uri: url },
+              }],
+            },
+          },
+        }],
+      }),
+    });
+    return r.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function getRecruitmentForUserNotification(registrationId) {
+  const now = new Date().toISOString();
+  const rows = await db(
+    `registrations?id=eq.${registrationId}&status=eq.waiting&expires_at=gt.${encodeURIComponent(now)}` +
+    '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,age_min,age_max,age_any,drink_style,purpose'
+  );
+  return rows && rows[0] ? rows[0] : null;
+}
+
+async function eligibleRecruitmentRecipients(reg) {
+  const prefectures = NOTIFICATION_PREFECTURES[reg.area_id] || [];
+  if (!prefectures.length) return [];
+  const opposite = reg.gender === 'male' ? 'female' : reg.gender === 'female' ? 'male' : '';
+  if (!opposite) return [];
+
+  const prefFilter = encodeURIComponent('(' + prefectures.join(',') + ')');
+  const profiles = await db(
+    `profiles?account_status=eq.active&id_verify_status=eq.approved&gender=eq.${opposite}` +
+    '&line_user_id=not.is.null&residence_prefecture=in.' + prefFilter +
+    '&select=user_id,line_user_id,age'
+  );
+
+  const blockRows = await db(
+    `blocks?or=(blocker_id.eq.${reg.user_id},blocked_id.eq.${reg.user_id})&select=blocker_id,blocked_id`
+  );
+  const blocked = new Set();
+  for (const row of blockRows || []) {
+    blocked.add(row.blocker_id === reg.user_id ? row.blocked_id : row.blocker_id);
+  }
+
+  const now = new Date();
+  const activeRegs = await db(
+    'registrations?status=eq.waiting&expires_at=gt.' + encodeURIComponent(now.toISOString()) + '&select=user_id'
+  );
+  const unavailable = new Set((activeRegs || []).map((row) => row.user_id));
+
+  const range = jstDayRange(now);
+  const sentToday = await db(
+    'recruitment_user_notification_recipients?status=eq.sent&sent_at=gte.' +
+    encodeURIComponent(range.start) + '&sent_at=lt.' + encodeURIComponent(range.end) + '&select=user_id'
+  );
+  const alreadyNotifiedToday = new Set((sentToday || []).map((row) => row.user_id));
+
+  const priorForRecruitment = await db(
+    `recruitment_user_notification_recipients?registration_id=eq.${reg.id}&status=eq.sent&select=user_id`
+  );
+  const alreadySentThisRecruitment = new Set((priorForRecruitment || []).map((row) => row.user_id));
+
+  return (profiles || []).filter((p) => {
+    if (!p.user_id || p.user_id === reg.user_id || !p.line_user_id) return false;
+    if (blocked.has(p.user_id) || unavailable.has(p.user_id)) return false;
+    if (alreadyNotifiedToday.has(p.user_id) || alreadySentThisRecruitment.has(p.user_id)) return false;
+    const age = Number(p.age);
+    if (!reg.age_any) {
+      if (reg.age_min != null && age < Number(reg.age_min)) return false;
+      if (reg.age_max != null && age > Number(reg.age_max)) return false;
+    }
+    return Number.isFinite(age) && age >= 20;
+  });
+}
+
 // 役割ごとの通知先を取り出す（notify_targets テーブル）
 async function notifyTarget(role) {
   try {
@@ -625,6 +761,111 @@ module.exports = async (req, res) => {
         ));
       }
       res.status(200).json({ success: true, list: list });
+      return;
+    }
+
+
+    // ── 募集を対象ユーザーへ通知（運営が明示操作した時だけ） ──────
+    if (action === 'preview_user_recruitment_notification' ||
+        action === 'send_user_recruitment_notification') {
+      const registrationId = body.registrationId;
+      if (!registrationId || !isUuid.test(registrationId)) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      const reg = await getRecruitmentForUserNotification(registrationId);
+      if (!reg) {
+        res.status(400).json({ success: false, error: 'recruitment_not_active' });
+        return;
+      }
+      const recipients = await eligibleRecruitmentRecipients(reg);
+      const preview = {
+        area: areaLabel(reg.area_id),
+        slot: reg.slot || '',
+        mode: reg.mode === '2v2' ? '2対2' : '1対1',
+        text: recruitmentNotificationText(reg),
+        targetCount: recipients.length,
+      };
+      if (action === 'preview_user_recruitment_notification') {
+        res.status(200).json({ success: true, preview: preview });
+        return;
+      }
+      if (body.confirm !== 'SEND') {
+        res.status(400).json({ success: false, error: 'confirmation_required' });
+        return;
+      }
+      if (!recipients.length) {
+        res.status(400).json({ success: false, error: 'no_eligible_recipients', preview: preview });
+        return;
+      }
+
+      const existing = await db(
+        `recruitment_user_notifications?registration_id=eq.${registrationId}&select=status,sent_count`
+      );
+      if (existing && existing[0] && existing[0].status === 'sent') {
+        res.status(409).json({ success: false, error: 'already_sent' });
+        return;
+      }
+
+      const summary = {
+        status: 'processing',
+        target_count: recipients.length,
+        sent_count: existing && existing[0] ? Number(existing[0].sent_count || 0) : 0,
+        failed_count: 0,
+        created_by: myId,
+        updated_at: new Date().toISOString(),
+      };
+      if (existing && existing[0]) {
+        await db(`recruitment_user_notifications?registration_id=eq.${registrationId}`, {
+          method: 'PATCH', body: summary,
+        });
+      } else {
+        await db('recruitment_user_notifications', {
+          method: 'POST', body: Object.assign({ registration_id: registrationId }, summary),
+        });
+      }
+
+      let sent = 0;
+      let failed = 0;
+      for (const recipient of recipients) {
+        const ok = await pushRecruitmentLine(recipient.line_user_id, reg);
+        const attemptedAt = new Date().toISOString();
+        const row = {
+          registration_id: registrationId,
+          user_id: recipient.user_id,
+          status: ok ? 'sent' : 'failed',
+          attempted_at: attemptedAt,
+          sent_at: ok ? attemptedAt : null,
+        };
+        await db(
+          'recruitment_user_notification_recipients?on_conflict=registration_id,user_id',
+          { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: row }
+        );
+        if (ok) sent += 1; else failed += 1;
+      }
+
+      const previousSent = existing && existing[0] ? Number(existing[0].sent_count || 0) : 0;
+      const finalStatus = failed === 0 ? 'sent' : sent > 0 ? 'partial' : 'failed';
+      await db(`recruitment_user_notifications?registration_id=eq.${registrationId}`, {
+        method: 'PATCH',
+        body: {
+          status: finalStatus,
+          target_count: recipients.length,
+          sent_count: previousSent + sent,
+          failed_count: failed,
+          updated_at: new Date().toISOString(),
+          sent_at: sent > 0 ? new Date().toISOString() : null,
+        },
+      });
+      await audit(
+        myId,
+        'recruitment_user_line_notification',
+        'registrations',
+        registrationId,
+        { target_count: recipients.length, sent_count: sent, failed_count: failed },
+        null
+      );
+      res.status(200).json({ success: true, sentCount: sent, failedCount: failed });
       return;
     }
 
