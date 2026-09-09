@@ -1646,6 +1646,30 @@ async function init(){
       return;
     }
 
+    // LINE連携完了メッセージの専用リンクから開かれた場合。
+    // 登録時と別のブラウザ領域（LINE内ブラウザ・PWA・Safari間）では
+    // ログイン情報を共有できないため、未ログイン／別アカウントなら
+    // LINE連携画面へ戻さず、登録済みアカウントのログイン画面へ出す。
+    var _lineReturn=false;
+    try{_lineReturn=_params.get('line_return')==='1';}catch(e){}
+    if(_lineReturn){
+      try{window.history.replaceState({},'',window.location.pathname);}catch(e){}
+      if(sess&&sess.user&&S.profile&&S.profile.line_user_id){
+        await routeAfterLoad();
+        loadStats();
+        return;
+      }
+      if(sess&&sess.user){
+        try{await DB.auth.signOut();}catch(e){}
+        S.user=null;S.profile=null;S.registration=null;S.match=null;
+      }
+      S.authTab='login';
+      S._lineReturnNotice=true;
+      go('email');
+      loadStats();
+      return;
+    }
+
     var _startMode=null;
     try{_startMode=_params.get('start');}catch(e){}
     if(!sess&&_startMode==='register'){
@@ -4740,7 +4764,10 @@ function emailH(){
     ? '<input class="inp" id="einp2" type="email" placeholder="メールアドレス（確認のため再入力）" oninput="checkEmailMatch()">'
       +'<div id="email-match-msg" style="font-size:12px;line-height:1.6;margin-top:-6px"></div>'
     : '';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">新規登録 / ログイン</div></div></div><div class="body" style="padding:24px;gap:14px;display:flex;flex-direction:column"><div style="display:flex;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border2)"><button class="tab-btn" style="background:'+(isReg?'var(--wine)':'transparent')+';color:'+(isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'register\';re(\'email\')">新規登録</button><button class="tab-btn" style="background:'+(!isReg?'var(--wine)':'transparent')+';color:'+(!isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'login\';re(\'email\')">ログイン</button></div><input class="inp" id="einp" type="email" placeholder="メールアドレス" '+(isReg?'oninput="checkEmailMatch()"':'')+'>'+emailConfirmField+'<input class="inp" id="pinp" type="password" placeholder="パスワード（6文字以上）">'+forgotLink+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="'+(isReg?'doSignUp':'doSignIn')+'()">'+(isReg?'登録して始める →':'ログイン →')+'</button></div></div>';
+  var lineReturnNotice=S._lineReturnNotice
+    ? '<div style="padding:13px 14px;border:1px solid rgba(205,167,101,.35);border-radius:10px;background:rgba(205,167,101,.10);font-size:12.5px;color:var(--cream);line-height:1.7">LINE連携は完了しています。登録したメールアドレスでログインすると、本人確認へ進みます。</div>'
+    : '';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">新規登録 / ログイン</div></div></div><div class="body" style="padding:24px;gap:14px;display:flex;flex-direction:column"><div style="display:flex;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border2)"><button class="tab-btn" style="background:'+(isReg?'var(--wine)':'transparent')+';color:'+(isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'register\';re(\'email\')">新規登録</button><button class="tab-btn" style="background:'+(!isReg?'var(--wine)':'transparent')+';color:'+(!isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'login\';re(\'email\')">ログイン</button></div>'+lineReturnNotice+'<input class="inp" id="einp" type="email" placeholder="メールアドレス" '+(isReg?'oninput="checkEmailMatch()"':'')+'>'+emailConfirmField+'<input class="inp" id="pinp" type="password" placeholder="パスワード（6文字以上）">'+forgotLink+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="'+(isReg?'doSignUp':'doSignIn')+'()">'+(isReg?'登録して始める →':'ログイン →')+'</button></div></div>';
 }
 
 function forgotPasswordH(){
