@@ -4982,6 +4982,16 @@ function profileEditH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" type="text" readonly disabled style="max-width:120px;opacity:.7" value="'+(p.age?p.age+'歳':'')+'"><div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">年齢はご登録の生年月日から自動で決まります。ここでは変更できません。誤りがある場合はお問い合わせください。</div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">居住都道府県</div><select class="inp '+(p.residence_prefecture?'filled':'')+'" id="pf-prefecture" onchange="S.pf.residence_prefecture=this.value;this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+PREFECTURES.map(function(v){return '<option value="'+v+'" '+(p.residence_prefecture===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'+jobSectionH('profile_edit')+'<div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_edit')+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
 }
 
+// 開始まで1時間を切っている時間枠は選べない（マッチ後に移動する余裕を残すため）
+function slotSelectable(t){
+  if(t==='今すぐ')return true;
+  var h=parseInt(String(t).replace(/[^0-9].*$/,''),10);
+  if(isNaN(h))return true;
+  var now=new Date();
+  var jst=new Date(now.getTime()+(now.getTimezoneOffset()+540)*60000);
+  var slot=new Date(jst.getFullYear(),jst.getMonth(),jst.getDate(),h,0,0,0);
+  return (slot.getTime()-jst.getTime())>60*60*1000;
+}
 function recruitH(){
   var f=S.form;
   var isPair=f.mode==='2v2';
@@ -4995,7 +5005,12 @@ function recruitH(){
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="recruit-context"><span>'+areaName(f.area)+'</span><span>'+(isPair?'2対2':'1対1')+'</span></div>';
   html+='<section class="form-section"><div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
-  SLOTS.forEach(function(t){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';});
+  if(f.slot&&f.slot!=='今すぐ'&&!slotSelectable(f.slot)){f.slot='';}
+  SLOTS.forEach(function(t){
+    var ok=slotSelectable(t);
+    if(ok){html+='<button class="sel-btn '+(f.slot===t?'on':'')+'" style="flex:none;padding:12px 14px" onclick="S.form.slot=\''+t+'\';re(\'recruit\')">'+t+'</button>';}
+    else{html+='<button class="sel-btn" style="flex:none;padding:12px 14px;opacity:.35;cursor:not-allowed" disabled>'+t+'</button>';}
+  });
   html+='</div>';
   if(f.slot==='今すぐ'){
     html+='<div style="padding:4px 20px 4px"><div style="display:flex;gap:8px">';
