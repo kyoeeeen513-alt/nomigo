@@ -1851,6 +1851,12 @@ async function routeAfterLoad(){
     go('splash');
     return;
   }
+  // LINE未連携のまま再読み込み・別タブ復帰した場合も、トップへ逃がさず
+  // 必ずLINE連携画面へ戻す。iPhone/Android/PCで共通の判定にする。
+  if(!S.profile.line_user_id){
+    await goLineConnect();
+    return;
+  }
   // LINE連携後にアプリを閉じたり再読み込みした場合も、本人確認が未完了なら
   // ホームへ戻さず必ず登録の続きへ送る。Safari復帰時にタイマーが止まっても
   // 「募集する」を押すまで本人確認が出ない状態を作らない。
@@ -5619,6 +5625,11 @@ document.addEventListener('visibilitychange',function(){
 });
 window.addEventListener('pagehide',function(){
   sessionStorage.setItem('ngo_last_active',String(Date.now()));
+});
+// iPhoneではLINEアプリからSafariへ戻っても visibilitychange/pageshow が
+// 発火しない場合があるため、フォーカス復帰時にも連携完了を確認する。
+window.addEventListener('focus',function(){
+  resumeLineLinkCheck();
 });
 
 // ===== 背景に上品な泡を漂わせる（LPと同じ演出） =====
