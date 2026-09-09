@@ -56,7 +56,8 @@ async function pushLine(lineUserId, text) {
 }
 
 function messageFor(job) {
-  const area = job.area_id ? String(job.area_id) : '';
+  const areaNames = { shinjuku: '新宿', susukino: 'すすきの' };
+  const area = job.area_id ? (areaNames[job.area_id] || String(job.area_id)) : '';
   const slot = job.slot ? String(job.slot) : '';
   const summary = [area, slot].filter(Boolean).join('・');
   return (
