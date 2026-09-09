@@ -33,8 +33,11 @@ $$;
 revoke all on function private.enforce_active_account() from public;
 revoke all on function private.enforce_active_account() from anon;
 revoke all on function private.enforce_active_account() from authenticated;
-grant usage on schema private to authenticator;
-grant execute on function private.enforce_active_account() to authenticator;
+-- PostgREST runs the hook after switching to the request role, so each API
+-- role needs permission to execute it. The private schema is not exposed by
+-- the Data API, therefore this does not create a callable RPC endpoint.
+grant usage on schema private to authenticator, anon, authenticated, service_role;
+grant execute on function private.enforce_active_account() to authenticator, anon, authenticated, service_role;
 
 alter role authenticator
   set pgrst.db_pre_request = 'private.enforce_active_account';
