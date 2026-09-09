@@ -563,7 +563,8 @@ async function loadRecruitments(){
     h+='<div class="x-preview" id="xt-'+x.id+'">'+esc(x.x_text||'')+'</div>';
     h+='<div class="acts"><button class="btn-send" onclick="copyRecruitText(\''+x.id+'\')">X投稿文をコピー</button>';
     h+='<button class="btn-sm" onclick="markSocialPosted(\''+x.id+'\')">'+(x.social_posted_at?'投稿済みを更新':'投稿済みにする')+'</button>';
-    h+='<button class="btn-sm" id="linecheck-'+x.id+'" onclick="previewLineNotification(\''+x.id+'\')">LINE通知の対象確認</button></div>';
+    h+='<button class="btn-sm" id="linecheck-'+x.id+'" onclick="previewLineNotification(\''+x.id+'\')">LINE通知の対象確認</button>';
+    h+='<button class="btn-sm" onclick="sendLineTest(\''+x.id+'\')">自分にテスト送信</button></div>';
     h+='<div id="linepv-'+x.id+'"></div>';
     if(x.social_posted_at)h+='<div class="meta">投稿済み：'+esc(x.social_posted_by||'運営')+'／'+esc(fmtDate(x.social_posted_at))+'</div>';
     h+='</div>';
@@ -610,6 +611,17 @@ async function markSocialPosted(id){
 
 
 var _lineNotifyBusy={};
+
+async function sendLineTest(id){
+  if(_lineNotifyBusy[id])return;
+  if(!confirm('この募集内容を、現在ログイン中の自分のLINEだけにテスト送信しますか？'))return;
+  _lineNotifyBusy[id]=true;
+  var r=await api({action:'test_user_recruitment_notification',registrationId:id,confirm:'TEST'});
+  _lineNotifyBusy[id]=false;
+  alert(r.success?'自分のLINEだけにテスト送信しました。':'テスト送信できませんでした。LINE連携と募集状況をご確認ください。');
+}
+
+
 
 async function previewLineNotification(id){
   if(_lineNotifyBusy[id])return;
