@@ -182,14 +182,28 @@ function jstDayRange(now) {
 }
 
 function recruitmentNotificationText(reg) {
+  const ageCondition = reg.age_any
+    ? '年齢問わない'
+    : reg.age_min != null && reg.age_max != null
+      ? String(reg.age_min) + '〜' + String(reg.age_max) + '歳'
+      : reg.age_min != null
+        ? String(reg.age_min) + '歳以上'
+        : reg.age_max != null
+          ? String(reg.age_max) + '歳以下'
+          : '';
   const lines = [
     '🍻 新しい募集が入りました！',
     '',
-    '📍 ' + areaLabel(reg.area_id),
-    '🕗 ' + (reg.slot || ''),
-    '👥 ' + (reg.mode === '2v2' ? '2対2' : '1対1'),
-    reg.drink_style ? '🥂 ' + reg.drink_style : '',
-    reg.purpose ? '💬 ' + purposeLabel(reg.purpose) : '',
+    '📍 エリア：' + areaLabel(reg.area_id),
+    '🕗 時間：' + (reg.slot || ''),
+    '👥 人数：' + (reg.mode === '2v2' ? '2対2' : '1対1'),
+    '👤 募集者：' + [ageBand(reg.age), genderLabel(reg.gender)].filter(Boolean).join('・'),
+    ageCondition ? '🎯 希望年齢：' + ageCondition : '',
+    reg.smoke === 'yes' ? '🚬 タバコ：吸う' : reg.smoke === 'no' ? '🚭 タバコ：吸わない' : '',
+    reg.alcohol != null ? '🍺 お酒の強さ：' + alcoholLabel(reg.alcohol) : '',
+    reg.drink_style ? '🥂 飲み方：' + reg.drink_style : '',
+    reg.duration_pref ? '⏳ 希望時間：' + reg.duration_pref : '',
+    reg.purpose ? '💬 目的：' + purposeLabel(reg.purpose) : '',
     '',
     '気になる方は募集内容をご確認ください。',
   ];
@@ -247,7 +261,7 @@ async function getRecruitmentForUserNotification(registrationId) {
   const now = new Date().toISOString();
   const rows = await db(
     `registrations?id=eq.${registrationId}&status=eq.waiting&expires_at=gt.${encodeURIComponent(now)}` +
-    '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,age_min,age_max,age_any,drink_style,purpose'
+    '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,age_min,age_max,age_any,smoke,alcohol,drink_style,duration_pref,purpose'
   );
   return rows && rows[0] ? rows[0] : null;
 }
