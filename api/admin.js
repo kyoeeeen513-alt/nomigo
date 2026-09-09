@@ -779,6 +779,31 @@ module.exports = async (req, res) => {
     }
 
 
+    // ── 運営本人だけへの募集LINEテスト ─────────────────
+    if (action === 'test_user_recruitment_notification') {
+      const registrationId = body.registrationId;
+      if (!registrationId || !isUuid.test(registrationId) || body.confirm !== 'TEST') {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      const reg = await getRecruitmentForUserNotification(registrationId);
+      if (!reg) {
+        res.status(400).json({ success: false, error: 'recruitment_not_active' });
+        return;
+      }
+      const mine = await db(
+        `profiles?user_id=eq.${myId}&account_status=eq.active&line_user_id=not.is.null&select=line_user_id`
+      );
+      if (!mine || !mine[0] || !mine[0].line_user_id) {
+        res.status(400).json({ success: false, error: 'admin_line_not_linked' });
+        return;
+      }
+      const sent = await pushRecruitmentLine(mine[0].line_user_id, reg);
+      await audit(myId, 'recruitment_line_test', 'registrations', registrationId, { sent: sent }, null);
+      res.status(sent ? 200 : 502).json({ success: sent });
+      return;
+    }
+
     // ── 募集を対象ユーザーへ通知（運営が明示操作した時だけ） ──────
     if (action === 'preview_user_recruitment_notification' ||
         action === 'send_user_recruitment_notification') {
