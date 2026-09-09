@@ -1038,7 +1038,7 @@ const APP_IMG_MATCHED='data:image/webp;base64,UklGRo5HAABXRUJQVlA4IIJHAADwGQKdAS
 //   列を追加する前のデータベースでは undefined になるが、
 //   後述の判定は undefined を通常扱いにしているため、先にこのファイルを
 //   デプロイしても既存の利用者に影響は出ない。
-const PROFILE_COLS_SELF='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,ticket_count,verified_level,id_verify_status,id_verify_note,reject_reason,real_name,birthdate,id_photo_url,line_user_id,email_verified,account_status,created_at,updated_at';
+const PROFILE_COLS_SELF='user_id,nickname,age,gender,residence_prefecture,job,smoke,alcohol,tags,photo_url,ticket_count,verified_level,id_verify_status,id_verify_note,reject_reason,real_name,birthdate,id_photo_url,line_user_id,email_verified,account_status,created_at,updated_at';
 const PROFILE_COLS_PARTNER='user_id,nickname,age,gender,job,smoke,alcohol,tags,photo_url,id_verify_status,line_user_id';
 
 const AREAS=[
@@ -1049,6 +1049,7 @@ const AREAS=[
   {id:'nagoya',name:'名古屋',img:'area_nagoya.jpg?v=2',open:false},
   {id:'hakata',name:'博多',img:'area_hakata.jpg?v=2',open:false}
 ];
+const PREFECTURES=['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
 const JOBS=['会社員（事務・管理）','会社員（営業）','会社員（企画・マーケティング）','会社員（技術・研究）','経営者・役員','自営業・フリーランス','公務員','士業（弁護士・会計士など）','コンサルタント','IT・エンジニア','クリエイター・デザイナー','メディア・広告','金融・保険','不動産・建設','メーカー・技術職','商社・貿易','医療・看護','福祉・介護','保育・教育','販売・小売','飲食・フード','美容・理容','アパレル・ファッション','ホテル・ブライダル','旅行・観光','ブライダル・イベント','運輸・物流','製造・工場','農林水産','スポーツ・フィットネス','エンタメ・芸能','公務（警察・消防・自衛官）','学生','その他'];
 const DRINK_STYLES=['ガッツリ飲みたい','ゆっくり飲みたい','ご飯メイン'];
 const TIMINGS=['一次会','二次会','どちらでもOK'];
@@ -1221,7 +1222,7 @@ var S={
   chatMsgs:[],reviewStars:0,reviewChecks:[false,false,false],
   stats:{active:0,todayMatches:0,maleWaiting:0,femaleWaiting:0},
   error:'',info:'',pollTimer:null,chargeId:null,
-  pf:{nickname:'',age:'',gender:null,job:null,smoke:null,alcohol:null,realname:'',birthdate:''}
+  pf:{nickname:'',age:'',gender:null,residence_prefecture:'',job:null,smoke:null,alcohol:null,realname:'',birthdate:''}
 };
 
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
@@ -2082,8 +2083,10 @@ function friendlyError(err,fallback){
 function saveInputs(){
   var nn=document.getElementById('pf-nn');var ag=document.getElementById('pf-ag');
   var rn=document.getElementById('pf-rn');var bd=document.getElementById('pf-bd');
+  var pref=document.getElementById('pf-prefecture');
   if(nn)S.pf.nickname=nn.value.trim();if(ag)S.pf.age=ag.value;
   if(rn)S.pf.realname=rn.value.trim();if(bd)S.pf.birthdate=bd.value;
+  if(pref)S.pf.residence_prefecture=pref.value;
 }
 
 // ===== 生年月日の入力 =====
@@ -2225,6 +2228,7 @@ function profileBasicIssue(p){
   if(age<20)return {message:'Nomi Goは20歳以上の方がご利用いただけます',checkpoint:'under_20'};
   if(!p.nickname||!p.nickname.trim())return {message:'ニックネームを入力してください',checkpoint:'nickname'};
   if(!p.gender)return {message:'性別を選択してください',checkpoint:'gender'};
+  if(PREFECTURES.indexOf(p.residence_prefecture)===-1)return {message:'居住都道府県を選択してください',checkpoint:'residence_prefecture'};
   if(p.gender==='male'&&!p.photoFile)return {message:'男性はご本人の顔写真の登録が必須です',checkpoint:'photo'};
   return null;
 }
@@ -2304,7 +2308,7 @@ async function saveProfile(){
   //   いくらでもチケットを増やせてしまう。
   //   無料付与を行うかどうかはDB側（app_settings と trg_grant_welcome_ticket）が判断する。
   //   verified_level も同じ理由で送らない。DB側の既定値に任せる。
-  var saved=await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:null,smoke:null,alcohol:null,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',updated_at:new Date().toISOString()});
+  var saved=await DB.from('profiles').upsert({user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,residence_prefecture:p.residence_prefecture,job:null,smoke:null,alcohol:null,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',updated_at:new Date().toISOString()});
   if(saved.error){
     // 同一人物（本名＋生年月日）での2つ目のアカウント作成は、DB側で禁止している。
     // お一人につき1アカウントという規約（第4条）を、実際に担保するための処理。
@@ -2334,7 +2338,7 @@ async function saveProfile(){
     var tc=await DB.from('profiles').select('ticket_count').eq('user_id',S.user.id).single();
     if(tc.data&&tc.data.ticket_count)granted=tc.data.ticket_count;
   }catch(e){}
-  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,job:null,smoke:null,alcohol:null,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:granted};
+  S.profile={user_id:S.user.id,nickname:p.nickname,age:parseInt(p.age),gender:p.gender,residence_prefecture:p.residence_prefecture,job:null,smoke:null,alcohol:null,photo_url:photoUrl,tags:p.tags||[],real_name:p.realname.trim(),birthdate:p.birthdate,email_verified:isEmailVerified(),id_verify_status:'none',ticket_count:granted};
   // 実際に配られたときだけ知らせる。配られていないのに文言を出すと嘘になる。
   // 【2026/8/22 表示時期を変更】以前はこの直後にお祝いを出していたが、
   //   本人確認もLINE連携もこれからという段階で出るため早すぎるとの指摘を受けた。
@@ -5093,13 +5097,14 @@ function goLegalBack(){
 
 function goProfileEdit(){
   if(!S.profile)return;
-  S.pf={nickname:S.profile.nickname,age:String(S.profile.age),gender:S.profile.gender,job:S.profile.job,smoke:S.profile.smoke,alcohol:S.profile.alcohol,tags:(S.profile.tags||[]).slice()};
+  S.pf={nickname:S.profile.nickname,age:String(S.profile.age),gender:S.profile.gender,residence_prefecture:S.profile.residence_prefecture||'',job:S.profile.job,smoke:S.profile.smoke,alcohol:S.profile.alcohol,tags:(S.profile.tags||[]).slice()};
   go('profile_edit');
 }
 
 async function saveProfileEdit(){
   var p=S.pf;
   if(!p.nickname||!p.gender){S.error='ニックネームと性別を入力してください';re('profile_edit');return;}
+  if(PREFECTURES.indexOf(p.residence_prefecture)===-1){S.error='居住都道府県を選択してください';re('profile_edit');return;}
   if(p.gender==='male'&&!p.photoFile&&!(S.profile&&S.profile.photo_url)){S.error='男性はご本人の顔写真の登録が必須です';re('profile_edit');return;}
   go('loading');
   var photoUrl=S.profile.photo_url;
@@ -5113,9 +5118,9 @@ async function saveProfileEdit(){
       return;
     }
   }
-  var upd=await DB.from('profiles').update({nickname:p.nickname,gender:p.gender,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
+  var upd=await DB.from('profiles').update({nickname:p.nickname,gender:p.gender,residence_prefecture:p.residence_prefecture,job:p.job,smoke:p.smoke,alcohol:p.alcohol,photo_url:photoUrl,tags:p.tags||[],updated_at:new Date().toISOString()}).eq('user_id',S.user.id);
   if(upd.error){S.error=friendlyError(upd.error,'保存に失敗しました。もう一度お試しください。');re('profile_edit');return;}
-  S.profile.nickname=p.nickname;S.profile.gender=p.gender;S.profile.job=p.job;S.profile.smoke=p.smoke;S.profile.alcohol=p.alcohol;S.profile.photo_url=photoUrl;S.profile.tags=p.tags||[];
+  S.profile.nickname=p.nickname;S.profile.gender=p.gender;S.profile.residence_prefecture=p.residence_prefecture;S.profile.job=p.job;S.profile.smoke=p.smoke;S.profile.alcohol=p.alcohol;S.profile.photo_url=photoUrl;S.profile.tags=p.tags||[];
   go('splash');
 }
 
@@ -5157,6 +5162,7 @@ function profileNewH(){
       +'<div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢（生年月日から自動計算）</div><input class="inp'+(p.age?' filled':'')+'" id="pf-ag" type="text" readonly style="max-width:120px;background:var(--card)" value="'+(p.age||'')+'" placeholder="自動入力"></div>'
       +'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム'+required+'</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+escapeHtml(p.nickname||'')+'" oninput="S.pf.nickname=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"></div>'
       +'<div class="sec-label">性別'+required+'</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button type="button" class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'male\';re(\'profile_new\')">♂ 男性</button><button type="button" class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="saveInputs();S.pf.gender=\'female\';re(\'profile_new\')">♀ 女性</button></div>'
+      +'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">居住都道府県'+required+'</div><select class="inp '+(p.residence_prefecture?'filled':'')+'" id="pf-prefecture" onchange="S.pf.residence_prefecture=this.value;sessionStorage.setItem(\'ngo_pf\',JSON.stringify(S.pf));this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+PREFECTURES.map(function(v){return '<option value="'+v+'" '+(p.residence_prefecture===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
       +photoSection+errorH+'</div><div class="ftr"><button type="button" class="btn btn-wine" onclick="continueProfileSetup()">次へ（2/2）→</button></div></div>';
   }
 
@@ -5214,7 +5220,7 @@ function profileEditH(){
   var photoPreview=p.photoPreview?'<img src="'+p.photoPreview+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':(S.profile&&S.profile.photo_url?'<img src="'+S.profile.photo_url+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block">':'<div style="width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">👤</div>');
   var isMalePfE=p.gender==='male';
   var photoSection='<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">'+(isMalePfE?'プロフィール写真（男性は必須）':'プロフィール写真（任意）')+'</div><div style="display:flex;align-items:center;gap:14px"><div id="pf-prev-wrap" style="width:80px;height:80px;flex-shrink:0">'+photoPreview+'</div><button type="button" id="pf-pick-btn" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:13px;font-weight:700;cursor:pointer" onclick="openPhotoPicker(\'profile_edit\')">写真を変更</button><input type="file" accept="image/*" id="pf-photo-edit" style="display:none" onchange="handlePhotoSelect(this,\'profile_edit\')"></div>'+(isMalePfE?'<div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">ご本人の顔がはっきり写った写真のみ承認されます（加工・マスク・複数人NG）。</div>':'')+'</div>';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" type="text" readonly disabled style="max-width:120px;opacity:.7" value="'+(p.age?p.age+'歳':'')+'"><div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">年齢はご登録の生年月日から自動で決まります。ここでは変更できません。誤りがある場合はお問い合わせください。</div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div>'+jobSectionH('profile_edit')+'<div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_edit')+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" type="text" readonly disabled style="max-width:120px;opacity:.7" value="'+(p.age?p.age+'歳':'')+'"><div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">年齢はご登録の生年月日から自動で決まります。ここでは変更できません。誤りがある場合はお問い合わせください。</div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">居住都道府県</div><select class="inp '+(p.residence_prefecture?'filled':'')+'" id="pf-prefecture" onchange="S.pf.residence_prefecture=this.value;this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+PREFECTURES.map(function(v){return '<option value="'+v+'" '+(p.residence_prefecture===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'+jobSectionH('profile_edit')+'<div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_edit')+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
 }
 
 function recruitH(){
