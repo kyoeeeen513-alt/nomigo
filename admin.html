@@ -562,7 +562,9 @@ async function loadRecruitments(){
     h+='<div class="recruit-chips">'+chips.map(function(c){return '<span class="recruit-chip">'+esc(c)+'</span>';}).join('')+'</div>';
     h+='<div class="x-preview" id="xt-'+x.id+'">'+esc(x.x_text||'')+'</div>';
     h+='<div class="acts"><button class="btn-send" onclick="copyRecruitText(\''+x.id+'\')">X投稿文をコピー</button>';
-    h+='<button class="btn-sm" onclick="markSocialPosted(\''+x.id+'\')">'+(x.social_posted_at?'投稿済みを更新':'投稿済みにする')+'</button></div>';
+    h+='<button class="btn-sm" onclick="markSocialPosted(\''+x.id+'\')">'+(x.social_posted_at?'投稿済みを更新':'投稿済みにする')+'</button>';
+    h+='<button class="btn-sm" id="linecheck-'+x.id+'" onclick="previewLineNotification(\''+x.id+'\')">LINE通知の対象確認</button></div>';
+    h+='<div id="linepv-'+x.id+'"></div>';
     if(x.social_posted_at)h+='<div class="meta">投稿済み：'+esc(x.social_posted_by||'運営')+'／'+esc(fmtDate(x.social_posted_at))+'</div>';
     h+='</div>';
   }
@@ -604,6 +606,55 @@ async function markSocialPosted(id){
   var r=await api({action:'mark_social_posted',registrationId:id});
   if(!r.success){alert('更新できませんでした。募集が終了している可能性があります。');return;}
   loadRecruitments();
+}
+
+
+var _lineNotifyBusy={};
+
+async function previewLineNotification(id){
+  if(_lineNotifyBusy[id])return;
+  _lineNotifyBusy[id]=true;
+  var btn=document.getElementById('linecheck-'+id);
+  if(btn){btn.disabled=true;btn.textContent='確認中…';}
+  var r=await api({action:'preview_user_recruitment_notification',registrationId:id});
+  _lineNotifyBusy[id]=false;
+  if(btn){btn.disabled=false;btn.textContent='LINE通知の対象確認';}
+  var box=document.getElementById('linepv-'+id);
+  if(!box)return;
+  if(!r.success){
+    box.innerHTML='<div class="err" style="margin-top:10px">対象を確認できませんでした。募集が終了している可能性があります。</div>';
+    return;
+  }
+  var p=r.preview||{};
+  var count=Number(p.targetCount||0);
+  var h='<div class="x-preview" style="margin-top:10px"><b>LINE通知プレビュー</b><br><br>'+esc(p.text||'')+
+    '<br><br><b>送信対象：'+count+'人</b><br><span class="meta">本人確認済み・LINE連携済み・居住地・性別・年齢条件が合い、本日まだ募集通知を受けていない方</span></div>';
+  if(count>0){
+    h+='<button class="btn-send" id="linesend-'+id+'" style="margin-top:8px" onclick="sendLineNotification(\''+id+'\','+count+')">この内容で'+count+'人にLINE通知</button>';
+  }else{
+    h+='<div class="meta" style="margin-top:8px">現在、送信できる対象者はいません。</div>';
+  }
+  box.innerHTML=h;
+}
+
+async function sendLineNotification(id,count){
+  if(_lineNotifyBusy[id])return;
+  if(!confirm('この募集を対象者'+count+'人へLINE通知しますか？\n\n送信後は取り消せません。'))return;
+  _lineNotifyBusy[id]=true;
+  var btn=document.getElementById('linesend-'+id);
+  if(btn){btn.disabled=true;btn.textContent='送信中…';}
+  var r=await api({action:'send_user_recruitment_notification',registrationId:id,confirm:'SEND'});
+  _lineNotifyBusy[id]=false;
+  if(!r.success){
+    if(btn){btn.disabled=false;btn.textContent='もう一度対象を確認';btn.onclick=function(){previewLineNotification(id);};}
+    var msg=r.error==='already_sent'?'この募集はすでに通知済みです。':
+      r.error==='no_eligible_recipients'?'対象者がいなくなったため送信していません。':
+      'LINE通知を完了できませんでした。対象を確認し直してください。';
+    alert(msg);
+    return;
+  }
+  alert('LINE通知が完了しました。送信：'+Number(r.sentCount||0)+'人、失敗：'+Number(r.failedCount||0)+'人');
+  previewLineNotification(id);
 }
 
 // ---------- パスワードの変更 ----------
