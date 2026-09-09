@@ -650,10 +650,19 @@ module.exports = async (req, res) => {
         return;
       }
       const uid = (await u.json()).id;
+      const now = new Date().toISOString();
       const regs = await db(
-        `registrations?id=eq.${registrationId}&user_id=eq.${uid}` +
+        `registrations?id=eq.${registrationId}&user_id=eq.${uid}&status=eq.waiting` +
+        `&expires_at=gt.${encodeURIComponent(now)}` +
         '&select=id,user_id,area_id,slot,mode,gender,status,created_at,expires_at,age,smoke,alcohol,drink_style,purpose,duration_pref'
       );
+      const activeOwner = await db(
+        `profiles?user_id=eq.${uid}&account_status=eq.active&select=user_id&limit=1`
+      );
+      if (!activeOwner || !activeOwner[0]) {
+        res.status(403).json({ success: false, error: 'inactive_account' });
+        return;
+      }
       if (!regs || !regs[0]) {
         res.status(404).json({ success: false, error: 'registration_not_found' });
         return;
@@ -1235,7 +1244,36 @@ module.exports = async (req, res) => {
     //   （データベース側の grant_welcome_ticket_on_approve が判定する）。
     if (action === 'withdraw' || action === 'ban') {
       const userId = body.userId;
-      const reason = (body.reason || '').trim().slice(0, 300);
+      let reason = (body.reason || '').trim().slice(0, 300);
+
+      // 通常退会では、利用者が申請時に選んだ理由を最新の退会申請から引き継ぐ。
+      // 旧申請には理由が無いため、推測して補完はしない。
+      if (action === 'withdraw' && !reason && userId && isUuid.test(userId)) {
+        try {
+          const requests = await db(
+            `inquiries?user_id=eq.${userId}&select=content,created_at&order=created_at.desc&limit=20`
+          );
+          const request = (requests || []).find((row) =>
+            typeof row.content === 'string' && row.content.includes('【退会申請】')
+          );
+          if (request) {
+            const reasonMarker = '【退会理由】';
+            const detailMarker = '【詳細】';
+            const reasonStart = request.content.indexOf(reasonMarker);
+            if (reasonStart >= 0) {
+              const afterReason = request.content.slice(reasonStart + reasonMarker.length);
+              const reasonLine = afterReason.split('\\n')[0].trim();
+              const detailStart = request.content.indexOf(detailMarker);
+              const detailLine = detailStart >= 0
+                ? request.content.slice(detailStart + detailMarker.length).split('\\n')[0].trim()
+                : '';
+              if (reasonLine) reason = (reasonLine + (detailLine ? '：' + detailLine : '')).slice(0, 300);
+            }
+          }
+        } catch (e) {
+          // 理由の取得失敗で退会処理自体は止めない。
+        }
+      }
 
       if (!admin.can_suspend) {
         res.status(403).json({ success: false, error: 'no_suspend_permission' });
