@@ -213,7 +213,7 @@ function recruitmentNotificationText(reg) {
 async function pushRecruitmentLine(lineUserId, reg) {
   if (!lineUserId) return false;
   const text = recruitmentNotificationText(reg);
-  const url = 'https://www.nomi-go.jp/?recruitment=' + encodeURIComponent(reg.id);
+  const url = 'https://www.nomi-go.jp/?recruitment=' + encodeURIComponent(reg.id) + '&openExternalBrowser=1';
   try {
     const r = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
