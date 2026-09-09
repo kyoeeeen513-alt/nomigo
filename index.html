@@ -1228,7 +1228,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,report:reportH,inquiry:inquiryH,withdraw:withdrawH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
+  var map={loading:loadingH,profile_load_error:profileLoadErrorH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,report:reportH,inquiry:inquiryH,withdraw:withdrawH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
   var app=document.getElementById('app');
   app.dataset.screen=S.screen;
   var html=(map[S.screen]||loadingH)();
@@ -1767,6 +1767,7 @@ async function handleDeactivated(status){
 }
 
 async function loadProfile(){
+  S._profileLoadFailed=false;
   var res=await DB.from('profiles').select(PROFILE_COLS_SELF).eq('user_id',S.user.id).single();
   // DB側で退会・利用停止アカウントを止めた場合も、単なる通信エラーとして
   // 登録画面へ進めず、理由を表示してこの端末のログイン情報を消す。
@@ -1776,6 +1777,11 @@ async function loadProfile(){
       await handleDeactivated(inactiveMatch[1]);
       return;
     }
+    // 通信・DBの一時エラーを「プロフィール未作成」と扱うと、登録済みの人が
+    // メール認証画面へ戻され、プロフィール編集も押せなくなる。
+    S._profileLoadFailed=true;
+    S.profile=null;
+    return;
   }
   S.profile=res.data;
   if(!S.profile)return;
@@ -1857,6 +1863,10 @@ async function loadEmailVerified(){
 }
 
 async function routeAfterLoad(){
+  if(S._profileLoadFailed){
+    go('profile_load_error');
+    return;
+  }
   await loadEmailVerified();
   if(!S.profile){
     // プロフィール未作成＝登録の途中。メール確認を終えていない場合は必ず確認画面へ戻す。
@@ -4398,6 +4408,25 @@ function loadingH(){
       +'<div id="load-bar" style="width:8%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright));border-radius:99px;transition:width .45s ease-out"></div>'
     +'</div>'
   +'</div>';
+}
+
+// プロフィール取得に失敗したとき専用の画面。
+// 登録状況を推測してメール認証へ戻さず、同じログイン状態のまま再試行する。
+function profileLoadErrorH(){
+  return '<div class="screen"><div class="body center" style="justify-content:center;text-align:center;padding:32px 24px">'
+    +'<div style="font-size:38px;margin-bottom:14px">↻</div>'
+    +'<div style="font-size:18px;font-weight:800;color:var(--cream);margin-bottom:10px">情報を読み込めませんでした</div>'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:22px">通信が一時的に不安定な可能性があります。<br>登録情報は消えていません。</div>'
+    +'<button class="btn btn-wine" onclick="retryProfileLoad()">もう一度読み込む</button>'
+    +'</div></div>';
+}
+
+async function retryProfileLoad(){
+  if(!S.user){go('email');return;}
+  go('loading');
+  await loadProfile();
+  if(S._profileLoadFailed){go('profile_load_error');return;}
+  if(S.user)await routeAfterLoad();
 }
 
 // バーを少しずつ右へ進める。
