@@ -87,7 +87,7 @@ module.exports = async (req, res) => {
 
     // 4) 参加者のLINE IDを、サーバー側だけで取り出す
     const profiles = await db(
-      `profiles?user_id=in.(${memberIds.join(',')})&select=line_user_id`
+      `profiles?account_status=eq.active&user_id=in.(${memberIds.join(',')})&select=line_user_id`
     );
     const lineIds = profiles
       .map((p) => p.line_user_id)
