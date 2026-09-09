@@ -16,7 +16,7 @@
 //
 //  追加した action：
 //    list_pending  … 本人確認の待ち一覧を返す（can_verify が必要）
-//    photo_url     … 身分証・顔写真の一時URLを発行する（can_verify が必要）
+//    photo_url     … 身分証の一時URLを発行する（can_verify が必要）
 //    list_inquiries… 問い合わせ一覧を返す（can_reply が必要）
 //    mark_handled  … 問い合わせを対応済みにする（can_reply が必要）
 //
@@ -954,7 +954,7 @@ module.exports = async (req, res) => {
       }
       const rows = await db(
         'profiles?id_verify_status=eq.pending' +
-        '&select=user_id,real_name,birthdate,nickname,gender,id_photo_url,face_photo_url' +
+        '&select=user_id,real_name,birthdate,nickname,gender,id_photo_url' +
         '&order=updated_at.asc'
       );
       res.status(200).json({ success: true, list: rows || [] });
@@ -973,14 +973,14 @@ module.exports = async (req, res) => {
       const rows = await db(
         'profiles?id_verify_status=eq.rejected' +
         '&updated_at=gte.' + since +
-        '&select=user_id,real_name,birthdate,nickname,gender,reject_reason,id_verify_note,id_photo_url,face_photo_url,updated_at' +
+        '&select=user_id,real_name,birthdate,nickname,gender,reject_reason,id_verify_note,id_photo_url,updated_at' +
         '&order=updated_at.desc&limit=100'
       );
       res.status(200).json({ success: true, list: rows || [] });
       return;
     }
 
-    // ── 身分証・顔写真の一時URLを発行する ──────────────
+    // ── 身分証の一時URLを発行する ──────────────
     // どの画像かは「利用者ID＋種類」で指定させる。
     // ブラウザから任意のファイル名を渡させない（他人の画像を覗かせない）。
     if (action === 'photo_url') {
@@ -989,18 +989,18 @@ module.exports = async (req, res) => {
         return;
       }
       const userId = body.userId;
-      const kind = body.kind; // 'id' か 'face'
-      if (!userId || !isUuid.test(userId) || (kind !== 'id' && kind !== 'face')) {
+      const kind = body.kind; // 'id' のみ
+      if (!userId || !isUuid.test(userId) || kind !== 'id') {
         res.status(400).json({ success: false, error: 'bad_request' });
         return;
       }
 
-      const p = await db(`profiles?user_id=eq.${userId}&select=id_photo_url,face_photo_url`);
+      const p = await db(`profiles?user_id=eq.${userId}&select=id_photo_url`);
       if (!p || !p[0]) {
         res.status(404).json({ success: false, error: 'user_not_found' });
         return;
       }
-      const path = (kind === 'id') ? p[0].id_photo_url : p[0].face_photo_url;
+      const path = p[0].id_photo_url;
       if (!path) {
         res.status(404).json({ success: false, error: 'photo_not_found' });
         return;
@@ -1084,7 +1084,7 @@ module.exports = async (req, res) => {
           birthdate: profile.birthdate || null,
           age_at_check: ageAtCheck,
           id_photo_url: profile.id_photo_url || null,
-          face_photo_url: profile.face_photo_url || null,
+
           actor_id: myId,
           actor_is_admin: true,
         },
