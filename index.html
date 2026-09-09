@@ -1228,7 +1228,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,report:reportH,inquiry:inquiryH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
+  var map={loading:loadingH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,report:reportH,inquiry:inquiryH,withdraw:withdrawH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
   var app=document.getElementById('app');
   app.dataset.screen=S.screen;
   var html=(map[S.screen]||loadingH)();
@@ -4277,14 +4277,52 @@ async function submitReport(){
   S._reportDone=true;S._hasReported=true;re('report');
 }
 
+function withdrawH(){
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH('','退会申請','退会理由をお聞かせください')+'</div></div>'
+    +'<div class="body" style="padding:24px">'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:18px">今後の改善のため、もっとも近い理由を1つ選んでください。</div>'
+    +'<select class="inp" id="withdraw-reason" onchange="toggleWithdrawOther(this.value)">'
+    +'<option value="">選択してください</option>'
+    +'<option value="一緒に飲む人が見つからなかった">一緒に飲む人が見つからなかった</option>'
+    +'<option value="料金が高い">料金が高い</option>'
+    +'<option value="使い方が分からなかった">使い方が分からなかった</option>'
+    +'<option value="対応エリアに住んでいない">対応エリアに住んでいない</option>'
+    +'<option value="その他">その他</option>'
+    +'</select>'
+    +'<div id="withdraw-other-wrap" style="display:none;margin-top:14px"><textarea class="inp" id="withdraw-other" rows="4" maxlength="200" placeholder="理由をご入力ください"></textarea></div>'
+    +'<div id="withdraw-err" style="color:var(--red);font-size:12px;margin-top:10px"></div>'
+    +'<button class="btn" id="withdraw-submit" style="margin-top:20px;background:#5a2431;color:#fff" onclick="submitDeactivationRequest()">退会を申請する</button>'
+    +'<button class="btn" style="margin-top:10px;background:transparent;color:var(--muted);border:1px solid var(--border)" onclick="go(\'splash\')">退会しない</button>'
+    +'</div></div>';
+}
+function toggleWithdrawOther(value){
+  var wrap=document.getElementById('withdraw-other-wrap');
+  if(wrap)wrap.style.display=value==='その他'?'block':'none';
+}
 async function requestDeactivation(){
-  if(!confirm('退会を申請しますか？\n運営が確認後、アカウントを利用できない状態にします。'))return;
-  var res=await DB.from('inquiries').insert({
-    user_id:S.user.id,
-    content:'【退会申請】このアカウントの退会を希望します。'
-  });
-  if(res.error){alert(friendlyError(res.error,'送信に失敗しました。もう一度お試しください。'));return;}
+  go('withdraw');
+}
+async function submitDeactivationRequest(){
+  var reasonEl=document.getElementById('withdraw-reason');
+  var otherEl=document.getElementById('withdraw-other');
+  var errEl=document.getElementById('withdraw-err');
+  var btn=document.getElementById('withdraw-submit');
+  var reason=reasonEl?reasonEl.value:'';
+  var detail=otherEl?otherEl.value.trim():'';
+  if(!reason){if(errEl)errEl.textContent='退会理由を選択してください';return;}
+  if(reason==='その他'&&!detail){if(errEl)errEl.textContent='その他の理由をご入力ください';return;}
+  if(!confirm('退会を申請しますか？\\n運営が確認後、アカウントを利用できない状態にします。'))return;
+  if(btn){btn.disabled=true;btn.textContent='送信中...';}
+  var content='【退会申請】このアカウントの退会を希望します。\\n【退会理由】'+reason;
+  if(detail)content+='\\n【詳細】'+detail;
+  var res=await DB.from('inquiries').insert({user_id:S.user.id,content:content});
+  if(res.error){
+    if(errEl)errEl.textContent=friendlyError(res.error,'送信に失敗しました。もう一度お試しください。');
+    if(btn){btn.disabled=false;btn.textContent='退会を申請する';}
+    return;
+  }
   alert('退会申請を受け付けました。運営が確認後、対応いたします。');
+  go('splash');
 }
 
 async function submitInquiry(){
