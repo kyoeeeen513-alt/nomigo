@@ -4633,7 +4633,7 @@ async function goLineConnect(){
 
 function lineConnectH(){
   // LINE連携は必須。完了するまで先へ進めないため戻る導線は出さない
-  return '<div class="screen"><div class="hdr"><div class="hdr-info">'+stepHeadH(4,'LINE連携','LINEと連携する')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← トップに戻る</button><div class="hdr-info">'+stepHeadH(4,'LINE連携','LINEと連携する')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
     +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
     +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
     +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
