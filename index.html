@@ -1768,6 +1768,15 @@ async function handleDeactivated(status){
 
 async function loadProfile(){
   var res=await DB.from('profiles').select(PROFILE_COLS_SELF).eq('user_id',S.user.id).single();
+  // DB側で退会・利用停止アカウントを止めた場合も、単なる通信エラーとして
+  // 登録画面へ進めず、理由を表示してこの端末のログイン情報を消す。
+  if(res.error){
+    var inactiveMatch=String(res.error.message||'').match(/account_inactive:(withdrawn|banned)/);
+    if(inactiveMatch){
+      await handleDeactivated(inactiveMatch[1]);
+      return;
+    }
+  }
   S.profile=res.data;
   if(!S.profile)return;
 
