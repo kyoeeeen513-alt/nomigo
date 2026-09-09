@@ -4278,7 +4278,7 @@ async function submitReport(){
 }
 
 function withdrawH(){
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH('','退会申請','退会理由をお聞かせください')+'</div></div>'
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">退会申請</div><div class="hdr-title">退会理由をお聞かせください</div></div></div>'
     +'<div class="body" style="padding:24px">'
     +'<div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:18px">今後の改善のため、もっとも近い理由を1つ選んでください。</div>'
     +'<select class="inp" id="withdraw-reason" onchange="toggleWithdrawOther(this.value)">'
