@@ -118,7 +118,7 @@ module.exports = async (req, res) => {
         const profiles = await db(
           'profiles?user_id=eq.' +
             encodeURIComponent(job.user_id) +
-            '&select=line_user_id&limit=1'
+            '&account_status=eq.active&select=line_user_id&limit=1'
         );
         const lineUserId = profiles[0] && profiles[0].line_user_id;
         if (!lineUserId) {
