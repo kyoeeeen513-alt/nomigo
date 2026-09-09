@@ -731,9 +731,8 @@ async function loadVerify(){
     h+='<div class="meta">ニックネーム: '+esc(p.nickname||'-')+' ／ 生年月日: '+esc(p.birthdate||'-')+'（'+age+'歳）</div>';
     h+='<div class="imgs">';
     h+='<a href="#" id="idlink-'+p.user_id+'" onclick="openPhoto(\''+p.user_id+'\',\'id\',this);return false;">身分証を見る</a>';
-    h+='<a href="#" id="facelink-'+p.user_id+'" onclick="openPhoto(\''+p.user_id+'\',\'face\',this);return false;">顔写真を見る</a>';
     h+='</div>';
-    h+='<div class="meta">生年月日・書類名・発行元が読めるか／顔写真が同一人物か／20歳以上かを確認してください</div>';
+    h+='<div class="meta">登録された本名・生年月日との一致／書類名・発行元・有効性／20歳以上かを確認してください。不正・偽造が疑われる場合は承認せず、運営責任者へ共有してください。</div>';
     if(ME.can_verify){
       h+='<div class="acts">';
       h+='<button class="btn-ok" onclick="openApprove(\''+p.user_id+'\')">承認する</button>';
