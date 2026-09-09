@@ -95,7 +95,7 @@ const PRE_LAUNCH = false;
 //   ログイン状態が保たれる。LINE独自の指定で、他のアプリでは無視される。
 //   なお利用者側の設定によっては効かない場合があるため、これで100%
 //   外部ブラウザになることは保証されない。
-const APP_URL = 'https://www.nomi-go.jp?openExternalBrowser=1';
+const APP_URL = 'https://www.nomi-go.jp/?line_return=1&openExternalBrowser=1';
 
 const SUPABASE_URL = 'https://dwubothomxjwfudkeepy.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
