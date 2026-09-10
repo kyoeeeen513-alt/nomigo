@@ -4341,9 +4341,22 @@ async function submitDeactivationRequest(){
   if(reason==='その他'&&!detail){if(errEl)errEl.textContent='その他の理由をご入力ください';return;}
   if(!confirm('退会を申請しますか？\\n運営が確認後、アカウントを利用できない状態にします。'))return;
   if(btn){btn.disabled=true;btn.textContent='送信中...';}
-  var content='【退会申請】このアカウントの退会を希望します。\\n【退会理由】'+reason;
-  if(detail)content+='\\n【詳細】'+detail;
-  var res=await DB.from('inquiries').insert({user_id:S.user.id,content:content});
+  // 【2026/9/10 修正】改行が '\\\\n'（文字列）として保存されていたので '\\n' に修正。
+  // 【2026/9/10 追加】退会後に profiles が消えると誰の申請か追えなくなるため、
+  //   申請の時点でニックネームとメールアドレスをスナップショットとして残す。
+  //   照合自体は user_id で可能だが、一覧を見ただけで判別できるようにする目的。
+  var wNick=(S.profile&&S.profile.nickname)?S.profile.nickname:'';
+  var wMail=(S.user&&S.user.email)?S.user.email:'';
+  var content='【退会申請】このアカウントの退会を希望します。\n【退会理由】'+reason;
+  if(detail)content+='\n【詳細】'+detail;
+  content+='\n【申請時のニックネーム】'+(wNick||'（未設定）');
+  content+='\n【申請時のメールアドレス】'+(wMail||'（不明）');
+  var res=await DB.from('inquiries').insert({
+    user_id:S.user.id,
+    name:wNick||null,
+    email:wMail||null,
+    content:content
+  });
   if(res.error){
     if(errEl)errEl.textContent=friendlyError(res.error,'送信に失敗しました。もう一度お試しください。');
     if(btn){btn.disabled=false;btn.textContent='退会を申請する';}
