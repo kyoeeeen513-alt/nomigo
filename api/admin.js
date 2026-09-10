@@ -393,7 +393,7 @@ function publicRecruitment(registration, profile, socialPost) {
     tags.length ? '✨ ' + tags.join('・') : '',
     '',
     '気が合いそうな方はNomi Goから確認👇',
-    'https://www.nomi-go.jp/lp.html?utm_source=x&utm_medium=organic&utm_campaign=recruitment_posts',
+    'https://www.nomi-go.jp/x',
   ].filter((line, index, all) => line !== '' || (index > 0 && all[index - 1] !== ''));
   item.x_text = lines.join('\n');
   return item;
