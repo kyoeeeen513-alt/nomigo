@@ -3678,11 +3678,14 @@ function drinkCompat(myStyle,myOk,theirStyle,theirOk){
   return false;
 }
 
-// 候補の優先度スコア：目的一致 > 年齢の近さ
+// 候補の優先度スコア：飲み方一致 > 目的一致 > 年齢の近さ
+// 飲み方が違っても候補からは外さず、同じ場合だけ優先する。
 function candidateScore(c){
   var score=0;
+  var myStyle=S.registration&&S.registration.drink_style;
   var myPurpose=(S.registration&&S.registration.purpose)||S.form.purpose;
-  if(myPurpose&&c.purpose&&c.purpose===myPurpose)score+=100;
+  if(myStyle&&c.drink_style&&c.drink_style===myStyle)score+=10000;
+  if(myPurpose&&c.purpose&&c.purpose===myPurpose)score+=1000;
   var myAge=S.profile&&S.profile.age?S.profile.age:25;
   score-=Math.abs((c.age||myAge)-myAge);
   return score;
@@ -3727,7 +3730,6 @@ async function tryMatch(){
     // 無断キャンセルの原因になる。
     if(c.expires_at&&new Date(c.expires_at).getTime()<=nowMs){dbgLog('  除外(期限切れ) '+c.id.slice(0,8));return false;}
     if(pastIds[c.user_id]){dbgLog('  除外(過去にマッチ済み) '+c.id.slice(0,8));return false;}
-    if(!drinkCompat(R.drink_style,R.ok_nodrink,c.drink_style,c.ok_nodrink)){dbgLog('  除外(飲み方) '+c.id.slice(0,8));return false;}
     var iWantThem=ageMatches(R.age_any,R.age_min?parseInt(R.age_min):null,R.age_max?parseInt(R.age_max):null,c.age);
     var theyWantMe=ageMatches(c.age_any,c.age_min,c.age_max,p.age);
     if(!iWantThem){dbgLog('  除外(自分の年齢希望) '+c.id.slice(0,8));return false;}
