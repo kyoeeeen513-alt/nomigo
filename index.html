@@ -2459,22 +2459,55 @@ function closeTicketGift(){
 function handleIdPhotoSelect(inputEl){
   var file=inputEl.files&&inputEl.files[0];
   if(!file)return;
-  S._idPhotoFile=file;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    S._idPhotoPreview=e.target.result;
-    re('id_verify');
-  };
-  reader.readAsDataURL(file);
+  var btn=document.getElementById('id-photo-pick-btn');
+  var btnText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.style.opacity='.55';btn.textContent='写真を読み込み中…';}
+  // 身分証は文字を読める解像度を保ちつつ、スマホの大容量写真をJPEGへ縮小する。
+  shrinkImage(file,2400,0.92,function(smallFile,dataUrl){
+    if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent=btnText;}
+    if(smallFile&&dataUrl){
+      S._idPhotoFile=smallFile;
+      S._idPhotoPreview=dataUrl;
+      S.error='';
+      re('id_verify');
+      return;
+    }
+    // HEIC等を端末で変換できない場合は、Storageが対応している元画像を使用する。
+    // ただし上限を超える画像は送信せず、その場で撮り直せる案内を出す。
+    if(file.size<=15*1024*1024){
+      S._idPhotoFile=file;
+      var reader=new FileReader();
+      reader.onload=function(e){S._idPhotoPreview=e.target.result;S.error='';re('id_verify');};
+      reader.onerror=function(){S._idPhotoFile=null;S.error='この写真は読み込めませんでした。別の写真を選ぶか、その場で撮影してください。';re('id_verify');};
+      reader.readAsDataURL(file);
+    }else{
+      S._idPhotoFile=null;S._idPhotoPreview=null;
+      S.error='写真の容量が大きすぎます。その場で撮影するか、別の写真を選んでください。';
+      re('id_verify');
+    }
+  });
 }
 
 async function uploadIdPhoto(userId,file){
   if(!file)return {path:null,error:null};
   var ext=(file.name&&file.name.split('.').pop())||'jpg';
   var path=userId+'/'+Date.now()+'.'+ext;
-  var up=await DB.storage.from('id_photos').upload(path,file,{upsert:true});
-  if(up.error)return {path:null,error:up.error.message||JSON.stringify(up.error)};
-  return {path:path,error:null};
+  var timeoutId=null;
+  try{
+    // 毎回異なるファイル名なので上書き権限は不要。30秒で必ず画面へ戻す。
+    var up=await Promise.race([
+      DB.storage.from('id_photos').upload(path,file,{upsert:false,contentType:file.type||'image/jpeg'}),
+      new Promise(function(resolve,reject){
+        timeoutId=setTimeout(function(){reject(new Error('id_photo_upload_timeout'));},30000);
+      })
+    ]);
+    if(timeoutId)clearTimeout(timeoutId);
+    if(up.error)return {path:null,error:up.error.message||JSON.stringify(up.error)};
+    return {path:path,error:null};
+  }catch(e){
+    if(timeoutId)clearTimeout(timeoutId);
+    return {path:null,error:e&&e.message?e.message:String(e)};
+  }
 }
 
 // 本人確認は身分証画像のみで行う。
@@ -2585,7 +2618,7 @@ function idVerifyH(){
         +'</details>'
       +'</div>'
       +preview
-      +'<button type="button" style="width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'身分証を撮り直す・選び直す':'身分証を撮影・選択')+'</button>'
+      +'<button type="button" id="id-photo-pick-btn" style="width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'身分証を撮り直す・選び直す':'身分証を撮影・選択')+'</button>'
       +'<input type="file" accept="image/*" id="pf-photo-id" style="display:none" onchange="handleIdPhotoSelect(this)">'
       +'<div style="font-size:11px;color:var(--muted);line-height:1.55;text-align:center">文字・生年月日・書類全体が鮮明に見える写真を選んでください。</div>'
       +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
