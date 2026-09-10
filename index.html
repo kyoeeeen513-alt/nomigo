@@ -3694,9 +3694,9 @@ async function tryMatch(){
   if(!p){dbgLog('S0: profile=null');return false;}
   dbgLog('tryMatch開始 gender='+p.gender);
 
-  // マッチの実行は女性側の端末のみが行う（女性が候補を確認・選択する設計のため）。
-  // 男性側は startPolling で自分の状態が matched になるのを待つだけ。
-  if(p.gender!=='female'){dbgLog('S1: 男性のため待機');return false;}
+  // 男女どちらの端末からでも候補の照合を動かす。
+  // 女性が先に募集して画面を閉じた後で男性が募集した場合も、1候補なら成立させる。
+  // 男性側で候補が複数いる場合は女性の選択を優先し、男性には選択画面を出さない。
 
   // 検索条件は必ず S.registration（DBから読んだ自分の募集）から取る。
   // S.form は画面の入力状態なので、待機中の再読み込み等で消えることがある。
@@ -3762,6 +3762,12 @@ async function tryMatch(){
     filtered=pairFiltered;
     dbgLog('S4b: 組に整理 '+filtered.length+'組');
     if(filtered.length===0){return false;}
+  }
+
+  // 女性側の2択という既存仕様を維持するため、男性側は候補が1人のときだけ成立処理へ進む。
+  if(p.gender==='male'&&filtered.length>1){
+    dbgLog('S4c: 男性側・候補複数のため女性の選択待ち');
+    return false;
   }
 
   // 目的一致・年齢の近さで並べ替え
