@@ -814,6 +814,12 @@ fbq('track','PageView');
           }catch(e){return '';}
         }
         var q=new URLSearchParams(window.location.search);
+        // 管理画面のX投稿用短縮URL /x は、長いUTMと同じ流入情報として扱う。
+        if(/^\/x\/?$/.test(window.location.pathname)){
+          if(!q.get('utm_source'))q.set('utm_source','x');
+          if(!q.get('utm_medium'))q.set('utm_medium','organic');
+          if(!q.get('utm_campaign'))q.set('utm_campaign','recruitment_posts');
+        }
         var ref=document.referrer||'';
         var source=(q.get('utm_source')||'').toLowerCase();
         var medium=q.get('utm_medium')||'';
@@ -874,7 +880,7 @@ fbq('track','PageView');
 
       // 広告のパラメータを、登録リンクへそのまま引き継ぐ
       var acquisitionKeys=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','campaign','adset','ad','fbclid','ttclid','gclid','msclkid','ref','ref_code'];
-      var incomingParams=new URLSearchParams(window.location.search);
+      var incomingParams=q;
       document.querySelectorAll('a[href^="https://www.nomi-go.jp/?start=register"]').forEach(function(link){
         try{
           var target=new URL(link.href);
