@@ -67,7 +67,7 @@ module.exports=async function handler(req,res){
   catch(e){return reply(res,e&&e.code==='too_large'?413:400,{error:e&&e.code==='too_large'?'image_too_large':'invalid_body'});}
   if(!body.length)return reply(res,400,{error:'empty_image'});
 
-  const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webpp','image/heic':'heic','image/heif':'heif'}[type];
+  const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic','image/heif':'heif'}[type];
   const path=`${user.id}/${Date.now()}-${Math.random().toString(36).slice(2,10)}.${ext}`;
   const upload=await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`,{
     method:'POST',
