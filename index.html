@@ -4199,6 +4199,11 @@ function canAnswerMatchOutcome(){
 function shouldRemindFinish(){
   return !!(S.registration&&S.registration.status==='matched'&&canAnswerMatchOutcome());
 }
+function finishHeaderActionH(){
+  return canAnswerMatchOutcome()
+    ?'<button style="background:transparent;color:var(--muted);border:0;font-size:12px;padding:9px 4px;font-weight:700;cursor:pointer;text-decoration:underline" onclick="openMatchOutcome()">結果を回答</button>'
+    :'';
+}
 function finishActionButtonH(compact){
   if(canAnswerMatchOutcome()){
     return '<button class="btn btn-wine" style="padding:'+(compact?'11px':'14px')+';font-size:'+(compact?'13px':'15px')+';margin-top:10px" onclick="openMatchOutcome()">飲み会の結果を回答する</button>';
@@ -4326,6 +4331,9 @@ function applyMessages(data){
   var newIds=newMsgs.map(function(m){return m.id;}).join(',');
   if(currentIds!==newIds){
     S.chatMsgs=newMsgs;
+    if(S.screen==='chat'&&S.match&&S.match.id){
+      DB.rpc('mark_match_chat_read',{p_match_id:S.match.id}).catch(function(){});
+    }
     if(S.screen==='chat'){
       render();
       setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
@@ -5472,7 +5480,7 @@ function matchedH(){
 function chatH(){
   var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+escapeHtml(msg.content)+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=escapeHtml(msg.nickname||(msg.profiles?msg.profiles.nickname:'?'));return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+escapeHtml(msg.content)+'</div></div></div>';}).join('');
   var reportBanner=S._hasReported?'<div style="padding:8px 16px;background:rgba(204,64,64,.1);border-bottom:1px solid rgba(204,64,64,.2);font-size:11px;color:var(--red);text-align:center">通報済み：運営が内容を確認中です</div>':'';
-  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div><button style="background:transparent;color:var(--muted);border:0;font-size:12px;padding:9px 4px;font-weight:700;cursor:pointer;text-decoration:underline" onclick="openMatchOutcome()">結果を回答</button></div>'+reportBanner+finishReminderBanner()+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div>'+finishHeaderActionH()+'</div>'+reportBanner+finishReminderBanner()+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
 }
 
 function outcomeH(){
