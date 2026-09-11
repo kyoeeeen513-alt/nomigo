@@ -1229,7 +1229,7 @@ var S={
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,profile_load_error:profileLoadErrorH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,review:reviewH,report:reportH,inquiry:inquiryH,withdraw:withdrawH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
+  var map={loading:loadingH,profile_load_error:profileLoadErrorH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,outcome:outcomeH,review:reviewH,report:reportH,inquiry:inquiryH,withdraw:withdrawH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
   var app=document.getElementById('app');
   app.dataset.screen=S.screen;
   var html=(map[S.screen]||loadingH)();
@@ -4180,30 +4180,37 @@ async function noShowMatch(){
 }
 
 
-// ===== 飲み終わりリマインド =====
-// マッチから3時間経っても「飲み終わった」アクションが無い人に、アプリ内バナーとLINEで通知
-var REMIND_AFTER_MS=3*60*60*1000;
+// ===== 飲み終わり・結果回答 =====
+// 「今すぐ」は成立2時間後、時間指定は開始時刻2時間後から回答できる。
+function matchEndAvailableMs(){
+  if(!S.match||!S.match.created_at)return null;
+  var created=new Date(S.match.created_at);
+  if(S.match.slot==='今すぐ')return created.getTime()+2*60*60*1000;
+  var mt=String(S.match.slot||'').match(/^(\d{2}):(\d{2})$/);
+  if(!mt)return created.getTime()+2*60*60*1000;
+  var jst=new Date(created.getTime()+9*60*60*1000);
+  var y=jst.getUTCFullYear(),mo=String(jst.getUTCMonth()+1).padStart(2,'0'),d=String(jst.getUTCDate()).padStart(2,'0');
+  return new Date(y+'-'+mo+'-'+d+'T'+mt[1]+':'+mt[2]+':00+09:00').getTime()+2*60*60*1000;
+}
+function canAnswerMatchOutcome(){
+  var t=matchEndAvailableMs();
+  return !!(t&&Date.now()>=t&&S.match&&S.match.status==='confirmed');
+}
 function shouldRemindFinish(){
-  if(!S.match||!S.registration)return false;
-  if(S.registration.status!=='matched')return false;
-  if(S.match.status!=='confirmed')return false;
-  if(!S.match.created_at)return false;
-  return (Date.now()-new Date(S.match.created_at).getTime())>=REMIND_AFTER_MS;
+  return !!(S.registration&&S.registration.status==='matched'&&canAnswerMatchOutcome());
+}
+function finishActionButtonH(compact){
+  if(canAnswerMatchOutcome()){
+    return '<button class="btn btn-wine" style="padding:'+(compact?'11px':'14px')+';font-size:'+(compact?'13px':'15px')+';margin-top:10px" onclick="openMatchOutcome()">飲み会の結果を回答する</button>';
+  }
+  return '<button class="btn" disabled style="padding:14px;font-size:14px;margin-top:10px;background:transparent;border:1px solid var(--border);color:var(--muted)">終了時刻になると回答できます</button>';
 }
 function finishReminderBanner(){
   if(!shouldRemindFinish())return '';
   return '<div style="margin:0 20px 12px;padding:14px 16px;background:var(--gold-bg);border:1.5px solid rgba(201,160,99,.5);border-radius:12px">'
-    +'<div style="font-size:13px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">飲み会は終わりましたか？</div>'
-    +'<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px">「飲み終わった」を押して評価すると、次の募集ができるようになります。</div>'
-    +'<button class="btn btn-wine" style="padding:11px;font-size:13px" onclick="go(\'review\')">飲み終わった →</button></div>';
-}
-// LINE通知は1マッチにつき1回だけ。reminder_sent を排他更新して二重送信を防ぐ
-async function sendFinishReminderOnce(){
-  if(!shouldRemindFinish())return;
-  var lock=await DB.from('matches').update({reminder_sent:true}).eq('id',S.match.id).eq('reminder_sent',false).select('id,reminder_sent').single();
-  if(lock.error||!lock.data)return;
-  S.match.reminder_sent=true;
-  await pushLineNotify(S.match.id,'finish_reminder');
+    +'<div style="font-size:13px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">飲み会は終了しましたか？</div>'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.7">今回の結果を回答してください。片方の回答だけで、お相手がドタキャン扱いになることはありません。</div>'
+    +finishActionButtonH(true)+'</div>';
 }
 function startFinishReminderTimer(){
   if(S._remindTimer)clearInterval(S._remindTimer);
@@ -4211,11 +4218,34 @@ function startFinishReminderTimer(){
     if(!S.match||!S.registration||S.registration.status!=='matched'){
       clearInterval(S._remindTimer);S._remindTimer=null;return;
     }
-    if(shouldRemindFinish()){
-      sendFinishReminderOnce();
-      if(S.screen==='matched'||S.screen==='chat'||S.screen==='splash')render();
-    }
+    if(S.screen==='matched'||S.screen==='chat'||S.screen==='splash')render();
   },60*1000);
+}
+function openMatchOutcome(){
+  if(!canAnswerMatchOutcome()){
+    alert('終了時刻になってから回答できます。');
+    return;
+  }
+  go('outcome');
+}
+var _outcomeSubmitting=false;
+async function submitMatchOutcome(result){
+  if(_outcomeSubmitting||!S.match)return;
+  var messages={
+    no_show:'お相手が来なかったとして報告しますか？\n\nこの回答だけで相手のドタキャンは確定せず、双方の回答を確認します。',
+    cancelled:'事前にキャンセルになったとして回答しますか？'
+  };
+  if(messages[result]&&!confirm(messages[result]))return;
+  _outcomeSubmitting=true;
+  var rpc=await DB.rpc('submit_match_outcome',{p_match_id:S.match.id,p_result:result});
+  _outcomeSubmitting=false;
+  if(rpc.error){
+    alert(String(rpc.error.message||'').indexOf('match_not_ready')!==-1?'終了時刻になってから回答できます。':'結果を保存できませんでした。もう一度お試しください。');
+    return;
+  }
+  S.registration=null;S.match=null;S.matchMembers=[];S.chatMsgs=[];
+  S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};
+  go('splash');
 }
 
 async function loadMatchMembers(){
@@ -4249,6 +4279,7 @@ async function openChat(){
   sessionStorage.setItem('ngo_screen','chat');
   render();
   syncReportStatus().then(function(){if(S.screen==='chat')render();});
+  DB.rpc('mark_match_chat_read',{p_match_id:S.match.id}).catch(function(){});
   loadMessagesAsync().then(function(){
     setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
   });
@@ -4256,6 +4287,7 @@ async function openChat(){
 }
 
 async function initChat(){
+  if(S.match&&S.match.id)DB.rpc('mark_match_chat_read',{p_match_id:S.match.id}).catch(function(){});
   if(S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;}
   await syncReportStatus();
   await loadMessagesAsync();
@@ -4374,9 +4406,11 @@ async function submitReview(){
     var legacyAgain=isLowNow2?false:S.reviewChecks[2];
     await DB.from('reviews').insert({match_id:matchId,reviewer_id:S.user.id,reviewee_id:targets[i].user_id,stars:S.reviewStars,tag_punctual:legacyPunctual,tag_friendly:legacyFriendly,tag_again:legacyAgain,review_tags:selectedTags});
   }
-  await setMatchResultOnce(matchId,'completed',{completed_at:new Date().toISOString()});
-  await saveUserResult(matchId,'completed');
-  if(S.registration)await DB.from('registrations').update({status:'completed'}).eq('id',S.registration.id);
+  var outcome=await DB.rpc('submit_match_outcome',{p_match_id:matchId,p_result:'completed'});
+  if(outcome.error){
+    alert(String(outcome.error.message||'').indexOf('match_not_ready')!==-1?'終了時刻になってから回答できます。':'結果を保存できませんでした。もう一度お試しください。');
+    return;
+  }
   S.registration=null;S.match=null;S.matchMembers=[];S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};_isSubmitting=false;
   S.reviewStars=0;S.reviewChecks=[false,false,false];S.reviewOtherText='';S.chatMsgs=[];S.chargeId=null;go('splash');
 }
@@ -5424,7 +5458,7 @@ function matchedH(){
       +'<div class="flow-step"><span class="flow-num">2</span><div class="flow-body">'
         +'<div class="flow-title">飲み終わったら評価する</div>'
         +'<div class="flow-note">評価を送ると、次の募集ができるようになります。</div>'
-        +'<button class="btn" style="padding:14px;font-size:15px;margin-top:10px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="go(\'review\')">飲み終わった</button>'
+        +finishActionButtonH(false)
       +'</div></div>'
     +'</div>'
     +'<div style="padding:6px 20px 0;text-align:center">'
@@ -5438,7 +5472,17 @@ function matchedH(){
 function chatH(){
   var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+escapeHtml(msg.content)+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=escapeHtml(msg.nickname||(msg.profiles?msg.profiles.nickname:'?'));return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+escapeHtml(msg.content)+'</div></div></div>';}).join('');
   var reportBanner=S._hasReported?'<div style="padding:8px 16px;background:rgba(204,64,64,.1);border-bottom:1px solid rgba(204,64,64,.2);font-size:11px;color:var(--red);text-align:center">通報済み：運営が内容を確認中です</div>':'';
-  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div><button style="background:transparent;color:var(--muted);border:0;font-size:12px;padding:9px 4px;font-weight:700;cursor:pointer;text-decoration:underline" onclick="go(\'review\')">飲み終わった</button></div>'+reportBanner+finishReminderBanner()+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div><button style="background:transparent;color:var(--muted);border:0;font-size:12px;padding:9px 4px;font-weight:700;cursor:pointer;text-decoration:underline" onclick="openMatchOutcome()">結果を回答</button></div>'+reportBanner+finishReminderBanner()+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
+}
+
+function outcomeH(){
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">飲み会の終了</div><div class="hdr-title">今回の結果を教えてください</div></div></div>'
+    +'<div class="body" style="padding:22px 20px">'
+    +'<div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:18px">回答は参加者ごとに記録します。あなたの回答だけで、お相手をドタキャン扱いにすることはありません。</div>'
+    +'<button class="choice-btn" style="margin-bottom:12px" onclick="go(\'review\')"><span><strong>会って飲んだ</strong><br><small style="color:var(--muted)">続けてお相手を評価します</small></span><span>→</span></button>'
+    +'<button class="choice-btn" style="margin-bottom:12px" onclick="submitMatchOutcome(\'no_show\')"><span><strong>相手が来なかった</strong><br><small style="color:var(--muted)">双方の回答を確認します</small></span><span>→</span></button>'
+    +'<button class="choice-btn" onclick="submitMatchOutcome(\'cancelled\')"><span><strong>事前にキャンセルになった</strong><br><small style="color:var(--muted)">キャンセルとして記録します</small></span><span>→</span></button>'
+    +'</div></div>';
 }
 
 function reviewH(){
