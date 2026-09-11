@@ -30,10 +30,41 @@ async function pushLine(to,text){
   });
   if(!r.ok)throw new Error(`line_${r.status}:${(await r.text()).slice(0,160)}`);
 }
-function messageFor(kind){
+function formatMeetingTime(value){
+  if(!value)return 'アプリでご確認ください';
+  return new Intl.DateTimeFormat('ja-JP',{
+    timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',
+    hour:'2-digit',minute:'2-digit',hour12:false
+  }).format(new Date(value));
+}
+function meetingLines(plan){
+  if(!plan)return '';
+  const time=plan.pending_time||plan.meeting_time;
+  const place=plan.pending_place||plan.meeting_place;
+  return `\n\n🕐 ${formatMeetingTime(time)}\n📍 ${place}`;
+}
+function messageFor(kind,plan){
   if(kind==='match_created')return (
     '🍻 マッチが成立しました！\n\n'+
-    'Nomi Goを開いて、お相手と待ち合わせ場所や時間をご相談ください。\n\n'+
+    '待ち合わせの初期設定はこちらです。変更したい場合だけ、アプリから変更を相談できます。'+
+    meetingLines(plan)+'\n\n'+
+    '▼ Nomi Goを開く\n'+APP_URL
+  );
+  if(kind==='meeting_change_requested')return (
+    '📅 お相手から待ち合わせの変更相談が届きました'+
+    meetingLines(plan)+'\n\n'+
+    'Nomi Goを開いて、変更内容をご確認ください。\n\n'+
+    '▼ 変更内容を確認する\n'+APP_URL
+  );
+  if(kind==='meeting_change_accepted')return (
+    '✅ 待ち合わせの変更が承認されました'+
+    meetingLines(plan)+'\n\n'+
+    '▼ Nomi Goを開く\n'+APP_URL
+  );
+  if(kind==='meeting_change_declined')return (
+    '📅 待ち合わせは元の時間・場所のままです\n\n'+
+    'お相手が変更を承認しなかったため、最初に決まっていた内容で待ち合わせをお願いします。'+
+    meetingLines(plan)+'\n\n'+
     '▼ Nomi Goを開く\n'+APP_URL
   );
   if(kind==='initial_contact')return (
@@ -67,7 +98,7 @@ module.exports=async(req,res)=>{
       `&attempts=lt.${MAX_ATTEMPTS}`,{method:'PATCH',body:{status:'queued',locked_at:null}});
     const jobs=await db('match_followup_jobs?status=eq.queued'+
       `&attempts=lt.${MAX_ATTEMPTS}`+
-      '&select=id,user_id,kind,attempts&order=created_at.asc'+
+      '&select=id,match_id,user_id,kind,attempts&order=created_at.asc'+
       `&limit=${BATCH_SIZE}`);
     for(const job of jobs){
       const claimed=await updateJob(job.id,{
@@ -83,7 +114,13 @@ module.exports=async(req,res)=>{
           await updateJob(job.id,{status:'skipped',locked_at:null,last_error:'line_not_linked'});
           skipped++;continue;
         }
-        await pushLine(lineId,messageFor(job.kind));
+        let plan=null;
+        if(job.kind==='match_created'||job.kind.indexOf('meeting_change_')===0){
+          const plans=await db('match_meeting_plans?match_id=eq.'+encodeURIComponent(job.match_id)+
+            '&select=meeting_time,meeting_place,pending_time,pending_place&limit=1');
+          plan=plans[0]||null;
+        }
+        await pushLine(lineId,messageFor(job.kind,plan));
         await updateJob(job.id,{status:'sent',sent_at:new Date().toISOString(),locked_at:null,last_error:null});
         sent++;
       }catch(e){
