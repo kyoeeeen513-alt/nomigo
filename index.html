@@ -4280,13 +4280,10 @@ async function openChat(){
   if(S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;}
   S.screen='chat';
   S.error='';
-  S._chatLoading=true;
-  S._chatLoadError=false;
   _animateNext=true;
   sessionStorage.setItem('ngo_screen','chat');
   render();
   syncReportStatus().then(function(){if(S.screen==='chat')render();});
-  DB.rpc('mark_match_chat_read',{p_match_id:S.match.id}).catch(function(){});
   loadMessagesAsync().then(function(){
     setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
   });
@@ -4294,41 +4291,18 @@ async function openChat(){
 }
 
 async function initChat(){
-  if(S.match&&S.match.id)DB.rpc('mark_match_chat_read',{p_match_id:S.match.id}).catch(function(){});
   if(S._chatTimer){clearInterval(S._chatTimer);S._chatTimer=null;}
   await syncReportStatus();
-  S._chatLoading=true;
-  S._chatLoadError=false;
-  await loadMessagesAsync(0);
+  await loadMessagesAsync();
   S._chatTimer=setInterval(function(){loadMessages();},3000);
 }
 
-async function loadMessagesAsync(retryCount){
+async function loadMessagesAsync(){
   if(!S.match||!S.match.id)return;
   var res=await DB.from('messages').select('*').eq('match_id',S.match.id).order('created_at',{ascending:true});
   dbgLog('M0: メッセージ取得 '+(res.error?('失敗 '+res.error.message):((res.data&&res.data.length)||0)+'件'));
-  if(res.error){
-    if((retryCount||0)<2){
-      await new Promise(function(resolve){setTimeout(resolve,700*((retryCount||0)+1));});
-      return loadMessagesAsync((retryCount||0)+1);
-    }
-    S._chatLoading=false;
-    S._chatLoadError=true;
-    if(S.screen==='chat')render();
-    return;
-  }
-  var forceRender=!!(S._chatLoading||S._chatLoadError);
-  S._chatLoading=false;
-  S._chatLoadError=false;
-  applyMessages(res.data,forceRender);
-}
-
-function retryChatMessages(){
-  if(!S.match||!S.match.id)return;
-  S._chatLoading=true;
-  S._chatLoadError=false;
-  if(S.screen==='chat')render();
-  loadMessagesAsync(0);
+  if(res.error)return;
+  applyMessages(res.data);
 }
 
 function loadMessages(){
@@ -4339,7 +4313,7 @@ function loadMessages(){
   });
 }
 
-function applyMessages(data,forceRender){
+function applyMessages(data){
   var sys=[{type:'system',id:'sys-0',content:'マッチング成立！チャットが作成されました'}];
   if(S.match.ticket_consumed&&S.profile&&S.profile.gender==='male'){
     sys.push({type:'system',id:'sys-1',content:'🎫 チケットを1枚使用しました'});
@@ -4353,11 +4327,8 @@ function applyMessages(data,forceRender){
   var newMsgs=sys.concat(msgs);
   var currentIds=S.chatMsgs.map(function(m){return m.id;}).join(',');
   var newIds=newMsgs.map(function(m){return m.id;}).join(',');
-  if(currentIds!==newIds||forceRender){
+  if(currentIds!==newIds){
     S.chatMsgs=newMsgs;
-    if(S.screen==='chat'&&S.match&&S.match.id){
-      DB.rpc('mark_match_chat_read',{p_match_id:S.match.id}).catch(function(){});
-    }
     if(S.screen==='chat'){
       render();
       setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
@@ -5503,11 +5474,6 @@ function matchedH(){
 
 function chatH(){
   var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+escapeHtml(msg.content)+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=escapeHtml(msg.nickname||(msg.profiles?msg.profiles.nickname:'?'));return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+escapeHtml(msg.content)+'</div></div></div>';}).join('');
-  if(S._chatLoading){
-    msgsHtml='<div style="padding:28px 16px;text-align:center;color:var(--muted);font-size:13px">メッセージを読み込んでいます…</div>';
-  }else if(S._chatLoadError){
-    msgsHtml='<div style="padding:28px 20px;text-align:center"><div style="color:var(--cream);font-size:14px;font-weight:800;margin-bottom:8px">メッセージを読み込めませんでした</div><div style="color:var(--muted);font-size:12px;line-height:1.7;margin-bottom:14px">メッセージは消えていません。通信状態を確認して、もう一度読み込んでください。</div><button class="btn btn-wine" style="padding:11px 14px;font-size:13px" onclick="retryChatMessages()">もう一度読み込む</button></div>';
-  }
   var reportBanner=S._hasReported?'<div style="padding:8px 16px;background:rgba(204,64,64,.1);border-bottom:1px solid rgba(204,64,64,.2);font-size:11px;color:var(--red);text-align:center">通報済み：運営が内容を確認中です</div>':'';
   return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div>'+finishHeaderActionH()+'</div>'+reportBanner+finishReminderBanner()+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
 }
