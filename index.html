@@ -2463,7 +2463,7 @@ function handleIdPhotoSelect(inputEl){
   var btnText=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.style.opacity='.55';btn.textContent='写真を読み込み中…';}
   // 身分証は文字を読める解像度を保ちつつ、スマホの大容量写真をJPEGへ縮小する。
-  shrinkImage(file,2400,0.92,function(smallFile,dataUrl){
+  shrinkImage(file,1800,0.88,function(smallFile,dataUrl){
     if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent=btnText;}
     if(smallFile&&dataUrl){
       S._idPhotoFile=smallFile;
@@ -2474,7 +2474,7 @@ function handleIdPhotoSelect(inputEl){
     }
     // HEIC等を端末で変換できない場合は、Storageが対応している元画像を使用する。
     // ただし上限を超える画像は送信せず、その場で撮り直せる案内を出す。
-    if(file.size<=15*1024*1024){
+    if(file.size<=4*1024*1024){
       S._idPhotoFile=file;
       var reader=new FileReader();
       reader.onload=function(e){S._idPhotoPreview=e.target.result;S.error='';re('id_verify');};
@@ -2490,23 +2490,46 @@ function handleIdPhotoSelect(inputEl){
 
 async function uploadIdPhoto(userId,file){
   if(!file)return {path:null,error:null};
-  var ext=(file.name&&file.name.split('.').pop())||'jpg';
-  var path=userId+'/'+Date.now()+'.'+ext;
-  var timeoutId=null;
+
+  async function send(accessToken){
+    var controller=typeof AbortController!=='undefined'?new AbortController():null;
+    var timeoutId=setTimeout(function(){if(controller)controller.abort();},45000);
+    try{
+      var response=await fetch('/api/id-photo-upload',{
+        method:'POST',
+        headers:{
+          'Authorization':'Bearer '+accessToken,
+          'Content-Type':file.type||'image/jpeg'
+        },
+        body:file,
+        signal:controller?controller.signal:undefined
+      });
+      var data={};
+      try{data=await response.json();}catch(e){}
+      return {ok:response.ok,status:response.status,data:data};
+    }finally{
+      clearTimeout(timeoutId);
+    }
+  }
+
   try{
-    // 毎回異なるファイル名なので上書き権限は不要。30秒で必ず画面へ戻す。
-    var up=await Promise.race([
-      DB.storage.from('id_photos').upload(path,file,{upsert:false,contentType:file.type||'image/jpeg'}),
-      new Promise(function(resolve,reject){
-        timeoutId=setTimeout(function(){reject(new Error('id_photo_upload_timeout'));},30000);
-      })
-    ]);
-    if(timeoutId)clearTimeout(timeoutId);
-    if(up.error)return {path:null,error:up.error.message||JSON.stringify(up.error)};
-    return {path:path,error:null};
+    var sessionResult=await DB.auth.getSession();
+    var session=sessionResult.data&&sessionResult.data.session;
+    if(!session||!session.access_token)return {path:null,error:'session_expired'};
+
+    var result=await send(session.access_token);
+    // スマホで古いログイン情報が残った場合だけ、1回更新して再送する。
+    if(result.status===401){
+      var refreshed=await DB.auth.refreshSession();
+      var freshSession=refreshed.data&&refreshed.data.session;
+      if(!freshSession||!freshSession.access_token)return {path:null,error:'session_expired'};
+      result=await send(freshSession.access_token);
+    }
+    if(!result.ok)return {path:null,error:(result.data&&result.data.error)||'upload_failed'};
+    if(!result.data||!result.data.path)return {path:null,error:'invalid_response'};
+    return {path:result.data.path,error:null};
   }catch(e){
-    if(timeoutId)clearTimeout(timeoutId);
-    return {path:null,error:e&&e.message?e.message:String(e)};
+    return {path:null,error:e&&e.name==='AbortError'?'upload_timeout':(e&&e.message?e.message:String(e))};
   }
 }
 
@@ -2524,7 +2547,19 @@ async function submitIdVerify(){
   var result=await uploadIdPhoto(S.user.id,S._idPhotoFile);
   if(!result.path){
     _idVerifySubmitting=false;
-    S.error=hasSession?'写真のアップロードに失敗しました。電波の良い場所でもう一度お試しください。':'ログインの有効期限が切れました。もう一度ログインしてください。';
+    if(!hasSession||result.error==='session_expired'){
+      S.error='ログインの有効期限が切れました。もう一度ログインしてください。';
+    }else if(result.error==='image_too_large'){
+      S.error='写真の容量が大きすぎます。その場で撮影するか、別の写真を選んでください。';
+    }else if(result.error==='unsupported_image'){
+      S.error='この画像形式には対応していません。その場で撮影するか、スクリーンショットを選んでください。';
+    }else if(result.error==='account_unavailable'){
+      S.error='このアカウントでは本人確認を申請できません。';
+    }else if(result.error==='upload_timeout'){
+      S.error='通信が時間内に完了しませんでした。電波の良い場所でもう一度お試しください。';
+    }else{
+      S.error='写真を保存できませんでした。時間をおいてもう一度お試しください。';
+    }
     re('id_verify');
     return;
   }
