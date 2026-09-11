@@ -2089,26 +2089,44 @@ function handlePhotoSelect(inputEl,screenName){
 
 async function uploadProfilePhoto(userId,file){
   if(!file)return null;
-  var ext=(file.name&&file.name.split('.').pop())||'jpg';
-  var path=userId+'/'+Date.now()+'.'+ext;
-  var timeoutId=null;
+
+  async function send(accessToken){
+    var controller=typeof AbortController!=='undefined'?new AbortController():null;
+    var timeoutId=setTimeout(function(){if(controller)controller.abort();},45000);
+    try{
+      var response=await fetch('/api/profile-photo-upload',{
+        method:'POST',
+        headers:{
+          'Authorization':'Bearer '+accessToken,
+          'Content-Type':file.type||'image/jpeg'
+        },
+        body:file,
+        signal:controller?controller.signal:undefined
+      });
+      var data={};
+      try{data=await response.json();}catch(e){}
+      return {ok:response.ok,status:response.status,data:data};
+    }finally{
+      clearTimeout(timeoutId);
+    }
+  }
+
   try{
-    // 電波が不安定なアプリ内ブラウザでも、アップロード待ちで永久に止めない。
-    // 写真は縮小済みのため、20秒を超えたら画面へ戻して再試行を案内する。
-    var up=await Promise.race([
-      DB.storage.from('avatars').upload(path,file,{upsert:true}),
-      new Promise(function(resolve,reject){
-        timeoutId=setTimeout(function(){reject(new Error('profile_photo_upload_timeout'));},20000);
-      })
-    ]);
-    if(timeoutId)clearTimeout(timeoutId);
-    if(up.error)throw up.error;
-    var pub=DB.storage.from('avatars').getPublicUrl(path);
-    var publicUrl=pub.data&&pub.data.publicUrl?pub.data.publicUrl:null;
-    if(!publicUrl)throw new Error('profile_photo_url_missing');
-    return publicUrl;
+    var sessionResult=await DB.auth.getSession();
+    var session=sessionResult.data&&sessionResult.data.session;
+    if(!session||!session.access_token)throw new Error('session_expired');
+    var result=await send(session.access_token);
+    if(result.status===401){
+      var refreshed=await DB.auth.refreshSession();
+      var fresh=refreshed.data&&refreshed.data.session;
+      if(!fresh||!fresh.access_token)throw new Error('session_expired');
+      result=await send(fresh.access_token);
+    }
+    if(!result.ok)throw new Error((result.data&&result.data.error)||'profile_photo_upload_failed');
+    if(!result.data||!result.data.publicUrl)throw new Error('profile_photo_url_missing');
+    return result.data.publicUrl;
   }catch(e){
-    if(timeoutId)clearTimeout(timeoutId);
+    if(e&&e.name==='AbortError')throw new Error('profile_photo_upload_timeout');
     throw e;
   }
 }
@@ -2366,7 +2384,12 @@ async function saveProfile(){
   }catch(e){
     setProfileStep(1);
     trackOnboarding('profile_error',1,'photo_upload');
-    S.error='写真のアップロードに失敗しました。通信環境をご確認のうえ、写真を選び直してもう一度お試しください。';
+    var photoErr=String(e&&e.message||e||'');
+    if(photoErr==='session_expired')S.error='ログインの有効期限が切れました。もう一度ログインしてください。';
+    else if(photoErr==='image_too_large')S.error='写真の容量が大きすぎます。別の写真を選んでください。';
+    else if(photoErr==='unsupported_image')S.error='この画像形式には対応していません。その場で撮影するか、スクリーンショットを選んでください。';
+    else if(photoErr==='profile_photo_upload_timeout')S.error='通信が時間内に完了しませんでした。電波の良い場所でもう一度お試しください。';
+    else S.error='写真を保存できませんでした。時間をおいてもう一度お試しください。';
     re('profile_new');
     return;
   }
