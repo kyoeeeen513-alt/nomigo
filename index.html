@@ -4334,6 +4334,15 @@ function applyMessages(data){
       setTimeout(function(){var el=document.querySelector('.chat-msgs');if(el)el.scrollTop=el.scrollHeight;},50);
     }
   }
+  // メッセージ取得と画面描画が終わった後にだけ、既読時刻を別通信で記録する。
+  // この通信は待たないため、失敗・遅延してもチャットの表示や送信を止めない。
+  if(S.screen==='chat'&&S.match&&S.match.id){
+    var readMatchId=S.match.id;
+    setTimeout(function(){
+      if(S.screen!=='chat'||!S.match||S.match.id!==readMatchId)return;
+      DB.rpc('mark_match_chat_read',{p_match_id:readMatchId}).then(function(){}).catch(function(){});
+    },500);
+  }
 }
 
 function dbgChat(msg){
