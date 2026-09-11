@@ -31,6 +31,11 @@ async function pushLine(to,text){
   if(!r.ok)throw new Error(`line_${r.status}:${(await r.text()).slice(0,160)}`);
 }
 function messageFor(kind){
+  if(kind==='match_created')return (
+    '🍻 マッチが成立しました！\n\n'+
+    'Nomi Goを開いて、お相手と待ち合わせ場所や時間をご相談ください。\n\n'+
+    '▼ Nomi Goを開く\n'+APP_URL
+  );
   if(kind==='initial_contact')return (
     '🍻 お相手へのご連絡をお願いします\n\n'+
     'マッチ成立後、まだお相手へのメッセージ送信が確認できていません。\n\n'+

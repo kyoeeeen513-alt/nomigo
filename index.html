@@ -4044,7 +4044,8 @@ async function pushLineNotify(matchId,kind){
 }
 
 function sendMatchLineNotify(matchId){
-  pushLineNotify(matchId,'match');
+  // マッチ成立LINEはDB側のキューから送信する。
+  // 画面側から直接送ると、通信切断時に履歴も再送も残らないため呼び出さない。
 }
 
 function startPolling(){
