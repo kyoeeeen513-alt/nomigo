@@ -1768,8 +1768,26 @@ async function handleDeactivated(status){
 }
 
 async function loadProfile(){
+  // 起動時の認証通知と通常処理が重なっても、プロフィール取得は1本だけにする。
+  if(S._profileLoadPromise)return S._profileLoadPromise;
+  var task=_loadProfileOnce();
+  S._profileLoadPromise=task;
+  try{return await task;}
+  finally{if(S._profileLoadPromise===task)S._profileLoadPromise=null;}
+}
+
+async function _loadProfileOnce(){
   S._profileLoadFailed=false;
-  var res=await DB.from('profiles').select(PROFILE_COLS_SELF).eq('user_id',S.user.id).single();
+  var res=null;
+  // LINE内ブラウザなどで通信が一瞬切れても、登録画面へ戻さず短時間だけ再試行する。
+  // maybeSingle は未登録者の「0件」を正常として扱い、本当の通信失敗と区別する。
+  for(var attempt=0;attempt<3;attempt++){
+    res=await DB.from('profiles').select(PROFILE_COLS_SELF).eq('user_id',S.user.id).maybeSingle();
+    if(!res.error)break;
+    var inactiveNow=String(res.error.message||'').match(/account_inactive:(withdrawn|banned)/);
+    if(inactiveNow)break;
+    if(attempt<2)await new Promise(function(resolve){setTimeout(resolve,attempt===0?400:1000);});
+  }
   // DB側で退会・利用停止アカウントを止めた場合も、単なる通信エラーとして
   // 登録画面へ進めず、理由を表示してこの端末のログイン情報を消す。
   if(res.error){
