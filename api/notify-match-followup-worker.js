@@ -43,7 +43,7 @@ function meetingLines(plan){
   const place=plan.pending_place||plan.meeting_place;
   return `\n\n🕐 ${formatMeetingTime(time)}\n📍 ${place}`;
 }
-function messageFor(kind,plan){
+function messageFor(kind,plan,quickContent){
   if(kind==='match_created')return (
     '🍻 マッチが成立しました！\n\n'+
     '待ち合わせの初期設定はこちらです。変更したい場合だけ、アプリから変更を相談できます。'+
@@ -66,6 +66,11 @@ function messageFor(kind,plan){
     'お相手が変更を承認しなかったため、最初に決まっていた内容で待ち合わせをお願いします。'+
     meetingLines(plan)+'\n\n'+
     '▼ Nomi Goを開く\n'+APP_URL
+  );
+  if(kind==='meeting_quick_message')return (
+    '💬 お相手から待ち合わせの連絡です\n\n'+
+    (quickContent||'Nomi Goを開いて内容をご確認ください。')+'\n\n'+
+    '▼ メッセージを確認する\n'+APP_URL
   );
   if(kind==='initial_contact')return (
     '🍻 お相手へのご連絡をお願いします\n\n'+
@@ -98,7 +103,7 @@ module.exports=async(req,res)=>{
       `&attempts=lt.${MAX_ATTEMPTS}`,{method:'PATCH',body:{status:'queued',locked_at:null}});
     const jobs=await db('match_followup_jobs?status=eq.queued'+
       `&attempts=lt.${MAX_ATTEMPTS}`+
-      '&select=id,match_id,user_id,kind,attempts&order=created_at.asc'+
+      '&select=id,match_id,user_id,kind,source_message_id,attempts&order=created_at.asc'+
       `&limit=${BATCH_SIZE}`);
     for(const job of jobs){
       const claimed=await updateJob(job.id,{
@@ -120,7 +125,13 @@ module.exports=async(req,res)=>{
             '&select=meeting_time,meeting_place,pending_time,pending_place&limit=1');
           plan=plans[0]||null;
         }
-        await pushLine(lineId,messageFor(job.kind,plan));
+        let quickContent=null;
+        if(job.kind==='meeting_quick_message'&&job.source_message_id){
+          const messages=await db('messages?id=eq.'+encodeURIComponent(job.source_message_id)+
+            '&select=content&limit=1');
+          quickContent=messages[0]&&messages[0].content;
+        }
+        await pushLine(lineId,messageFor(job.kind,plan,quickContent));
         await updateJob(job.id,{status:'sent',sent_at:new Date().toISOString(),locked_at:null,last_error:null});
         sent++;
       }catch(e){

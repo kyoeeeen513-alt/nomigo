@@ -5502,6 +5502,29 @@ function meetingPlanH(){
   return '<div style="padding:15px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.02)"><div style="font-size:12px;color:var(--muted)">待ち合わせ</div><div style="font-size:15px;font-weight:800;line-height:1.8;margin-top:4px">🕐 '+escapeHtml(formatMeetingTime(p.meeting_time))+'<br>📍 '+escapeHtml(p.meeting_place)+'</div>'+pendingHtml+'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" '+(pending?'disabled ':'')+'style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingEditOpen=!S._meetingEditOpen;re(\'matched\')">時間・場所を変更</button><button class="btn" style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingNoteOpen=!S._meetingNoteOpen;re(\'matched\')">目印・服装</button></div>'+edit+note+'</div>';
 }
 
+var _quickMeetingSubmitting=false;
+async function sendQuickMeetingAction(action){
+  if(_quickMeetingSubmitting||!S.match)return;
+  if(action==='cancel_consult'&&!confirm('お相手へキャンセルの相談を送りますか？\n\nこの操作だけではキャンセル確定にはなりません。'))return;
+  _quickMeetingSubmitting=true;
+  var res=await DB.rpc('send_match_quick_message',{p_match_id:S.match.id,p_action:action});
+  _quickMeetingSubmitting=false;
+  if(res.error){alert('連絡を送信できませんでした。もう一度お試しください。');return;}
+  if(S.screen==='chat')await loadMessagesAsync();
+  else await openChat();
+}
+
+function quickMeetingActionsH(){
+  var actions=[
+    ['arrived','到着しました'],
+    ['late_5','5分遅れます'],
+    ['late_10','10分遅れます'],
+    ['cannot_find','場所が分かりません'],
+    ['cancel_consult','キャンセル相談']
+  ];
+  return '<div style="margin-top:10px"><div style="font-size:11px;color:var(--muted);margin-bottom:7px">簡単連絡</div><div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch">'+actions.map(function(a){return '<button style="flex:0 0 auto;border:1px solid var(--border);border-radius:18px;background:var(--card);color:var(--cream);font-family:inherit;font-size:11px;font-weight:700;padding:8px 11px;cursor:pointer" onclick="sendQuickMeetingAction(\''+a[0]+'\')">'+a[1]+'</button>';}).join('')+'</div></div>';
+}
+
 function matchedH(){
   var m=S.match;if(!m)return '';
   var membersHtml=S.matchMembers.map(function(u){
@@ -5564,6 +5587,7 @@ function matchedH(){
         +'<div class="flow-title">待ち合わせを決める</div>'
         +'<div class="flow-note">時間と場所は設定済みです。変更が必要な場合だけご相談ください。</div>'
         +'<div style="margin-top:10px">'+meetingPlanH()+'</div>'
+        +quickMeetingActionsH()
         +'<button class="btn btn-wine" style="padding:15px;font-size:15px;margin-top:10px" onclick="openChat()">チャットを開く →</button>'
       +'</div></div>'
       +'<div class="flow-step"><span class="flow-num">2</span><div class="flow-body">'
@@ -5583,7 +5607,7 @@ function matchedH(){
 function chatH(){
   var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+escapeHtml(msg.content)+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=escapeHtml(msg.nickname||(msg.profiles?msg.profiles.nickname:'?'));return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+escapeHtml(msg.content)+'</div></div></div>';}).join('');
   var reportBanner=S._hasReported?'<div style="padding:8px 16px;background:rgba(204,64,64,.1);border-bottom:1px solid rgba(204,64,64,.2);font-size:11px;color:var(--red);text-align:center">通報済み：運営が内容を確認中です</div>':'';
-  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div>'+finishHeaderActionH()+'</div>'+reportBanner+finishReminderBanner()+'<div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div>'+finishHeaderActionH()+'</div>'+reportBanner+finishReminderBanner()+'<div style="padding:0 14px 6px">'+quickMeetingActionsH()+'</div><div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
 }
 
 function outcomeH(){
