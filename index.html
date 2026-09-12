@@ -1219,7 +1219,7 @@ var _isSubmitting=false;
 var S={
   screen:'loading',user:null,profile:null,authTab:'register',
   form:{area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false},
-  registration:null,match:null,matchMembers:[],meetingPlan:null,
+  registration:null,match:null,matchMembers:[],meetingPlan:null,meetingChangeHistory:null,
   chatMsgs:[],reviewStars:0,reviewChecks:[false,false,false],
   stats:{active:0,todayMatches:0,maleWaiting:0,femaleWaiting:0},
   error:'',info:'',pollTimer:null,chargeId:null,
@@ -4089,7 +4089,7 @@ async function cancelReg(){
   stopWaitMessageRotation();
   if(S.pollTimer)clearInterval(S.pollTimer);
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
+  S.registration=null;S.match=null;S.meetingPlan=null;S.meetingChangeHistory=null;S.chargeId=null;_isSubmitting=false;
   S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
@@ -4147,11 +4147,17 @@ async function saveUserResult(matchId,userResult){
 
 async function cancelAfterMatch(){
   if(S.match){
+    // 変更を拒否された提案者のキャンセル理由を運営確認用に残す。
+    // 記録に失敗しても、利用者を既存のキャンセル画面に閉じ込めない。
+    try{
+      var contextResult=await DB.rpc('record_match_cancellation_context',{p_match_id:S.match.id});
+      if(contextResult.error)console.warn('Cancellation context save failed',contextResult.error);
+    }catch(e){console.warn('Cancellation context save failed',e);}
     await setMatchResultOnce(S.match.id,'cancelled');
     await saveUserResult(S.match.id,'cancelled');
   }
   if(S.registration)await DB.from('registrations').update({status:'cancelled'}).eq('id',S.registration.id);
-  S.registration=null;S.match=null;S.chargeId=null;_isSubmitting=false;
+  S.registration=null;S.match=null;S.meetingPlan=null;S.meetingChangeHistory=null;S.chargeId=null;_isSubmitting=false;
   S.form={area:null,slot:null,drink_style:null,purpose:null,ok_nodrink:false,timing:null,age_min:null,age_max:null,age_any:false};
   go('splash');
 }
@@ -4161,9 +4167,13 @@ function confirmCancelAfterMatch(){
   if(_cancelSubmitting)return;
   // 自分に関係する条件だけを見せる。男女両方の条件を並べると読み解く負担が大きい。
   var isMale=S.profile&&S.profile.gender==='male';
+  var declinedMine=S.meetingChangeHistory
+    &&S.meetingChangeHistory.proposed_by===S.user.id
+    &&S.meetingChangeHistory.status==='declined';
   var msg=isMale
     ?'キャンセルしますか？\n\n使用したチケット1枚は返還されません。\nお相手にはキャンセルの連絡が届きます。'
     :'キャンセルしますか？\n\n事前にご連絡いただければ、費用はかかりません。\n連絡なく当日不参加となった場合のみ、キャンセル料3,980円（税込）のご負担が生じることがあります。';
+  if(declinedMine)msg+='\n\n変更が承認されなかった後のキャンセルとして、ご本人都合の確認履歴に記録されます。';
   if(!confirm(msg))return;
   _cancelSubmitting=true;
   cancelAfterMatch().catch(function(){}).finally(function(){_cancelSubmitting=false;});
@@ -4270,7 +4280,7 @@ async function loadMatchMembers(){
     r.data[i].profiles=byUser[r.data[i].user_id]||{};
   }
   S.matchMembers=r.data;
-  await loadMeetingPlan(false);
+  await Promise.all([loadMeetingPlan(false),loadMeetingChangeHistory(false)]);
   await syncReportStatus();
   startFinishReminderTimer();
   startMeetingPlanTimer();
@@ -5433,13 +5443,30 @@ async function loadMeetingPlan(shouldRender){
   if(shouldRender&&before!==JSON.stringify(res.data)&&(S.screen==='matched'||S.screen==='chat'))render();
 }
 
+async function loadMeetingChangeHistory(shouldRender){
+  if(!S.match||!S.match.id)return;
+  var res=await DB.from('match_meeting_change_history')
+    .select('proposal_id,match_id,proposed_by,status,proposed_at,responded_at')
+    .eq('match_id',S.match.id)
+    .order('proposed_at',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(res.error)return;
+  var before=S.meetingChangeHistory?JSON.stringify(S.meetingChangeHistory):'';
+  S.meetingChangeHistory=res.data||null;
+  if(shouldRender&&before!==JSON.stringify(S.meetingChangeHistory)&&(S.screen==='matched'||S.screen==='chat'))render();
+}
+
 function startMeetingPlanTimer(){
   if(S._meetingPlanTimer)clearInterval(S._meetingPlanTimer);
   S._meetingPlanTimer=setInterval(function(){
     if(!S.match||!S.registration||S.registration.status!=='matched'){
       clearInterval(S._meetingPlanTimer);S._meetingPlanTimer=null;return;
     }
-    loadMeetingPlan(true).catch(function(){});
+    Promise.all([
+      loadMeetingPlan(true),
+      loadMeetingChangeHistory(true)
+    ]).catch(function(){});
   },10000);
 }
 
@@ -5458,7 +5485,7 @@ async function submitMeetingChange(){
   _meetingPlanSubmitting=false;
   if(res.error){alert('変更相談を送れませんでした。もう一度お試しください。');return;}
   S._meetingEditOpen=false;
-  await loadMeetingPlan(false);
+  await Promise.all([loadMeetingPlan(false),loadMeetingChangeHistory(false)]);
   render();
 }
 
@@ -5469,7 +5496,7 @@ async function respondMeetingChange(accept){
   var res=await DB.rpc('respond_match_meeting_change',{p_match_id:S.match.id,p_accept:!!accept});
   _meetingPlanSubmitting=false;
   if(res.error){alert('回答を保存できませんでした。もう一度お試しください。');return;}
-  await loadMeetingPlan(false);
+  await Promise.all([loadMeetingPlan(false),loadMeetingChangeHistory(false)]);
   render();
 }
 
@@ -5492,6 +5519,12 @@ function meetingPlanH(){
   var pending=!!p.pending_id;
   var mine=p.pending_by===S.user.id;
   var pendingHtml='';
+  var declinedMine=S.meetingChangeHistory
+    &&S.meetingChangeHistory.proposed_by===S.user.id
+    &&S.meetingChangeHistory.status==='declined';
+  var declinedHtml=declinedMine
+    ?'<div style="margin-top:12px;padding:12px;background:var(--red-bg);border:1px solid rgba(204,64,64,.3);border-radius:10px;font-size:12px;line-height:1.7;color:var(--cream)">変更は承認されませんでした。元の時間・場所が有効です。参加できずキャンセルする場合は、ご本人都合として記録されます。</div>'
+    :'';
   if(pending&&mine){
     pendingHtml='<div style="margin-top:12px;padding:12px;background:var(--gold-bg);border:1px solid rgba(201,160,99,.45);border-radius:10px"><div style="font-size:12px;font-weight:800;color:var(--gold-bright)">変更の回答待ち</div><div style="font-size:12px;line-height:1.7;margin-top:5px">🕐 '+escapeHtml(formatMeetingTime(p.pending_time))+'<br>📍 '+escapeHtml(p.pending_place)+'</div></div>';
   }else if(pending){
@@ -5499,7 +5532,7 @@ function meetingPlanH(){
   }
   var edit=S._meetingEditOpen&&!pending?'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)"><label style="font-size:11px;color:var(--muted)">変更したい時間</label><input class="inp" id="meeting-time-input" type="datetime-local" value="'+meetingInputValue(p.meeting_time)+'" style="margin-top:5px"><label style="display:block;font-size:11px;color:var(--muted);margin-top:10px">変更したい場所</label><input class="inp" id="meeting-place-input" maxlength="100" value="'+escapeHtml(p.meeting_place)+'" style="margin-top:5px"><button class="btn btn-wine" style="padding:12px;font-size:13px;margin-top:10px" onclick="submitMeetingChange()">変更を相談する</button></div>':'';
   var note=S._meetingNoteOpen?'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)"><input class="inp" id="meeting-note-input" maxlength="100" placeholder="例：黒いジャケット、入口の右側にいます"><button class="btn btn-wine" style="padding:12px;font-size:13px;margin-top:8px" onclick="sendMeetingNote()">チャットに送る</button></div>':'';
-  return '<div style="padding:15px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.02)"><div style="font-size:12px;color:var(--muted)">待ち合わせ</div><div style="font-size:15px;font-weight:800;line-height:1.8;margin-top:4px">🕐 '+escapeHtml(formatMeetingTime(p.meeting_time))+'<br>📍 '+escapeHtml(p.meeting_place)+'</div>'+pendingHtml+'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" '+(pending?'disabled ':'')+'style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingEditOpen=!S._meetingEditOpen;re(\'matched\')">時間・場所を変更</button><button class="btn" style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingNoteOpen=!S._meetingNoteOpen;re(\'matched\')">目印・服装</button></div>'+edit+note+'</div>';
+  return '<div style="padding:15px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.02)"><div style="font-size:12px;color:var(--muted)">待ち合わせ</div><div style="font-size:15px;font-weight:800;line-height:1.8;margin-top:4px">🕐 '+escapeHtml(formatMeetingTime(p.meeting_time))+'<br>📍 '+escapeHtml(p.meeting_place)+'</div>'+pendingHtml+declinedHtml+'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" '+(pending?'disabled ':'')+'style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingEditOpen=!S._meetingEditOpen;re(\'matched\')">時間・場所を変更</button><button class="btn" style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingNoteOpen=!S._meetingNoteOpen;re(\'matched\')">目印・服装</button></div>'+edit+note+'</div>';
 }
 
 var _quickMeetingSubmitting=false;
