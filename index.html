@@ -1223,13 +1223,14 @@ var S={
   chatMsgs:[],reviewStars:0,reviewChecks:[false,false,false],
   stats:{active:0,todayMatches:0,maleWaiting:0,femaleWaiting:0},
   error:'',info:'',pollTimer:null,chargeId:null,
-  pf:{nickname:'',age:'',gender:null,residence_prefecture:'',job:null,smoke:null,alcohol:null,realname:'',birthdate:''}
+  pf:{nickname:'',age:'',gender:null,residence_prefecture:'',job:null,smoke:null,alcohol:null,realname:'',birthdate:''},
+  _pendingRecruitmentId:null,_recruitmentInvite:null
 };
 
 // 画面を切り替えたときだけ演出を付ける（選択のたびの再描画では付けない）
 var _animateNext=true;
 function render(){
-  var map={loading:loadingH,profile_load_error:profileLoadErrorH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,waiting:waitH,matched:matchedH,chat:chatH,outcome:outcomeH,review:reviewH,report:reportH,inquiry:inquiryH,withdraw:withdrawH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
+  var map={loading:loadingH,profile_load_error:profileLoadErrorH,splash:splashH,email:emailH,profile_new:profileNewH,profile_edit:profileEditH,drink_profile_setup:drinkProfileSetupH,area_select:areaSelectH,mode_select:modeSelectH,recruit:recruitH,recruitment_invite:recruitmentInviteH,waiting:waitH,matched:matchedH,chat:chatH,outcome:outcomeH,review:reviewH,report:reportH,inquiry:inquiryH,withdraw:withdrawH,choose:chooseH,terms:termsH,privacy:privacyH,newpassword:newPasswordH,forgot_password:forgotPasswordH,reset_sent:resetSentH,change_password:changePasswordH,faqbot:faqBotH,line_connect:lineConnectH,email_verify:emailVerifyH,tokushoho:tokushohoH,id_verify:idVerifyH,id_verify_pending:idVerifyPendingH,fix_profile:fixProfileH,pair_invite:pairInviteH,pair_accept:pairAcceptH,payconsent:payConsentH};
   var app=document.getElementById('app');
   app.dataset.screen=S.screen;
   var html=(map[S.screen]||loadingH)();
@@ -1599,6 +1600,28 @@ async function init(){
     });
     var _h=window.location.hash||'';
     var _q=window.location.search||'';
+    // 募集LINEのリンクは、ログインや本人確認をはさんでも失わないよう
+    // このタブ内にだけ一時保存する。
+    var _recruitmentId=null;
+    try{
+      var _recruitmentParams=new URLSearchParams(_q);
+      _recruitmentId=_recruitmentParams.get('recruitment');
+    }catch(e){
+      var _recruitmentMatch=_q.match(/[?&]recruitment=([^&]+)/);
+      if(_recruitmentMatch)_recruitmentId=decodeURIComponent(_recruitmentMatch[1]);
+    }
+    if(_recruitmentId&&/^[0-9a-f-]{36}$/i.test(_recruitmentId)){
+      S._pendingRecruitmentId=_recruitmentId;
+      try{sessionStorage.setItem('ngo_pending_recruitment',_recruitmentId);}catch(e){}
+      try{
+        var _cleanRecruitmentUrl=new URL(window.location.href);
+        _cleanRecruitmentUrl.searchParams.delete('recruitment');
+        _cleanRecruitmentUrl.searchParams.delete('openExternalBrowser');
+        window.history.replaceState({},'',_cleanRecruitmentUrl.pathname+_cleanRecruitmentUrl.search+_cleanRecruitmentUrl.hash);
+      }catch(e){}
+    }else{
+      try{S._pendingRecruitmentId=sessionStorage.getItem('ngo_pending_recruitment')||null;}catch(e){}
+    }
     if(_h.indexOf('type=recovery')!==-1||_q.indexOf('type=recovery')!==-1){
       S._recovering=true;
       S.screen='newpassword';
@@ -1672,6 +1695,12 @@ async function init(){
 
     var _startMode=null;
     try{_startMode=_params.get('start');}catch(e){}
+    if(!sess&&S._pendingRecruitmentId){
+      S.authTab='login';
+      go('email');
+      loadStats();
+      return;
+    }
     if(!sess&&_startMode==='register'){
       S.authTab='register';
       go('email');
@@ -1925,6 +1954,11 @@ async function routeAfterLoad(){
     var onboardingIdStatus=await getIdVerifyStatus();
     if(!onboardingIdStatus||onboardingIdStatus==='none'){go('id_verify');}
     else{go('id_verify_pending');}
+    return;
+  }
+  // LINE通知から開いた募集は、通常のトップより先に応募確認画面へ送る。
+  if(S._pendingRecruitmentId){
+    await openRecruitmentInviteById(S._pendingRecruitmentId);
     return;
   }
   // 【カード登録の関門を撤去 8/15】
@@ -3808,6 +3842,111 @@ function candidateScore(c){
   var myAge=S.profile&&S.profile.age?S.profile.age:25;
   score-=Math.abs((c.age||myAge)-myAge);
   return score;
+}
+
+function clearPendingRecruitment(){
+  S._pendingRecruitmentId=null;
+  S._recruitmentInvite=null;
+  try{sessionStorage.removeItem('ngo_pending_recruitment');}catch(e){}
+}
+
+async function openRecruitmentInviteById(registrationId){
+  if(!registrationId||!/^[0-9a-f-]{36}$/i.test(registrationId)){
+    clearPendingRecruitment();go('splash');return;
+  }
+  go('loading');
+  try{
+    var res=await DB.from('registrations').select(REG_COLS).eq('id',registrationId)
+      .eq('status','waiting').gt('expires_at',new Date().toISOString()).maybeSingle();
+    var reg=res.data;
+    if(res.error||!reg||reg.user_id===S.user.id||(S.profile&&reg.gender===S.profile.gender)){
+      S._recruitmentInvite={ended:true};go('recruitment_invite');return;
+    }
+    var pr={};
+    try{
+      var prRes=await DB.rpc('get_candidate_profile',{p_user_id:reg.user_id});
+      pr=(prRes.data&&prRes.data[0])||{};
+    }catch(e){}
+    S._recruitmentInvite={ended:false,registration:reg,profile:pr,submitting:false};
+    go('recruitment_invite');
+  }catch(e){
+    S._recruitmentInvite={ended:true,loadError:true};go('recruitment_invite');
+  }
+}
+
+function declineRecruitmentInvite(){clearPendingRecruitment();go('splash');}
+
+async function applyRecruitmentInvite(){
+  var invite=S._recruitmentInvite;
+  if(!invite||invite.ended||invite.submitting||!invite.registration)return;
+  invite.submitting=true;re('recruitment_invite');
+  try{
+    if(S.registration&&(S.registration.status==='waiting'||S.registration.status==='matched')){
+      alert('すでに進行中の募集またはマッチがあります。');return;
+    }
+    if(S.profile&&S.profile.gender==='male'){
+      await syncTicketCount();
+      if(!S.profile.ticket_count||S.profile.ticket_count<1){alert('応募するにはチケットが1枚必要です。');return;}
+    }
+    var targetRes=await DB.from('registrations').select(REG_COLS).eq('id',invite.registration.id)
+      .eq('status','waiting').gt('expires_at',new Date().toISOString()).maybeSingle();
+    var target=targetRes.data;
+    if(targetRes.error||!target){invite.ended=true;re('recruitment_invite');return;}
+    if(target.mode==='2v2'){
+      await loadPairStatus();
+      if(!S._pair||S._pair.status!=='accepted'||S._pair.partnerVerified!==true){
+        alert('2対2への応募には、同行するお友だちの登録と本人確認が必要です。');return;
+      }
+    }
+    if(!ageMatches(target.age_any,target.age_min,target.age_max,S.profile.age)){
+      invite.ended=true;re('recruitment_invite');return;
+    }
+    var ins=await DB.from('registrations').insert({
+      user_id:S.user.id,area_id:target.area_id,slot:target.slot,mode:target.mode||'1v1',
+      gender:S.profile.gender,drink_style:target.drink_style,purpose:target.purpose||null,
+      ok_nodrink:!!target.ok_nodrink,timing:'どちらでもOK',duration_pref:target.duration_pref||null,
+      age_any:false,age_min:target.age,age_max:target.age,age:S.profile.age,
+      smoke:S.profile.smoke,alcohol:S.profile.alcohol,status:'waiting'
+    }).select(REG_COLS).single();
+    if(ins.error||!ins.data){alert(friendlyError(ins.error,'応募できませんでした。もう一度お試しください。'));return;}
+    S.registration=ins.data;
+    var lock=await DB.from('registrations').update({status:'processing'}).eq('id',target.id)
+      .eq('status','waiting').select(REG_COLS).maybeSingle();
+    if(lock.error||!lock.data){
+      await DB.from('registrations').update({status:'cancelled'}).eq('id',ins.data.id).eq('status','waiting');
+      S.registration=null;invite.ended=true;re('recruitment_invite');return;
+    }
+    var ok=await finalizeMatchWith(lock.data,null);
+    if(!ok){
+      await DB.from('registrations').update({status:'waiting'}).eq('id',target.id).eq('status','processing');
+      await DB.from('registrations').update({status:'cancelled'}).eq('id',ins.data.id).eq('status','waiting');
+      S.registration=null;alert(S.error||'応募できませんでした。もう一度お試しください。');return;
+    }
+    clearPendingRecruitment();go('matched');
+  }catch(e){alert(friendlyError(e,'応募できませんでした。もう一度お試しください。'));}
+  finally{if(S._recruitmentInvite){S._recruitmentInvite.submitting=false;if(S.screen==='recruitment_invite')re('recruitment_invite');}}
+}
+
+function recruitmentInviteH(){
+  var invite=S._recruitmentInvite;
+  if(!invite)return loadingH();
+  if(invite.ended){
+    return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">募集のお知らせ</div><div class="hdr-title">受付が終了しました</div></div></div>'
+      +'<div class="body" style="padding:42px 22px;text-align:center"><div style="font-size:42px">🍷</div><div style="font-size:15px;font-weight:800;color:var(--cream);margin-top:16px">この募集は終了したか、すでに成立しています。</div><div style="font-size:12.5px;color:var(--muted);line-height:1.8;margin-top:10px">トップ画面から、現在受付中の募集をご確認ください。</div></div>'
+      +'<div class="ftr"><button class="btn btn-wine" onclick="declineRecruitmentInvite()">トップへ戻る</button></div></div>';
+  }
+  var r=invite.registration,p=invite.profile||{};
+  var area=(AREAS.find(function(a){return a.id===r.area_id;})||{}).name||r.area_id||'';
+  var photo=p.photo_url?'<img src="'+escapeHtml(p.photo_url)+'" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)">':'<div style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--card);border:2px solid var(--border);font-size:30px">👤</div>';
+  var details=['📍 '+area,'🕗 '+(r.slot||''),'👥 '+(r.mode==='2v2'?'2対2':'1対1')];
+  if(r.drink_style)details.push('🥂 '+r.drink_style);
+  if(r.purpose)details.push('💬 '+purposeLabel(r.purpose));
+  var disabled=invite.submitting?'disabled ':'';
+  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">LINEから届いた募集</div><div class="hdr-title">この募集に応募しますか？</div></div></div>'
+    +'<div class="body" style="padding:24px 20px"><div style="display:flex;align-items:center;gap:14px;padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)">'+photo+'<div><div style="font-size:17px;font-weight:900;color:var(--cream)">'+escapeHtml(p.nickname||'募集ユーザー')+'</div><div style="font-size:12.5px;color:var(--muted);margin-top:4px">'+(p.age?escapeHtml(String(p.age))+'歳':'')+(p.job?'・'+escapeHtml(p.job):'')+'</div></div></div>'
+    +'<div style="margin-top:14px;padding:18px;border:1px solid var(--border2);border-radius:16px;background:rgba(255,255,255,.025);font-size:14px;color:var(--cream);line-height:2.15">'+details.map(escapeHtml).join('<br>')+'</div>'
+    +'<div style="font-size:11.5px;color:var(--muted);line-height:1.75;margin-top:14px">応募すると、この募集者とのマッチ成立処理に進みます。男性は成立時にチケット1枚を消費します。</div></div>'
+    +'<div class="ftr" style="display:flex;flex-direction:column;gap:8px"><button class="btn btn-wine" '+disabled+'onclick="applyRecruitmentInvite()">'+(invite.submitting?'応募中...':'この募集に応募する')+'</button><button class="btn" '+disabled+'style="background:transparent;color:var(--muted);border:0" onclick="declineRecruitmentInvite()">今回はやめる</button></div></div>';
 }
 
 async function tryMatch(){
