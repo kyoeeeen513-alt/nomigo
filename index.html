@@ -1617,7 +1617,17 @@ async function init(){
       // LINEの画面を閉じて開き直す場合や、右下からSafariへ移る場合も
       // 同じ募集へ戻れるようにするため。
     }else{
-      try{S._pendingRecruitmentId=sessionStorage.getItem('ngo_pending_recruitment')||null;}catch(e){}
+      // 募集IDが付いていない入口（マッチ通知・募集終了通知・LINE連携・
+      // ホーム画面など）では、以前見ていた募集を復元しない。
+      // 別のお知らせを開いたのに古い募集画面が出ることを防ぐ。
+      S._pendingRecruitmentId=null;
+      try{sessionStorage.removeItem('ngo_pending_recruitment');}catch(e){}
+      try{
+        var _normalEntryUrl=new URL(window.location.href);
+        _normalEntryUrl.searchParams.delete('recruitment');
+        _normalEntryUrl.searchParams.delete('openExternalBrowser');
+        window.history.replaceState({},'',_normalEntryUrl.pathname+_normalEntryUrl.search+_normalEntryUrl.hash);
+      }catch(e){}
     }
     if(_h.indexOf('type=recovery')!==-1||_q.indexOf('type=recovery')!==-1){
       S._recovering=true;
