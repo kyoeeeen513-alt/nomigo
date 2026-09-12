@@ -3867,8 +3867,17 @@ async function openRecruitmentInviteById(registrationId){
       var prRes=await DB.rpc('get_candidate_profile',{p_user_id:reg.user_id});
       pr=(prRes.data&&prRes.data[0])||{};
     }catch(e){}
-    S._recruitmentInvite={ended:false,registration:reg,profile:pr,submitting:false};
+    // LINEのボタンを押した指が、画面切替直後の応募ボタンにも反応する
+    // クリック持ち越しを防ぐため、表示直後は応募できない状態にする。
+    S._recruitmentInvite={ended:false,registration:reg,profile:pr,submitting:false,ready:false};
     go('recruitment_invite');
+    setTimeout(function(){
+      if(S._recruitmentInvite&&S._recruitmentInvite.registration&&
+         S._recruitmentInvite.registration.id===registrationId){
+        S._recruitmentInvite.ready=true;
+        if(S.screen==='recruitment_invite')re('recruitment_invite');
+      }
+    },1500);
   }catch(e){
     S._recruitmentInvite={ended:true,loadError:true};go('recruitment_invite');
   }
@@ -3878,7 +3887,8 @@ function declineRecruitmentInvite(){clearPendingRecruitment();go('splash');}
 
 async function applyRecruitmentInvite(){
   var invite=S._recruitmentInvite;
-  if(!invite||invite.ended||invite.submitting||!invite.registration)return;
+  if(!invite||invite.ended||invite.submitting||!invite.ready||!invite.registration)return;
+  if(!confirm('この募集に応募して、マッチを成立させますか？\n\n「応募する」を選ぶまでマッチは成立しません。'))return;
   invite.submitting=true;re('recruitment_invite');
   try{
     if(S.registration&&(S.registration.status==='waiting'||S.registration.status==='matched')){
@@ -3941,12 +3951,12 @@ function recruitmentInviteH(){
   var details=['📍 '+area,'🕗 '+(r.slot||''),'👥 '+(r.mode==='2v2'?'2対2':'1対1')];
   if(r.drink_style)details.push('🥂 '+r.drink_style);
   if(r.purpose)details.push('💬 '+purposeLabel(r.purpose));
-  var disabled=invite.submitting?'disabled ':'';
+  var disabled=(invite.submitting||!invite.ready)?'disabled ':'';
   return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">LINEから届いた募集</div><div class="hdr-title">この募集に応募しますか？</div></div></div>'
     +'<div class="body" style="padding:24px 20px"><div style="display:flex;align-items:center;gap:14px;padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)">'+photo+'<div><div style="font-size:17px;font-weight:900;color:var(--cream)">'+escapeHtml(p.nickname||'募集ユーザー')+'</div><div style="font-size:12.5px;color:var(--muted);margin-top:4px">'+(p.age?escapeHtml(String(p.age))+'歳':'')+(p.job?'・'+escapeHtml(p.job):'')+'</div></div></div>'
     +'<div style="margin-top:14px;padding:18px;border:1px solid var(--border2);border-radius:16px;background:rgba(255,255,255,.025);font-size:14px;color:var(--cream);line-height:2.15">'+details.map(escapeHtml).join('<br>')+'</div>'
     +'<div style="font-size:11.5px;color:var(--muted);line-height:1.75;margin-top:14px">応募すると、この募集者とのマッチ成立処理に進みます。男性は成立時にチケット1枚を消費します。</div></div>'
-    +'<div class="ftr" style="display:flex;flex-direction:column;gap:8px"><button class="btn btn-wine" '+disabled+'onclick="applyRecruitmentInvite()">'+(invite.submitting?'応募中...':'この募集に応募する')+'</button><button class="btn" '+disabled+'style="background:transparent;color:var(--muted);border:0" onclick="declineRecruitmentInvite()">今回はやめる</button></div></div>';
+    +'<div class="ftr" style="display:flex;flex-direction:column;gap:8px"><button type="button" class="btn btn-wine" '+disabled+'onclick="applyRecruitmentInvite()">'+(invite.submitting?'応募中...':'この募集に応募する')+'</button><button type="button" class="btn" '+(invite.submitting?'disabled ':'')+'style="background:transparent;color:var(--muted);border:0" onclick="declineRecruitmentInvite()">今回はやめる</button></div></div>';
 }
 
 async function tryMatch(){
