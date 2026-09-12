@@ -1322,7 +1322,7 @@ function stepHeadH(n,label,title){
 }
 
 // ===== 募集の残り時間 =====
-// 「今すぐ」は60分、時間指定はその時刻の30分後まで（期限はDB側が決める）。
+// 「今すぐ」は60分、時間指定はその時刻の30分前まで（期限はDB側が決める）。
 function remainMinutes(){
   if(!S.registration||!S.registration.expires_at)return null;
   return Math.ceil((new Date(S.registration.expires_at).getTime()-Date.now())/60000);
@@ -5263,7 +5263,7 @@ function profileEditH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">プロフィール編集</div><div class="hdr-title">登録情報を編集</div></div></div><div class="body" style="padding:0 0 20px">'+photoSection+lineSection+'<div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">ニックネーム</div><input class="inp'+(p.nickname?' filled':'')+'" id="pf-nn" type="text" placeholder="例：たける" maxlength="10" value="'+(p.nickname||'')+'" oninput="S.pf.nickname=this.value;this.classList.toggle(\'filled\',!!this.value)"></div><div style="padding:12px 20px 0"><div class="sec-label" style="padding:0 0 8px">年齢</div><input class="inp" type="text" readonly disabled style="max-width:120px;opacity:.7" value="'+(p.age?p.age+'歳':'')+'"><div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">年齢はご登録の生年月日から自動で決まります。ここでは変更できません。誤りがある場合はお問い合わせください。</div></div><div class="sec-label">性別</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.gender==='male'?'on':'')+'" onclick="S.pf.gender=\'male\';re(\'profile_edit\')">♂ 男性</button><button class="sel-btn '+(p.gender==='female'?'on':'')+'" onclick="S.pf.gender=\'female\';re(\'profile_edit\')">♀ 女性</button></div><div style="padding:16px 20px 0"><div class="sec-label" style="padding:0 0 8px">居住都道府県</div><select class="inp '+(p.residence_prefecture?'filled':'')+'" id="pf-prefecture" onchange="S.pf.residence_prefecture=this.value;this.classList.toggle(\'filled\',!!this.value)"><option value="">選択してください</option>'+PREFECTURES.map(function(v){return '<option value="'+v+'" '+(p.residence_prefecture===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'+jobSectionH('profile_edit')+'<div class="sec-label">タバコ</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'profile_edit\')">🚬 吸う</button><button class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'profile_edit\')">🚭 吸わない</button></div><div class="sec-label">お酒の強さ</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'profile_edit\')">'+a+'</button>';}).join('')+'</div>'+tagSectionH('profile_edit')+(S.error?'<div class="err-msg" style="margin:12px 20px">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="saveProfileEdit()">保存する</button></div></div>';
 }
 
-// 開始まで1時間を切っている時間枠は選べない（マッチ後に移動する余裕を残すため）
+// 開始まで30分を切っている時間枠は選べない（開始後のマッチを防ぐため）
 function slotSelectable(t){
   if(t==='今すぐ')return true;
   var h=parseInt(String(t).replace(/[^0-9].*$/,''),10);
@@ -5271,7 +5271,7 @@ function slotSelectable(t){
   var now=new Date();
   var jst=new Date(now.getTime()+(now.getTimezoneOffset()+540)*60000);
   var slot=new Date(jst.getFullYear(),jst.getMonth(),jst.getDate(),h,0,0,0);
-  return (slot.getTime()-jst.getTime())>60*60*1000;
+  return (slot.getTime()-jst.getTime())>30*60*1000;
 }
 function recruitH(){
   var f=S.form;
@@ -5331,7 +5331,7 @@ function recruitH(){
         +'<button class="btn btn-wine" style="padding:13px;font-size:14px;margin-top:10px" onclick="goPairInvite()">お友だちを招待する →</button></div></section>';
     }
   }
-  html+='<div class="form-footnote">飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。<br>募集は'+(f.slot==='今すぐ'?'60分で':'選んだ時間の30分後に')+'自動的に終了します。時間が経ちすぎたお相手とマッチしないための仕組みです。</div>';
+  html+='<div class="form-footnote">飲みスタイルと希望年齢は、お互いの条件が合う人同士でマッチングされます。<br>募集は'+(f.slot==='今すぐ'?'60分で':'選んだ時間の30分前に')+'自動的に終了します。時間が経ちすぎたお相手とマッチしないための仕組みです。</div>';
   if(S.ticketPurchaseSuccess){
     html+='<div style="margin:8px 20px;padding:14px;background:rgba(90,170,112,.15);border:1px solid rgba(90,170,112,.3);border-radius:10px;color:var(--green);font-size:13px;line-height:1.7">✓ 購入完了！チケット残数：'+(S.profile&&S.profile.ticket_count!=null?S.profile.ticket_count:0)+'枚</div>';
   }
