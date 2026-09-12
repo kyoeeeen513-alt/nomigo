@@ -1613,12 +1613,9 @@ async function init(){
     if(_recruitmentId&&/^[0-9a-f-]{36}$/i.test(_recruitmentId)){
       S._pendingRecruitmentId=_recruitmentId;
       try{sessionStorage.setItem('ngo_pending_recruitment',_recruitmentId);}catch(e){}
-      try{
-        var _cleanRecruitmentUrl=new URL(window.location.href);
-        _cleanRecruitmentUrl.searchParams.delete('recruitment');
-        _cleanRecruitmentUrl.searchParams.delete('openExternalBrowser');
-        window.history.replaceState({},'',_cleanRecruitmentUrl.pathname+_cleanRecruitmentUrl.search+_cleanRecruitmentUrl.hash);
-      }catch(e){}
+      // 募集を確定・辞退するまではURLから募集IDを消さない。
+      // LINEの画面を閉じて開き直す場合や、右下からSafariへ移る場合も
+      // 同じ募集へ戻れるようにするため。
     }else{
       try{S._pendingRecruitmentId=sessionStorage.getItem('ngo_pending_recruitment')||null;}catch(e){}
     }
@@ -3848,6 +3845,12 @@ function clearPendingRecruitment(){
   S._pendingRecruitmentId=null;
   S._recruitmentInvite=null;
   try{sessionStorage.removeItem('ngo_pending_recruitment');}catch(e){}
+  try{
+    var cleanUrl=new URL(window.location.href);
+    cleanUrl.searchParams.delete('recruitment');
+    cleanUrl.searchParams.delete('openExternalBrowser');
+    window.history.replaceState({},'',cleanUrl.pathname+cleanUrl.search+cleanUrl.hash);
+  }catch(e){}
 }
 
 async function openRecruitmentInviteById(registrationId){
@@ -3859,8 +3862,12 @@ async function openRecruitmentInviteById(registrationId){
     var res=await DB.from('registrations').select(REG_COLS).eq('id',registrationId)
       .eq('status','waiting').gt('expires_at',new Date().toISOString()).maybeSingle();
     var reg=res.data;
-    if(res.error||!reg||reg.user_id===S.user.id||(S.profile&&reg.gender===S.profile.gender)){
+    if(res.error||!reg||reg.user_id===S.user.id){
       S._recruitmentInvite={ended:true};go('recruitment_invite');return;
+    }
+    if(S.profile&&reg.gender===S.profile.gender){
+      S._recruitmentInvite={ended:false,ineligible:true,registration:reg};
+      go('recruitment_invite');return;
     }
     var pr={};
     try{
@@ -3940,6 +3947,11 @@ async function applyRecruitmentInvite(){
 function recruitmentInviteH(){
   var invite=S._recruitmentInvite;
   if(!invite)return loadingH();
+  if(invite.ineligible){
+    return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">募集のお知らせ</div><div class="hdr-title">応募対象外です</div></div></div>'
+      +'<div class="body" style="padding:42px 22px;text-align:center"><div style="font-size:42px">🍷</div><div style="font-size:15px;font-weight:800;color:var(--cream);margin-top:16px">この募集は異性のユーザーが対象です。</div><div style="font-size:12.5px;color:var(--muted);line-height:1.8;margin-top:10px">募集は現在も受付中です。<br>終了・成立したわけではありません。</div></div>'
+      +'<div class="ftr"><button type="button" class="btn btn-wine" onclick="declineRecruitmentInvite()">トップへ戻る</button></div></div>';
+  }
   if(invite.ended){
     return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">募集のお知らせ</div><div class="hdr-title">受付が終了しました</div></div></div>'
       +'<div class="body" style="padding:42px 22px;text-align:center"><div style="font-size:42px">🍷</div><div style="font-size:15px;font-weight:800;color:var(--cream);margin-top:16px">この募集は終了したか、すでに成立しています。</div><div style="font-size:12.5px;color:var(--muted);line-height:1.8;margin-top:10px">トップ画面から、現在受付中の募集をご確認ください。</div></div>'
@@ -3955,7 +3967,7 @@ function recruitmentInviteH(){
   return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">LINEから届いた募集</div><div class="hdr-title">この募集に応募しますか？</div></div></div>'
     +'<div class="body" style="padding:24px 20px"><div style="display:flex;align-items:center;gap:14px;padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)">'+photo+'<div><div style="font-size:17px;font-weight:900;color:var(--cream)">'+escapeHtml(p.nickname||'募集ユーザー')+'</div><div style="font-size:12.5px;color:var(--muted);margin-top:4px">'+(p.age?escapeHtml(String(p.age))+'歳':'')+(p.job?'・'+escapeHtml(p.job):'')+'</div></div></div>'
     +'<div style="margin-top:14px;padding:18px;border:1px solid var(--border2);border-radius:16px;background:rgba(255,255,255,.025);font-size:14px;color:var(--cream);line-height:2.15">'+details.map(escapeHtml).join('<br>')+'</div>'
-    +'<div style="font-size:11.5px;color:var(--muted);line-height:1.75;margin-top:14px">応募すると、この募集者とのマッチ成立処理に進みます。男性は成立時にチケット1枚を消費します。</div></div>'
+    +'<div style="font-size:11.5px;color:var(--muted);line-height:1.75;margin-top:14px">応募すると、この募集者とのマッチ成立処理に進みます。男性は成立時にチケット1枚を消費します。<br>この画面を閉じても、LINEの同じリンクから戻れます。</div></div>'
     +'<div class="ftr" style="display:flex;flex-direction:column;gap:8px"><button type="button" class="btn btn-wine" '+disabled+'onclick="applyRecruitmentInvite()">'+(invite.submitting?'応募中...':'この募集に応募する')+'</button><button type="button" class="btn" '+(invite.submitting?'disabled ':'')+'style="background:transparent;color:var(--muted);border:0" onclick="declineRecruitmentInvite()">今回はやめる</button></div></div>';
 }
 
