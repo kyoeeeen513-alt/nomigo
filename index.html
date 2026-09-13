@@ -812,6 +812,30 @@ body{font-size:15px;background:
 .wait-cancel-btn{padding:12px;background:transparent;border:0;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:700;text-decoration:underline;cursor:pointer}
 .wait-cancel-note{margin-top:2px;color:var(--lgray);font-size:11.5px;line-height:1.7}
 
+/* ===== 2026/9/13 マッチ成立画面 UI試作 =====
+   マッチ情報・待ち合わせ・チャット・評価処理は変えず、成立後の優先順位を整理する。 */
+#app[data-screen="matched"]{background:#120A0C}
+#app[data-screen="matched"] .match-hero{border-bottom:1px solid rgba(212,170,99,.14)}
+#app[data-screen="matched"] .match-hero>img{height:236px;filter:saturate(1.02) contrast(1.03) brightness(.94)}
+#app[data-screen="matched"] .match-hero-copy{padding:76px 18px 20px;background:linear-gradient(transparent,rgba(16,9,11,.94))}
+.match-success-title{color:#fff;font:700 29px/1.4 'Shippori Mincho',serif;letter-spacing:.04em}
+.match-success-sub{margin-top:4px;color:var(--gold-bright);font-size:13px;font-weight:800}
+.match-members{margin:14px;border:1px solid rgba(247,240,230,.10);border-radius:16px;background:#211518;overflow:hidden}
+.match-members>.sec-label{padding:15px 16px 7px;color:var(--muted)}
+#app[data-screen="matched"] .member-row{margin:0;padding:15px 16px}
+.match-flow{margin:12px 14px 0;padding:0 16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+#app[data-screen="matched"] .flow-step{padding:18px 0}
+#app[data-screen="matched"] .flow-title{font-size:15px;color:var(--cream)}
+#app[data-screen="matched"] .flow-note{font-size:12px;line-height:1.7}
+#app[data-screen="matched"] .flow-num{background:rgba(212,170,99,.11);border-color:rgba(212,170,99,.32);color:var(--gold-bright)}
+.meeting-plan-card{padding:15px;border:1px solid rgba(247,240,230,.11);border-radius:13px;background:#181014}
+.meeting-plan-label{color:var(--muted);font-size:11px;letter-spacing:.08em}
+.meeting-plan-value{margin-top:7px;display:grid;gap:6px;font-size:14px;font-weight:800;line-height:1.65}
+.meeting-plan-value span{display:flex;gap:10px}
+.meeting-plan-key{min-width:28px;color:var(--gold);font-size:10.5px;font-weight:800;letter-spacing:.08em}
+#app[data-screen="matched"] .match-flow .btn-wine{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="matched"] .ui-preview-static button,#app[data-screen="matched"].ui-preview-static button{pointer-events:none}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1769,6 +1793,21 @@ async function init(){
       S._poolWaiting=3;
       S._poolNew=2;
       S.screen='waiting';
+      render();
+      return;
+    }
+    if(isMatchedPreview()){
+      S.user={id:'preview-me'};
+      S.profile={gender:'male'};
+      S.match={id:'preview-match'};
+      S.registration={status:'matched'};
+      S.matchMembers=[
+        {user_id:'preview-me',profiles:{nickname:'あなた',age:30,gender:'male',job:'会社員（営業）',smoke:'no',alcohol:2,tags:['話しやすい'],id_verify_status:'approved'}},
+        {user_id:'preview-partner',profiles:{nickname:'みさき',age:28,gender:'female',job:'会社員（企画・マーケティング）',smoke:'no',alcohol:1,tags:['ご飯も好き','聞き上手'],id_verify_status:'approved'}}
+      ];
+      S.meetingPlan={meeting_time:new Date(Date.now()+90*60000).toISOString(),meeting_place:'新宿駅 東口付近'};
+      S.screen='matched';
+      document.getElementById('app').classList.add('ui-preview-static');
       render();
       return;
     }
@@ -5986,7 +6025,7 @@ function meetingPlanH(){
   }
   var edit=S._meetingEditOpen&&!pending?'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)"><label style="font-size:11px;color:var(--muted)">変更したい時間</label><input class="inp" id="meeting-time-input" type="datetime-local" value="'+meetingInputValue(p.meeting_time)+'" style="margin-top:5px"><label style="display:block;font-size:11px;color:var(--muted);margin-top:10px">変更したい場所</label><input class="inp" id="meeting-place-input" maxlength="100" value="'+escapeHtml(p.meeting_place)+'" style="margin-top:5px"><button class="btn btn-wine" style="padding:12px;font-size:13px;margin-top:10px" onclick="submitMeetingChange()">変更を相談する</button></div>':'';
   var note=S._meetingNoteOpen?'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)"><input class="inp" id="meeting-note-input" maxlength="100" placeholder="例：黒いジャケット、入口の右側にいます"><button class="btn btn-wine" style="padding:12px;font-size:13px;margin-top:8px" onclick="sendMeetingNote()">チャットに送る</button></div>':'';
-  return '<div style="padding:15px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.02)"><div style="font-size:12px;color:var(--muted)">待ち合わせ</div><div style="font-size:15px;font-weight:800;line-height:1.8;margin-top:4px">🕐 '+escapeHtml(formatMeetingTime(p.meeting_time))+'<br>📍 '+escapeHtml(p.meeting_place)+'</div>'+pendingHtml+declinedHtml+'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" '+(pending?'disabled ':'')+'style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingEditOpen=!S._meetingEditOpen;re(\'matched\')">時間・場所を変更</button><button class="btn" style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingNoteOpen=!S._meetingNoteOpen;re(\'matched\')">目印・服装</button></div>'+edit+note+'</div>';
+  return '<div class="meeting-plan-card"><div class="meeting-plan-label">待ち合わせ</div><div class="meeting-plan-value"><span><b class="meeting-plan-key">時間</b>'+escapeHtml(formatMeetingTime(p.meeting_time))+'</span><span><b class="meeting-plan-key">場所</b>'+escapeHtml(p.meeting_place)+'</span></div>'+pendingHtml+declinedHtml+'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" '+(pending?'disabled ':'')+'style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingEditOpen=!S._meetingEditOpen;re(\'matched\')">時間・場所を変更</button><button class="btn" style="padding:10px;font-size:12px;background:transparent;border:1px solid var(--border);color:var(--cream)" onclick="S._meetingNoteOpen=!S._meetingNoteOpen;re(\'matched\')">目印・服装</button></div>'+edit+note+'</div>';
 }
 
 var _quickMeetingSubmitting=false;
@@ -6060,16 +6099,16 @@ function matchedH(){
     +'<div class="match-hero">'
       +'<img src="'+APP_IMG_MATCHED+'" alt="乾杯する飲み友達" loading="lazy" decoding="async">'
       +'<div class="match-hero-copy">'
-        +'<div style="font-size:24px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px;color:#fff">マッチ成立！</div>'
-        +'<div style="font-size:14px;font-weight:800;color:var(--gold)">今夜の飲み相手が決まりました</div>'
+        +'<div class="match-success-title">マッチ成立</div>'
+        +'<div class="match-success-sub">今夜の飲み相手が決まりました</div>'
       +'</div>'
     +'</div>'
-    +'<div style="border-bottom:1px solid var(--border2)"><div class="sec-label">今夜のメンバー</div>'+membersHtml+'</div>'
+    +'<div class="match-members"><div class="sec-label">今夜のメンバー</div>'+membersHtml+'</div>'
     +'<div style="padding:16px 20px 0">'+reportedBadge+'</div>'
     +finishReminderBanner()
     // 通常の流れは「①待ち合わせを決める → ②飲み終わったら評価」の2段階だけ。
     // 通報・キャンセルは例外の操作なので、目立たない文字リンクに下げる。
-    +'<div style="padding:4px 20px 0">'
+    +'<div class="match-flow">'
       +'<div class="flow-step"><span class="flow-num">1</span><div class="flow-body">'
         +'<div class="flow-title">待ち合わせを決める</div>'
         +'<div class="flow-note">時間と場所は設定済みです。変更が必要な場合だけご相談ください。</div>'
@@ -6089,6 +6128,11 @@ function matchedH(){
     +'<div style="padding:0 20px">'+morePanel+'</div>'
     +'<div style="height:40px"></div>'
     +'</div>';
+}
+
+function isMatchedPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='matched';}
+  catch(e){return false;}
 }
 
 function chatH(){
