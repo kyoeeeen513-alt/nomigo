@@ -771,6 +771,28 @@ body{font-size:15px;background:
 #app[data-screen="drink_profile_setup"] .ftr{padding:11px 14px calc(16px + env(safe-area-inset-bottom,0px))}
 #app[data-screen="drink_profile_setup"] .ftr .btn-wine:not(:disabled){background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:0 7px 18px rgba(0,0,0,.24)}
 
+/* ===== 2026/9/13 エリア・人数選択画面 UI試作 =====
+   選択肢・稼働人数・遷移は変えず、写真と選択情報の階層を整理する。 */
+#app[data-screen="area_select"] .body,#app[data-screen="mode_select"] .body{padding:8px 14px 24px !important;background:#120A0C}
+#app[data-screen="area_select"] .screen-intro,#app[data-screen="mode_select"] .screen-intro{padding:13px 2px 15px !important}
+#app[data-screen="area_select"] .screen-intro-title,#app[data-screen="mode_select"] .screen-intro-title{font-size:23px}
+#app[data-screen="area_select"] .area-grid{gap:10px}
+#app[data-screen="area_select"] .area-card{border-radius:15px;background:#211518;border-color:rgba(247,240,230,.10);box-shadow:none}
+#app[data-screen="area_select"] .area-card img{height:136px;filter:saturate(.86) contrast(1.04) brightness(.82)}
+#app[data-screen="area_select"] .area-card-label{padding:30px 12px 12px;background:linear-gradient(transparent,rgba(10,5,7,.92))}
+#app[data-screen="area_select"] .area-card-title{font-size:16px !important;letter-spacing:.05em}
+#app[data-screen="area_select"] .area-live-badge{top:9px;right:9px;padding:5px 8px;background:rgba(16,9,11,.82);border:1px solid rgba(123,224,144,.42);color:#8DE6A0;box-shadow:none}
+#app[data-screen="area_select"] .area-quiet-badge{top:9px;right:9px;padding:5px 8px;background:rgba(16,9,11,.82);border:1px solid rgba(212,170,99,.32);color:var(--gold-bright)}
+#app[data-screen="area_select"] .area-soon{opacity:.55}
+.area-availability-note{padding:14px 3px 0;color:var(--muted);font-size:12px;line-height:1.75}
+.area-availability-note span{display:block}
+#app[data-screen="mode_select"] .mode-card{border-radius:16px;border-color:rgba(247,240,230,.11);background:#211518;box-shadow:none}
+#app[data-screen="mode_select"] .mode-card img{height:190px;filter:saturate(.94) contrast(1.03) brightness(.88)}
+#app[data-screen="mode_select"] .mode-card-label{padding:54px 16px 16px}
+#app[data-screen="mode_select"] .mode-card-title{font-size:21px;letter-spacing:.045em}
+#app[data-screen="mode_select"] .mode-card-sub{margin-top:5px;color:#D2C5BC;font-size:12px}
+.mode-match-note{padding:2px 3px 0;color:var(--muted);font-size:12px;line-height:1.7}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1707,6 +1729,17 @@ async function init(){
       S.pf.smoke='no';
       S.pf.alcohol=2;
       S.screen='drink_profile_setup';
+      render();
+      return;
+    }
+    if(isAreaSelectPreview()){
+      S.areaStats={susukino:2,shinjuku:3};
+      S.screen='area_select';
+      render();
+      return;
+    }
+    if(isModeSelectPreview()){
+      S.screen='mode_select';
       render();
       return;
     }
@@ -3364,6 +3397,7 @@ function selectArea(areaId,el){
 
 function areaSelectH(){
   var stats=S.areaStats||{};
+  var preview=isAreaSelectPreview();
   var cardsHtml=AREAS.map(function(a){
     var n=stats[a.id]||0;
     var isComingSoon=(a.open===false);
@@ -3373,13 +3407,18 @@ function areaSelectH(){
     }else if(n>0){
       badge='<div class="area-live-badge"><span class="dot"></span>'+n+'人が募集中</div>';
     }else{
-      badge='<div class="area-quiet-badge">募集を待っています</div>';
+      badge='<div class="area-quiet-badge">募集受付中</div>';
     }
     var cardCls='mode-card area-card'+(isComingSoon?' area-soon':'');
     var overlay='<div class="area-card-tint"></div>';
-    return '<div class="'+cardCls+'" onclick="selectArea(\''+a.id+'\',this)"><img src="'+a.img+'" alt="'+a.name+'" loading="lazy" decoding="async">'+overlay+badge+'<div class="area-card-label"><span class="area-card-title">'+a.name+'</span></div></div>';
+    return '<div class="'+cardCls+'" '+(preview?'':'onclick="selectArea(\''+a.id+'\',this)"')+'><img src="'+a.img+'" alt="'+a.name+'" loading="lazy" decoding="async">'+overlay+badge+'<div class="area-card-label"><span class="area-card-title">'+a.name+'</span></div></div>';
   }).join('');
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px"><div class="screen-intro"><div class="screen-intro-title">今夜、飲みに行ける街は？</div><div class="screen-intro-note">現在地ではなく、合流したいエリアを選んでください。</div></div><div class="area-grid">'+cardsHtml+'</div><div style="font-size:12px;color:var(--muted);line-height:1.7;padding:14px 4px 0">現在は「新宿」「すすきの」でご利用いただけます。その他のエリアは近日公開予定です。順次エリアを増やし、全国展開を予定しています。</div></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px"><div class="screen-intro"><div class="screen-intro-title">今夜、飲みに行ける街は？</div><div class="screen-intro-note">現在地ではなく、合流したいエリアを選んでください。</div></div><div class="area-grid">'+cardsHtml+'</div><div class="area-availability-note"><span>現在は「新宿」「すすきの」で利用できます。</span><span>その他のエリアも順次オープン予定です。</span></div></div></div>';
+}
+
+function isAreaSelectPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='area-select';}
+  catch(e){return false;}
 }
 
 // ===== 2対2の招待 =====
@@ -3650,12 +3689,18 @@ function selectMode(m,el){
 
 function modeSelectH(){
   var m=S.form.mode;
+  var preview=isModeSelectPreview();
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'area_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">人数を選ぶ</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px">'
     +'<div class="screen-intro" style="padding:4px 2px 2px"><div class="screen-intro-title">どんな人数で乾杯する？</div><div class="screen-intro-note">選んだ人数が同じ人とだけマッチします。</div></div>'
-    +'<div class="mode-card mode-card-square" onclick="selectMode(\'1v1\',this)"><img src="'+APP_IMG_1V1+'" alt="1対1で飲む" loading="lazy" decoding="async"><div class="mode-card-label"><span class="mode-card-title">1対1で飲む</span><span class="mode-card-sub">空いた夜に、気軽にひとりと</span></div></div>'
-    +'<div class="mode-card" onclick="selectMode(\'2v2\',this)"><img src="'+APP_IMG_2V2+'" alt="2対2で飲む" loading="lazy" decoding="async"><div class="mode-card-label"><span class="mode-card-title">2対2で飲む</span><span class="mode-card-sub">友達と一緒に、4人で乾杯</span></div></div>'
-    +'<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:4px 4px 0">同じ人数を希望する人同士でマッチングします。</div>'
+    +'<div class="mode-card mode-card-square" '+(preview?'':'onclick="selectMode(\'1v1\',this)"')+'><img src="'+APP_IMG_1V1+'" alt="1対1で飲む" loading="lazy" decoding="async"><div class="mode-card-label"><span class="mode-card-title">1対1で飲む</span><span class="mode-card-sub">空いた夜に、気軽にひとりと</span></div></div>'
+    +'<div class="mode-card" '+(preview?'':'onclick="selectMode(\'2v2\',this)"')+'><img src="'+APP_IMG_2V2+'" alt="2対2で飲む" loading="lazy" decoding="async"><div class="mode-card-label"><span class="mode-card-title">2対2で飲む</span><span class="mode-card-sub">友達と一緒に、4人で乾杯</span></div></div>'
+    +'<div class="mode-match-note">同じ人数を希望する人同士でマッチングします。</div>'
     +'</div></div>';
+}
+
+function isModeSelectPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='mode-select';}
+  catch(e){return false;}
 }
 
 function recruitAgeReady(f){
