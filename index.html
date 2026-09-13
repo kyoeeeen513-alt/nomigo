@@ -929,6 +929,28 @@ body{font-size:15px;background:
 #app[data-screen="email_verify"] #everify-btn{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
 #app[data-screen="email"].ui-preview-static button,#app[data-screen="email"].ui-preview-static input,#app[data-screen="email_verify"].ui-preview-static button,#app[data-screen="email_verify"].ui-preview-static input{pointer-events:none}
 
+/* ===== 2026/9/13 FAQ・お問い合わせ画面 UI試作 =====
+   質問候補・回答・問い合わせ項目・送信処理は変えず、サポート画面として整理する。 */
+#app[data-screen="faqbot"],#app[data-screen="inquiry"]{background:#120A0C}
+.faq-quick{display:flex;gap:7px;padding:10px 14px;border-bottom:1px solid rgba(247,240,230,.08);overflow-x:auto;-webkit-overflow-scrolling:touch;background:#1B1114}
+#app[data-screen="faqbot"] .faq-quick .tag-chip{flex:0 0 auto;background:#211518;border-color:rgba(247,240,230,.11);color:#D8CCC3;white-space:nowrap}
+#app[data-screen="faqbot"] .chat-msgs{background:#120A0C}
+.support-av{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:10px;background:rgba(212,170,99,.11);border:1px solid rgba(212,170,99,.28);color:var(--gold-bright);font:800 13px/1 'Shippori Mincho',serif}
+#app[data-screen="faqbot"] .msg-row:not(.mine) .msg-bubble{background:#211518 !important;border-color:rgba(247,240,230,.09)}
+#app[data-screen="faqbot"] .msg-row.mine .msg-bubble{background:#652432 !important}
+#app[data-screen="faqbot"] .chat-input{background:#160D10;border-top-color:rgba(247,240,230,.09)}
+#app[data-screen="faqbot"] .chat-send{background:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="inquiry"] .body{padding:10px 14px 24px !important;gap:12px !important;background:#120A0C}
+.inquiry-intro{padding:17px 16px;background:linear-gradient(145deg,#351A22,#28151A);border:1px solid rgba(212,170,99,.16);border-radius:16px}
+.inquiry-intro-title{font:700 21px/1.5 'Shippori Mincho',serif;color:var(--cream);letter-spacing:.035em}
+.inquiry-intro-copy{margin-top:6px;color:#D0C2B9;font-size:12px;line-height:1.7}
+.inquiry-form{display:grid;gap:13px;padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.inquiry-field{display:grid;gap:7px}
+.inquiry-field-label{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.06em}
+#app[data-screen="inquiry"] .inp{background:#181014;border-color:rgba(247,240,230,.12)}
+#app[data-screen="inquiry"] .ftr .btn-wine{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="faqbot"].ui-preview-static button,#app[data-screen="faqbot"].ui-preview-static input,#app[data-screen="inquiry"].ui-preview-static button,#app[data-screen="inquiry"].ui-preview-static input,#app[data-screen="inquiry"].ui-preview-static textarea{pointer-events:none}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1950,6 +1972,19 @@ async function init(){
     if(isEmailVerifyPreview()){
       S.user={email:'sample@nomi-go.jp'};
       S.screen='email_verify';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isFaqPreview()){
+      S.faqMsgs=[{type:'bot',content:'よくある質問をご案内します。下の項目を選ぶか、知りたいことを入力してください。'}];
+      S.screen='faqbot';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isInquiryPreview()){
+      S.screen='inquiry';
       document.getElementById('app').classList.add('ui-preview-static');
       render();
       return;
@@ -6451,10 +6486,11 @@ function faqAnsBy(head){
   return '';
 }
 function faqBotH(){
+  var preview=isFaqPreview();
   var msgsHtml=(S.faqMsgs||[]).map(function(m){
     var isBot=m.type==='bot';
     var inquiryBtn=m.showInquiryBtn?'<button style="margin-top:8px;padding:8px 14px;border-radius:20px;border:1.5px solid var(--wine);background:transparent;color:var(--wine);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer" onclick="go(\'inquiry\')">お問い合わせはこちら →</button>':'';
-    return '<div class="msg-row '+(isBot?'':'mine')+'">'+(isBot?'<div class="msg-av" style="background:var(--wine-bg);color:var(--wine)">🤖</div>':'')+'<div><div class="msg-bubble" style="background:'+(isBot?'var(--card)':'var(--wine)')+';color:'+(isBot?'var(--cream)':'#fff')+'">'+escapeHtml(m.content)+'</div>'+inquiryBtn+'</div></div>';
+    return '<div class="msg-row '+(isBot?'':'mine')+'">'+(isBot?'<div class="support-av">N</div>':'')+'<div><div class="msg-bubble" style="background:'+(isBot?'var(--card)':'var(--wine)')+';color:'+(isBot?'var(--cream)':'#fff')+'">'+escapeHtml(m.content)+'</div>'+inquiryBtn+'</div></div>';
   }).join('');
   var quickList=[
     // 【2026/9/8 修正】ボタンと答えの対応がズレていた（2対2・退会・安全性の3つ）。
@@ -6469,15 +6505,25 @@ function faqBotH(){
     {label:'退会したい',ans:faqAnsBy('退会をご希望の場合は')},
     {label:'安全性が心配',ans:faqAnsBy('通報機能や評価機能により')}
   ];
-  var quickHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border2)">'+quickList.map(function(q){return '<button class="tag-chip" onclick="tapFaqQuestion(\''+q.label+'\',\''+q.ans.replace(/'/g,"\\'")+'\')" style="font-size:12px">'+q.label+'</button>';}).join('')+'</div>';
-  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">サポート</div><div class="hdr-title">よくある質問</div></div></div>'+quickHtml+'<div class="chat-wrap"><div class="chat-msgs" id="faqmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="faq-input" type="text" placeholder="質問を入力..." onkeydown="if(event.key===\'Enter\')sendFaqMsg()"><button class="chat-send" onclick="sendFaqMsg()">↑</button></div></div></div>';
+  var quickHtml='<div class="faq-quick">'+quickList.map(function(q){return '<button class="tag-chip" onclick="tapFaqQuestion(\''+q.label+'\',\''+q.ans.replace(/'/g,"\\'")+'\')" style="font-size:12px">'+q.label+'</button>';}).join('')+'</div>';
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">Nomi Go サポート</div><div class="hdr-title">よくある質問</div></div></div>'+quickHtml+'<div class="chat-wrap"><div class="chat-msgs" id="faqmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="faq-input" type="text" placeholder="質問を入力..." '+(preview?'readonly':'onkeydown="if(event.key===\'Enter\')sendFaqMsg()"')+'><button class="chat-send" '+(preview?'disabled':'onclick="sendFaqMsg()"')+'>↑</button></div></div></div>';
+}
+
+function isFaqPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='faq';}
+  catch(e){return false;}
 }
 
 function inquiryH(){
   if(S._inquiryDone){
     return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="S._inquiryDone=false;go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">お問い合わせ</div></div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px"><div style="font-size:40px">✅</div><div style="font-size:16px;font-weight:800;color:var(--cream)">送信が完了しました。</div><div style="font-size:13px;color:var(--muted);line-height:1.7">お問い合わせありがとうございます。<br>内容を確認のうえ、対応いたします。</div></div><div class="ftr"><button class="btn btn-wine" onclick="S._inquiryDone=false;go(\'splash\')">トップに戻る</button></div></div>';
   }
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">お問い合わせ</div><div class="hdr-title">運営へ連絡する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><div class="sec-label" style="padding:0 0 8px">お名前（任意）</div><input id="inquiry-name" class="inp" type="text" placeholder="例：山田太郎"><div class="sec-label" style="padding:0 0 8px">メールアドレス（必須）</div><input id="inquiry-email" class="inp" type="email" placeholder="例：sample@mail.com"><div class="sec-label" style="padding:0 0 8px">お問い合わせ内容</div><textarea id="inquiry-content" class="inp" style="height:160px;resize:none" placeholder="ご質問・ご要望・お困りのことをご記入ください"></textarea><div id="inquiry-err" class="err-msg"></div></div><div class="ftr"><button class="btn btn-wine" id="inquiry-btn" onclick="submitInquiry()">送信する</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">お問い合わせ</div><div class="hdr-title">運営へ連絡する</div></div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:14px"><div class="inquiry-intro"><div class="inquiry-intro-title">お困りのことを<br>お聞かせください</div><div class="inquiry-intro-copy">内容を確認のうえ、運営から順次対応します。</div></div><div class="inquiry-form"><label class="inquiry-field"><span class="inquiry-field-label">お名前（任意）</span><input id="inquiry-name" class="inp" type="text" placeholder="例：山田太郎"></label><label class="inquiry-field"><span class="inquiry-field-label">メールアドレス（必須）</span><input id="inquiry-email" class="inp" type="email" placeholder="例：sample@mail.com"></label><label class="inquiry-field"><span class="inquiry-field-label">お問い合わせ内容</span><textarea id="inquiry-content" class="inp" style="height:160px;resize:none" placeholder="ご質問・ご要望・お困りのことをご記入ください"></textarea></label><div id="inquiry-err" class="err-msg"></div></div></div><div class="ftr"><button class="btn btn-wine" id="inquiry-btn" onclick="submitInquiry()">送信する</button></div></div>';
+}
+
+function isInquiryPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='inquiry';}
+  catch(e){return false;}
 }
 
 document.addEventListener('visibilitychange',function(){
