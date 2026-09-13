@@ -666,6 +666,29 @@ body{font-size:15px;background:
 .cardreg-input{box-shadow:none}
 
 
+/* ===== 2026/9/13 募集作成画面 UI試作 =====
+   入力項目・選択値・イベント・募集処理は変更せず、見た目だけを調整する。
+   このブロックを外せば直前の募集作成画面へ戻る。 */
+#app[data-screen="recruit"] .body{padding:8px 0 28px !important;background:#120A0C}
+#app[data-screen="recruit"] .recruit-context{padding:12px 16px 3px;gap:7px}
+#app[data-screen="recruit"] .recruit-context span{min-height:29px;padding:5px 11px;background:#211518;border:1px solid rgba(247,240,230,.12);color:#D8CBC2;font-weight:700}
+#app[data-screen="recruit"] .form-section{margin:12px 14px 0;padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.16)}
+#app[data-screen="recruit"] .form-section .sec-label{padding:0 0 13px;color:var(--cream);font-size:14px;line-height:1.45;letter-spacing:.025em;font-weight:800}
+#app[data-screen="recruit"] .form-section>div[style*="padding:0 20px"],
+#app[data-screen="recruit"] .form-section>div[style*="padding:4px 20px"],
+#app[data-screen="recruit"] .form-section>div[style*="padding:8px 20px"]{padding-left:0 !important;padding-right:0 !important}
+#app[data-screen="recruit"] .sel-btn,#app[data-screen="recruit"] .choice-btn{background:#181014;border:1px solid rgba(247,240,230,.12);border-radius:11px;box-shadow:none;color:#D0C3BA}
+#app[data-screen="recruit"] .sel-btn{min-height:46px}
+#app[data-screen="recruit"] .choice-btn{min-height:52px;padding:14px 15px}
+#app[data-screen="recruit"] .sel-btn.on,#app[data-screen="recruit"] .choice-btn.on{background:#D4AA63;border-color:#D4AA63;color:#160D10;font-weight:800;box-shadow:none}
+#app[data-screen="recruit"] .choice-btn.on span:last-child{color:#160D10 !important}
+#app[data-screen="recruit"] .age-range-row .inp{background:#181014;border-color:rgba(247,240,230,.14);border-radius:11px;box-shadow:none}
+#app[data-screen="recruit"] .age-range-row .inp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,170,99,.10)}
+#app[data-screen="recruit"] .form-footnote{margin:14px 14px 0;padding:14px 4px 0;border-top:1px solid rgba(247,240,230,.08)}
+#app[data-screen="recruit"] .ftr{padding:11px 14px calc(16px + env(safe-area-inset-bottom,0px))}
+#app[data-screen="recruit"] .ftr .btn-wine:not(:disabled){background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:0 7px 18px rgba(0,0,0,.24)}
+
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
