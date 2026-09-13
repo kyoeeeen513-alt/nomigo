@@ -100,6 +100,8 @@
       font-size:14px;font-weight:700;text-decoration:none;margin-top:9px;
     }
     .cta-micro{margin:9px 0 0;font-size:11.5px;line-height:1.6;color:var(--muted);text-align:center}
+    .cta-lead{margin:0 0 10px;font-size:clamp(12.5px,3.4vw,14px);font-weight:700;line-height:1.5;color:var(--gold-text-pale);text-align:center;letter-spacing:.02em}
+    .cta-note{margin-top:11px;font-size:12px;line-height:1.7;color:var(--gold-text-pale);overflow-wrap:anywhere}
 
     /* ===== ファーストビュー ===== */
     .hero{position:relative;overflow:hidden;padding:0}
@@ -168,7 +170,7 @@
       .phone-cap span{display:block;margin-top:7px;font-size:12px;color:#e8ddcf}
       .hero-trust{grid-template-columns:repeat(4,1fr)}
       .btn-primary{max-width:420px}
-      .cta-micro,.hero-tagline{text-align:left;max-width:420px}
+      .cta-micro,.hero-tagline,.cta-lead{text-align:left;max-width:420px}
     }
 
     /* ===== セクション共通 ===== */
@@ -414,8 +416,9 @@ fbq('track','PageView');
           </div>
 
           <div class="hero-actions">
-            <a class="btn-primary" id="hero-cta" href="https://www.nomi-go.jp/?start=register">0円で登録する<span class="arw">›</span></a>
-            <p class="cta-micro">登録・募集作成は無料／20歳以上・本人確認必須</p>
+            <p class="cta-lead">＼ まずは今夜の募集を見てみる ／</p>
+            <a class="btn-primary" id="hero-cta" href="https://www.nomi-go.jp/?start=register">無料で登録する<span class="arw">›</span></a>
+            <p class="cta-micro cta-note">ご登録無料・月額料金なし<br>女性0円｜男性も9月中の新規登録で初回マッチ0円</p>
             <a class="btn-ghost" href="#howto">使い方を見る<span class="arw">›</span></a>
           </div>
           <p class="hero-tagline">今夜、いい人と飲みに行こう。</p>
