@@ -5042,7 +5042,7 @@ function splashH(){
       +'<div class="home-title">今夜、一緒に<br><span class="home-title-accent">飲みませんか？</span></div>'
       +'<div class="home-primary-action">'+recruitBtn+idPendingNote+'</div>'
       +matchCard
-      +(!isMatched&&!isWaiting?waitFeedCardH():'')
+      +((isRecruitmentCardPreview()||(!isMatched&&!isWaiting))?waitFeedCardH():'')
       +homeInstallCard
       +preLaunchCard
       +ticketCard
