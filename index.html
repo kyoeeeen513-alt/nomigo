@@ -737,6 +737,21 @@ body{font-size:15px;background:
 .idv-state-icon--warning{border-color:rgba(201,112,91,.42);color:#E1A08F}
 .verify-waiting-core{color:var(--gold-bright);font-size:0}
 
+/* ===== 2026/9/13 LINE連携画面 UI試作 =====
+   連携番号・遷移・確認処理は変えず、手順を読み取りやすく整理する。 */
+#app[data-screen="line_connect"] .body{padding:12px 14px 24px !important;gap:12px !important;background:#120A0C}
+.line-guide{padding:17px 16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.line-guide-title{font:700 22px/1.45 'Shippori Mincho',serif;color:var(--cream);letter-spacing:.035em}
+.line-guide-copy{margin-top:7px;color:var(--muted);font-size:12.5px;line-height:1.75}
+.line-code-card{padding:18px 16px !important;background:#181014 !important;border:1px solid rgba(212,170,99,.28);border-radius:16px !important;text-align:center}
+.line-code-label{margin-bottom:7px;color:var(--muted);font-size:11px;letter-spacing:.12em}
+.line-code-value{color:var(--gold-bright);font-size:34px;font-weight:900;line-height:1.25;letter-spacing:.18em;font-variant-numeric:tabular-nums}
+.line-steps{display:grid;gap:9px;padding:2px 2px 1px}
+.line-step{display:flex;align-items:flex-start;gap:10px;color:#D3C7BE;font-size:12.5px;line-height:1.65}
+.line-step-num{width:22px;height:22px;flex:none;display:grid;place-items:center;border-radius:50%;background:rgba(212,170,99,.12);border:1px solid rgba(212,170,99,.30);color:var(--gold-bright);font-size:10px;font-weight:900}
+#app[data-screen="line_connect"] .line-open-btn{background:#06C755;border-color:#06C755;color:#07180D;box-shadow:none}
+#app[data-screen="line_connect"] .line-check-btn{min-height:48px;border:1px solid rgba(247,240,230,.14) !important;border-radius:12px;color:var(--muted) !important;font-size:12.5px}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1659,6 +1674,12 @@ async function init(){
     if(isIdVerifyPreview()){
       S.profile={real_name:'確認用',birthdate:'2000-01-01'};
       S.screen='id_verify';
+      render();
+      return;
+    }
+    if(isLineConnectPreview()){
+      S._lineLinkCode='482731';
+      S.screen='line_connect';
       render();
       return;
     }
@@ -5196,13 +5217,20 @@ async function goLineConnect(){
 
 function lineConnectH(){
   // LINE連携は必須。完了するまで先へ進めないため戻る導線は出さない
+  var preview=isLineConnectPreview();
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← トップに戻る</button><div class="hdr-info">'+stepHeadH(4,'LINE連携','LINEと連携する')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
-    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">マッチ通知などをLINEで受け取れます。下のボタンからNomi Go公式LINEを友だち追加し、表示された番号をトークで送ってください。</div>'
-    +'<div style="text-align:center;padding:20px;background:var(--card);border-radius:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px">連携番号</div><div style="font-size:32px;font-weight:900;letter-spacing:.1em;color:var(--gold)">'+(S._lineLinkCode||'')+'</div></div>'
-    +'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>'
-    +'<div style="font-size:11px;color:var(--muted);line-height:1.6">連携が完了すると、自動で次の画面に進みます。</div>'
-    +'<button class="btn" style="background:transparent;border:1.5px solid var(--border);color:var(--cream)" onclick="checkLineLinkNow()">自動で移らなければこちらを押してください</button>'
+    +'<div class="line-guide"><div class="line-guide-title">大切なお知らせを<br>LINEで受け取る</div><div class="line-guide-copy">マッチ成立など、見逃したくない通知をアプリを閉じていても受け取れます。</div></div>'
+    +'<div class="line-code-card"><div class="line-code-label">連携番号</div><div class="line-code-value">'+(S._lineLinkCode||'')+'</div></div>'
+    +'<div class="line-steps"><div class="line-step"><span class="line-step-num">1</span><span>Nomi Go公式LINEを友だち追加</span></div><div class="line-step"><span class="line-step-num">2</span><span>トーク画面で上の連携番号を送信</span></div></div>'
+    +(preview?'<span class="btn btn-wine line-open-btn" style="display:flex;align-items:center;justify-content:center;opacity:.72">Nomi Go公式LINEを開く →</span>':'<a href="https://line.me/R/ti/p/@098dhbub" target="_blank" class="btn btn-wine line-open-btn" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Nomi Go公式LINEを開く →</a>')
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.6;text-align:center">連携が完了すると、自動で次の画面に進みます。</div>'
+    +'<button class="btn line-check-btn" style="background:transparent" '+(preview?'disabled':'onclick="checkLineLinkNow()"')+'>自動で移らなければこちらを押してください</button>'
     +'</div></div>';
+}
+
+function isLineConnectPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='line-connect';}
+  catch(e){return false;}
 }
 
 // 確認コードはサーバーが作り、サーバーが本人のメールアドレスへ送る。
