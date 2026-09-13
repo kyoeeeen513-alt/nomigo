@@ -3413,7 +3413,7 @@ function areaSelectH(){
     var overlay='<div class="area-card-tint"></div>';
     return '<div class="'+cardCls+'" '+(preview?'':'onclick="selectArea(\''+a.id+'\',this)"')+'><img src="'+a.img+'" alt="'+a.name+'" loading="lazy" decoding="async">'+overlay+badge+'<div class="area-card-label"><span class="area-card-title">'+a.name+'</span></div></div>';
   }).join('');
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px"><div class="screen-intro"><div class="screen-intro-title">今夜、飲みに行ける街は？</div><div class="screen-intro-note">現在地ではなく、合流したいエリアを選んでください。</div></div><div class="area-grid">'+cardsHtml+'</div><div class="area-availability-note"><span>現在は「新宿」「すすきの」で利用できます。</span><span>その他のエリアも順次オープン予定です。</span></div></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">エリアを選ぶ</div></div></div><div class="body" style="padding:24px"><div class="screen-intro"><div class="screen-intro-title">今夜、飲みに行ける街は？</div><div class="screen-intro-note">現在地ではなく、合流したいエリアを選んでください。</div></div><div class="area-grid">'+cardsHtml+'</div><div class="area-availability-note"><span>現在は「新宿」「すすきの」で利用できます。</span><span>その他のエリアも順次オープンし、</span><span>全国展開を予定しています。</span></div></div></div>';
 }
 
 function isAreaSelectPreview(){
