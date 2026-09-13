@@ -878,11 +878,16 @@ body{font-size:15px;background:
 /* ===== 2026/9/13 飲み会終了・評価画面 UI試作 =====
    回答項目・評価内容・保存処理は変えず、選択の流れと状態を整理する。 */
 #app[data-screen="outcome"] .body,#app[data-screen="review"] .body{background:#120A0C}
-.outcome-intro{padding:17px 16px;margin-bottom:13px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
-.outcome-intro-title{font:700 21px/1.5 'Shippori Mincho',serif;color:var(--cream);letter-spacing:.03em}
-.outcome-intro-copy{margin-top:7px;color:var(--muted);font-size:12px;line-height:1.75}
-#app[data-screen="outcome"] .outcome-choice{margin-bottom:10px;background:#211518;border:1px solid rgba(247,240,230,.11);border-radius:14px;box-shadow:none}
-#app[data-screen="outcome"] .outcome-choice:first-of-type{border-color:rgba(212,170,99,.34)}
+.outcome-intro{padding:22px 18px;margin-bottom:15px;background:radial-gradient(circle at 100% 0%,rgba(212,170,99,.12),transparent 52%),linear-gradient(145deg,#3A1A23,#28151A);border:1px solid rgba(212,170,99,.18);border-radius:16px}
+.outcome-intro-title{font:700 25px/1.5 'Shippori Mincho',serif;color:var(--cream);letter-spacing:.04em}
+.outcome-intro-copy{margin-top:8px;color:#D2C4BB;font-size:12px;line-height:1.75}
+#app[data-screen="outcome"] .outcome-choice{margin-bottom:10px;padding:15px 14px;background:#211518;border:1px solid rgba(247,240,230,.11);border-radius:14px;box-shadow:none}
+#app[data-screen="outcome"] .outcome-choice--met{background:linear-gradient(145deg,rgba(212,170,99,.13),#211518);border-color:rgba(212,170,99,.42)}
+#app[data-screen="outcome"] .outcome-choice--issue{border-color:rgba(201,112,91,.22)}
+.outcome-choice-main{display:flex;align-items:center;gap:12px}
+.outcome-choice-mark{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:9px;background:rgba(247,240,230,.055);border:1px solid rgba(247,240,230,.10);color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.04em}
+.outcome-choice--met .outcome-choice-mark{background:#D4AA63;border-color:#D4AA63;color:#160D10}
+.outcome-choice--issue .outcome-choice-mark{color:#DCA08F;border-color:rgba(201,112,91,.28);background:rgba(201,112,91,.07)}
 #app[data-screen="outcome"] .outcome-choice strong{font-size:14px}
 #app[data-screen="outcome"] .outcome-choice small{font-size:11.5px;line-height:1.6}
 #app[data-screen="review"] .review-hero{padding:31px 20px 25px;background:linear-gradient(180deg,#351A22,#28151A);border-bottom:1px solid rgba(212,170,99,.13)}
@@ -895,6 +900,7 @@ body{font-size:15px;background:
 #app[data-screen="review"] .review-tags-card .tag-chip{background:#181014;border-color:rgba(247,240,230,.12)}
 #app[data-screen="review"] .review-tags-card .tag-chip.on{background:#D4AA63;border-color:#D4AA63;color:#160D10}
 #app[data-screen="review"] .ftr .btn-wine:not(:disabled){background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="review"] .star-btn svg{filter:drop-shadow(0 3px 7px rgba(212,170,99,.16))}
 #app[data-screen="outcome"].ui-preview-static button,#app[data-screen="review"].ui-preview-static button{pointer-events:none}
 
 @media(max-width:360px){
@@ -6255,9 +6261,9 @@ function outcomeH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">飲み会の終了</div><div class="hdr-title">今回の結果を教えてください</div></div></div>'
     +'<div class="body" style="padding:22px 20px">'
     +'<div class="outcome-intro"><div class="outcome-intro-title">今夜はどうでしたか？</div><div class="outcome-intro-copy">回答は参加者ごとに記録します。あなたの回答だけで、お相手をドタキャン扱いにすることはありません。</div></div>'
-    +'<button class="choice-btn outcome-choice" onclick="go(\'review\')"><span><strong>会って飲んだ</strong><br><small style="color:var(--muted)">続けてお相手を評価します</small></span><span>→</span></button>'
-    +'<button class="choice-btn outcome-choice" onclick="submitMatchOutcome(\'no_show\')"><span><strong>相手が来なかった</strong><br><small style="color:var(--muted)">双方の回答を確認します</small></span><span>→</span></button>'
-    +'<button class="choice-btn outcome-choice" onclick="submitMatchOutcome(\'cancelled\')"><span><strong>事前にキャンセルになった</strong><br><small style="color:var(--muted)">キャンセルとして記録します</small></span><span>→</span></button>'
+    +'<button class="choice-btn outcome-choice outcome-choice--met" onclick="go(\'review\')"><span class="outcome-choice-main"><span class="outcome-choice-mark">01</span><span><strong>会って飲んだ</strong><br><small style="color:var(--muted)">続けてお相手を評価します</small></span></span><span>→</span></button>'
+    +'<button class="choice-btn outcome-choice outcome-choice--issue" onclick="submitMatchOutcome(\'no_show\')"><span class="outcome-choice-main"><span class="outcome-choice-mark">02</span><span><strong>相手が来なかった</strong><br><small style="color:var(--muted)">双方の回答を確認します</small></span></span><span>→</span></button>'
+    +'<button class="choice-btn outcome-choice" onclick="submitMatchOutcome(\'cancelled\')"><span class="outcome-choice-main"><span class="outcome-choice-mark">03</span><span><strong>事前にキャンセルになった</strong><br><small style="color:var(--muted)">キャンセルとして記録します</small></span></span><span>→</span></button>'
     +'</div></div>';
 }
 
@@ -6272,7 +6278,7 @@ function reviewH(){
   var otherIdx=checks.length-1;
   var starsHtml=[1,2,3,4,5].map(function(n){
     var gid='starGrad'+n,sid='starShadow'+n;
-    var svg='<svg width="42" height="42" viewBox="0 0 24 24"><defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFE9B0"/><stop offset="55%" stop-color="var(--gold)"/><stop offset="100%" stop-color="#A9701E"/></linearGradient><filter id="'+sid+'" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="1.4" flood-color="#000" flood-opacity="0.65"/></filter></defs><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7L2 9.2l7.1-.6z" fill="'+(n<=S.reviewStars?'url(#'+gid+')':'transparent')+'" stroke="var(--gold)" stroke-width="1.5" filter="url(#'+sid+')"/></svg>';
+    var svg='<svg width="42" height="42" viewBox="0 0 24 24"><defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFE6A3"/><stop offset="55%" stop-color="#E3B44F"/><stop offset="100%" stop-color="#B77A21"/></linearGradient><filter id="'+sid+'" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="1.4" flood-color="#000" flood-opacity="0.65"/></filter></defs><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7L2 9.2l7.1-.6z" fill="'+(n<=S.reviewStars?'url(#'+gid+')':'transparent')+'" stroke="'+(n<=S.reviewStars?'#F1CA72':'#B99453')+'" stroke-width="1.5" filter="url(#'+sid+')"/></svg>';
     return '<button class="star-btn" onclick="setReviewStars('+n+')">'+svg+'</button>';
   }).join('');
   var checksHtml=checks.map(function(c,i){return '<button class="tag-chip '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'+c+'</button>';}).join('');
