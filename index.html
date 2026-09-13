@@ -1651,6 +1651,14 @@ async function init(){
   try{
     var sc=supabase;
     DB=sc.createClient('https://dwubothomxjwfudkeepy.supabase.co','sb_publishable_vpUd5hulLV1-gI1wsAkgWA_hrB9ZOJ9');
+    // 本人確認済みの運営アカウントでも見た目だけ確認できる専用入口。
+    // 認証・DB読込より先に止めるため、プロフィールや審査状態には触れない。
+    if(isIdVerifyPreview()){
+      S.profile={real_name:'確認用',birthdate:'2000-01-01'};
+      S.screen='id_verify';
+      render();
+      return;
+    }
     DB.auth.onAuthStateChange(function(event,session){
       if(event==='PASSWORD_RECOVERY'){
         S._recovering=true;
@@ -2786,9 +2794,14 @@ function retryIdVerify(){
   go('id_verify');
 }
 
+function isIdVerifyPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='id-verify';}
+  catch(e){return false;}
+}
+
 function idVerifyH(){
   var preview=S._idPhotoPreview?'<img class="idv-preview" src="'+S._idPhotoPreview+'">':'<div class="idv-preview-empty">身分証の写真がここに表示されます</div>';
-  var ready=!!S._idPhotoFile;
+  var ready=!!S._idPhotoFile&&!isIdVerifyPreview();
   var realName=escapeHtml(S.profile&&S.profile.real_name?S.profile.real_name:'（未登録）');
   var birthdate=escapeHtml(S.profile&&S.profile.birthdate?S.profile.birthdate:'（未登録）');
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','年齢の確認')+'</div></div>'
