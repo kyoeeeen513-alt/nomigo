@@ -836,6 +836,25 @@ body{font-size:15px;background:
 #app[data-screen="matched"] .match-flow .btn-wine{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
 #app[data-screen="matched"] .ui-preview-static button,#app[data-screen="matched"].ui-preview-static button{pointer-events:none}
 
+/* ===== 2026/9/13 チャット画面 UI試作 =====
+   メッセージ送受信・定型連絡・待ち合わせ・評価導線は変えず、会話の視認性を整える。 */
+#app[data-screen="chat"]{background:#120A0C}
+#app[data-screen="chat"] .hdr{background:#160D10}
+#app[data-screen="chat"] .screen>div[style*="padding:0 14px 6px"]{padding:8px 14px 9px !important;border-bottom:1px solid rgba(247,240,230,.08);background:#1B1114}
+#app[data-screen="chat"] .screen>div[style*="padding:0 14px 6px"]>div{margin-top:0 !important}
+#app[data-screen="chat"] .screen>div[style*="padding:0 14px 6px"] div[style*="font-size:11px"]{margin-bottom:8px !important;color:var(--muted) !important;letter-spacing:.08em}
+#app[data-screen="chat"] .screen>div[style*="padding:0 14px 6px"] button{background:#211518 !important;border-color:rgba(247,240,230,.11) !important;color:#D8CCC3 !important;padding:8px 12px !important}
+#app[data-screen="chat"] .chat-msgs{padding:20px 16px;gap:15px;background:#120A0C}
+#app[data-screen="chat"] .msg-system{margin:2px auto;padding:7px 11px;background:transparent;border:0;color:#8F827A;font-size:10.5px}
+#app[data-screen="chat"] .msg-av{width:30px;height:30px;background:#2B1B20 !important;color:var(--gold-bright) !important;border:1px solid rgba(212,170,99,.22)}
+#app[data-screen="chat"] .msg-bubble{max-width:min(78vw,270px);padding:11px 14px;border-radius:17px;font-size:14px;line-height:1.65;box-shadow:none}
+#app[data-screen="chat"] .msg-row.mine .msg-bubble{background:#652432 !important;border:1px solid rgba(247,240,230,.08);border-bottom-right-radius:5px}
+#app[data-screen="chat"] .msg-row:not(.mine) .msg-bubble{background:#211518 !important;border:1px solid rgba(247,240,230,.09);border-bottom-left-radius:5px}
+#app[data-screen="chat"] .chat-input{padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:#160D10;border-top:1px solid rgba(247,240,230,.09)}
+#app[data-screen="chat"] .chat-inp{min-height:46px;background:#211518;border-color:rgba(247,240,230,.11)}
+#app[data-screen="chat"] .chat-send{width:46px;height:46px;background:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="chat"].ui-preview-static button{pointer-events:none}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1807,6 +1826,22 @@ async function init(){
       ];
       S.meetingPlan={meeting_time:new Date(Date.now()+90*60000).toISOString(),meeting_place:'新宿駅 東口付近'};
       S.screen='matched';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isChatPreview()){
+      S.user={id:'preview-me'};
+      S.profile={gender:'male'};
+      S.match={id:'preview-match'};
+      S.registration={status:'matched'};
+      S.chatMsgs=[
+        {type:'system',content:'マッチが成立しました'},
+        {user_id:'preview-partner',nickname:'みさき',profiles:{nickname:'みさき',gender:'female'},content:'はじめまして！今日はよろしくお願いします'},
+        {user_id:'preview-me',nickname:'あなた',profiles:{nickname:'あなた',gender:'male'},content:'こちらこそよろしくお願いします！'},
+        {user_id:'preview-partner',nickname:'みさき',profiles:{nickname:'みさき',gender:'female'},content:'東口の交番前で待っています'}
+      ];
+      S.screen='chat';
       document.getElementById('app').classList.add('ui-preview-static');
       render();
       return;
@@ -6136,9 +6171,15 @@ function isMatchedPreview(){
 }
 
 function chatH(){
+  var preview=isChatPreview();
   var msgsHtml=S.chatMsgs.map(function(msg){if(msg.type==='system')return '<div class="msg-system">'+escapeHtml(msg.content)+'</div>';var isMe=msg.user_id===S.user.id;var gn=msg.profiles?msg.profiles.gender:'';var nick=escapeHtml(msg.nickname||(msg.profiles?msg.profiles.nickname:'?'));return '<div class="msg-row '+(isMe?'mine':'')+'">'+(!isMe?'<div class="msg-av" style="background:'+(gn==='male'?'rgba(50,80,160,.4)':'rgba(160,50,100,.4)')+';color:'+(gn==='male'?'#8AAAE0':'#E08AB0')+'">'+nick[0]+'</div>':'')+'<div>'+(!isMe?'<div style="font-size:10px;color:var(--muted);margin-bottom:3px">'+nick+'</div>':'')+'<div class="msg-bubble" style="background:'+(isMe?'var(--wine)':'var(--card)')+';color:'+(isMe?'#fff':'var(--cream)')+'">'+escapeHtml(msg.content)+'</div></div></div>';}).join('');
   var reportBanner=S._hasReported?'<div style="padding:8px 16px;background:rgba(204,64,64,.1);border-bottom:1px solid rgba(204,64,64,.2);font-size:11px;color:var(--red);text-align:center">通報済み：運営が内容を確認中です</div>':'';
-  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div>'+finishHeaderActionH()+'</div>'+reportBanner+finishReminderBanner()+'<div style="padding:0 14px 6px">'+quickMeetingActionsH()+'</div><div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." onkeydown="if(event.key===\'Enter\')sendMsg()"><button class="chat-send" aria-label="送信" onclick="sendMsg()">↑</button></div></div></div>';
+  return '<div class="screen" style="overflow:hidden"><div class="hdr"><button class="hdr-back" onclick="go(\'matched\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">チャット</div><div class="hdr-title">待ち合わせを相談</div></div>'+finishHeaderActionH()+'</div>'+reportBanner+finishReminderBanner()+'<div style="padding:0 14px 6px">'+quickMeetingActionsH()+'</div><div class="chat-wrap"><div class="chat-msgs" id="chatmsgs">'+msgsHtml+'</div><div class="chat-input"><input class="chat-inp" id="cinput" type="text" placeholder="メッセージを送る..." '+(preview?'readonly':'onkeydown="if(event.key===\'Enter\')sendMsg()"')+'><button class="chat-send" aria-label="送信" '+(preview?'disabled':'onclick="sendMsg()"')+'>↑</button></div></div></div>';
+}
+
+function isChatPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='chat';}
+  catch(e){return false;}
 }
 
 function outcomeH(){
