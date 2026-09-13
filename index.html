@@ -793,6 +793,25 @@ body{font-size:15px;background:
 #app[data-screen="mode_select"] .mode-card-sub{margin-top:5px;color:#D2C5BC;font-size:12px}
 .mode-match-note{padding:2px 3px 0;color:var(--muted);font-size:12px;line-height:1.7}
 
+/* ===== 2026/9/13 募集中画面 UI試作 =====
+   募集状態・残り時間・条件・キャンセル処理は変えず、状態表示を整理する。 */
+#app[data-screen="waiting"] .body{background:#120A0C}
+#app[data-screen="waiting"] .wait-hero{padding:34px 18px 30px;background:#1B1114;border-bottom:1px solid rgba(247,240,230,.08)}
+#app[data-screen="waiting"] .wait-pill{padding:7px 11px;background:rgba(123,224,144,.08);border:1px solid rgba(123,224,144,.28);color:#9BE7AA;box-shadow:none}
+#app[data-screen="waiting"] .wait-dot{background:#76D98A;box-shadow:0 0 10px rgba(118,217,138,.55)}
+#app[data-screen="waiting"] .wait-hero-title{margin:17px 0 8px;font-size:28px;line-height:1.42}
+#app[data-screen="waiting"] .wait-info{margin:14px 14px 0;padding:4px 16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+#app[data-screen="waiting"] .wait-row{padding:14px 0;gap:11px}
+#app[data-screen="waiting"] .wait-ico{width:10px;height:10px;flex:none;margin-top:6px;border-radius:50%;background:#D4AA63;box-shadow:0 0 0 4px rgba(212,170,99,.09);font-size:0}
+#app[data-screen="waiting"] .wait-t{font-size:14px}
+#app[data-screen="waiting"] .wait-s{font-size:12px;line-height:1.7}
+#app[data-screen="waiting"] .cond-wrap{margin:12px 14px 0;padding:15px 16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+#app[data-screen="waiting"] .cond-label{margin-bottom:10px;color:var(--muted)}
+#app[data-screen="waiting"] .cond-chip{background:#181014;border-color:rgba(247,240,230,.12);color:#DED2C9}
+.wait-cancel-wrap{padding:8px 20px 28px;text-align:center}
+.wait-cancel-btn{padding:12px;background:transparent;border:0;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:700;text-decoration:underline;cursor:pointer}
+.wait-cancel-note{margin-top:2px;color:var(--lgray);font-size:11.5px;line-height:1.7}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1493,14 +1512,14 @@ function waitRowH(icon,title,sub){
 function poolLineH(){
   if(S._poolWaiting==null)return '';
   if(S._poolWaiting>0&&S._poolNew===0){
-    return waitRowH('🌙','新しいお相手はいません',
+    return waitRowH('','募集を公開しています',
       nb('一度お会いした方とは、')+nb('重ねてマッチしない仕組みです。'));
   }
   if(S._poolWaiting===0){
-    return waitRowH('🌙','まだ相手がいません',
-      nb('見つかり次第、')+nb('すぐにお知らせします。'));
+    return waitRowH('','募集を公開しています',
+      nb('条件の合う方が参加すると、')+nb('すぐにお知らせします。'));
   }
-  return waitRowH('🍷','条件の合う方が<span class="wait-num">'+S._poolNew+'人</span>います',
+  return waitRowH('','条件の合う方が<span class="wait-num">'+S._poolNew+'人</span>います',
     nb('まもなく成立する見込みです。'));
 }
 
@@ -1740,6 +1759,16 @@ async function init(){
     }
     if(isModeSelectPreview()){
       S.screen='mode_select';
+      render();
+      return;
+    }
+    if(isWaitingPreview()){
+      S.profile={line_user_id:'preview'};
+      S.registration={expires_at:new Date(Date.now()+47*60000).toISOString()};
+      S.form={area:'shinjuku',slot:'20:00',drink_style:'ゆっくり飲みたい',mode:'1v1'};
+      S._poolWaiting=3;
+      S._poolNew=2;
+      S.screen='waiting';
       render();
       return;
     }
@@ -5754,6 +5783,7 @@ function recruitH(){
 }
 
 function waitH(){
+  var preview=isWaitingPreview();
   var lineConnected=!!(S.profile&&S.profile.line_user_id);
   var showLineCta=!!S._waitShowLineCta&&!lineConnected;
   var rm=remainMinutes();
@@ -5761,7 +5791,7 @@ function waitH(){
 
   var rows='';
   if(lineConnected){
-    rows+=waitRowH('🔔','アプリは閉じて大丈夫です',nb('マッチしたら、')+nb('LINEでお知らせします。'));
+    rows+=waitRowH('','アプリは閉じて大丈夫です',nb('マッチしたら、')+nb('LINEでお知らせします。'));
   }
   rows+=poolLineH();
   var rowsHtml=(!expired&&rows)?'<div class="wait-info">'+rows+'</div>':'';
@@ -5804,11 +5834,16 @@ function waitH(){
       :rowsHtml+lineCtaHtml)
     +chipsHtml
     +(expired?''
-      :'<div style="padding:6px 20px 28px;text-align:center">'
-        +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;font-weight:700;text-decoration:underline;cursor:pointer;padding:12px" onclick="cancelReg()">募集をキャンセルする</button>'
-        +'<div style="font-size:11.5px;color:var(--lgray);line-height:1.7;margin-top:2px">'+nb('マッチが成立する前のキャンセルは')+nb('無料です。')+'</div>'
+      :'<div class="wait-cancel-wrap">'
+        +(preview?'<span class="wait-cancel-btn">募集をキャンセルする</span>':'<button class="wait-cancel-btn" onclick="cancelReg()">募集をキャンセルする</button>')
+        +'<div class="wait-cancel-note">'+nb('マッチが成立する前のキャンセルは')+nb('無料です。')+'</div>'
       +'</div>')
     +'</div></div>';
+}
+
+function isWaitingPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='waiting';}
+  catch(e){return false;}
 }
 
 async function goSplashFromMatched(){
