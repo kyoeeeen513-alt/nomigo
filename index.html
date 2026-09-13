@@ -758,6 +758,7 @@ body{font-size:15px;background:
 .drink-profile-intro{padding:12px 18px 3px}
 .drink-profile-intro-title{font:700 22px/1.45 'Shippori Mincho',serif;color:var(--cream);letter-spacing:.035em}
 .drink-profile-intro-copy{margin-top:5px;color:var(--muted);font-size:12.5px;line-height:1.7}
+.drink-profile-intro-copy span{display:block;white-space:nowrap}
 .drink-profile-section{margin:12px 14px 0;padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
 .drink-profile-section>.sec-label{padding:0 0 12px;color:var(--cream);font-size:14px;letter-spacing:.025em;font-weight:800}
 .drink-profile-section>.sec-label::after{display:none}
@@ -5557,7 +5558,7 @@ function drinkProfileSetupH(){
   var errorH=S.error?'<div class="err-msg" style="margin:12px 20px">'+escapeHtml(S.error)+'</div>':'';
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">初回のみ</div><div class="hdr-title">募集用プロフィール</div></div></div>'
     +'<div class="body" style="padding:0 0 20px">'
-    +'<div class="drink-profile-intro"><div class="drink-profile-intro-title">募集前に、3つだけ</div><div class="drink-profile-intro-copy">募集相手に伝える情報です。次回からは入力不要で、マイページから変更できます。</div></div>'
+    +'<div class="drink-profile-intro"><div class="drink-profile-intro-title">募集前に、3つだけ</div><div class="drink-profile-intro-copy"><span>募集相手に伝える情報です。</span><span>次回からは入力不要です。</span><span>マイページから変更できます。</span></div></div>'
     +'<div class="drink-profile-section"><div class="sec-label">職業'+required+'</div>'+jobSectionH('drink_profile_setup').replace('<div class="sec-label">職業</div>','')+'</div>'
     +'<div class="drink-profile-section"><div class="sec-label">タバコ'+required+'</div><div style="display:flex;gap:10px;padding:0 20px 4px"><button type="button" class="sel-btn '+(p.smoke==='yes'?'on':'')+'" onclick="S.pf.smoke=\'yes\';re(\'drink_profile_setup\')">吸う</button><button type="button" class="sel-btn '+(p.smoke==='no'?'on':'')+'" onclick="S.pf.smoke=\'no\';re(\'drink_profile_setup\')">吸わない</button></div></div>'
     +'<div class="drink-profile-section"><div class="sec-label">お酒の強さ'+required+'</div><div class="range-row">'+ALCOHOL_LEVELS.map(function(a,i){return '<button type="button" class="range-btn '+(p.alcohol===i?'on':'')+'" onclick="S.pf.alcohol='+i+';re(\'drink_profile_setup\')">'+a+'</button>';}).join('')+'</div></div>'
