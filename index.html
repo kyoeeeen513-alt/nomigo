@@ -951,6 +951,27 @@ body{font-size:15px;background:
 #app[data-screen="inquiry"] .ftr .btn-wine{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
 #app[data-screen="faqbot"].ui-preview-static button,#app[data-screen="faqbot"].ui-preview-static input,#app[data-screen="inquiry"].ui-preview-static button,#app[data-screen="inquiry"].ui-preview-static input,#app[data-screen="inquiry"].ui-preview-static textarea{pointer-events:none}
 
+/* ===== 2026/9/13 候補選択画面 UI試作 =====
+   候補情報・制限時間・成立処理は変えず、2人を比較しやすく整理する。 */
+#app[data-screen="choose"] .body{padding:12px 14px 24px !important;background:#120A0C}
+.choice-timer{min-width:58px;padding:6px 11px;border:1px solid rgba(212,170,99,.34);border-radius:999px;background:rgba(212,170,99,.08);color:var(--gold-bright);font-size:12px;font-weight:900;text-align:center;font-variant-numeric:tabular-nums}
+.choice-intro{padding:14px 15px;margin-bottom:12px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:14px;color:var(--muted);font-size:12px;line-height:1.75}
+.choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.choice-card{min-width:0;display:flex;flex-direction:column;overflow:hidden;background:#211518;border:1px solid rgba(247,240,230,.11);border-radius:16px}
+.choice-photo{width:100%;aspect-ratio:1;display:block;object-fit:cover;background:#181014}
+.choice-photo-empty{width:100%;aspect-ratio:1;display:grid;place-items:center;background:#181014;color:#74676A}
+.choice-photo-empty svg{width:46%;height:46%;display:block}
+.choice-profile{flex:1;padding:12px 11px 9px}
+.choice-name{color:var(--cream);font-size:16px;font-weight:900}
+.choice-info{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.55}
+.choice-sub{margin-top:5px;color:#B8AAA2;font-size:10.5px;line-height:1.6}
+.choice-purpose{margin-top:6px;color:var(--gold-bright);font-size:11px;font-weight:800}
+.choice-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.choice-tags span{padding:3px 6px;border:1px solid rgba(247,240,230,.10);border-radius:6px;background:#181014;color:#CFC1B8;font-size:10px}
+.choice-action{padding:0 10px 11px}
+.choice-action .btn{min-height:46px;padding:11px 5px !important;background:#D4AA63;border-color:#D4AA63;color:#160D10;font-size:12.5px !important;box-shadow:none}
+#app[data-screen="choose"].ui-preview-static button{pointer-events:none}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1985,6 +2006,16 @@ async function init(){
     }
     if(isInquiryPreview()){
       S.screen='inquiry';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isChoosePreview()){
+      S._choice={deadline:Date.now()+90000,submitting:false,cands:[
+        {purpose:'fun',profileData:{nickname:'さき',age:27,job:'会社員',smoke:'no',alcohol:2,tags:['話しやすい','ご飯も好き']}},
+        {purpose:'chill',profileData:{nickname:'あや',age:29,job:'美容・理容',smoke:'no',alcohol:1,tags:['聞き上手','お酒はほどほど']}}
+      ]};
+      S.screen='choose';
       document.getElementById('app').classList.add('ui-preview-static');
       render();
       return;
@@ -4631,37 +4662,44 @@ async function submitChoice(idx,isAuto){
 function choiceCardH(c,idx){
   var pr=c.profileData||{};
   var photo=pr.photo_url
-    ?'<img src="'+pr.photo_url+'" style="width:100%;aspect-ratio:1;object-fit:cover;display:block">'
-    :'<div style="width:100%;aspect-ratio:1;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:44px;color:var(--muted)">👤</div>';
-  var tags=(pr.tags||[]).slice(0,3).map(function(t){return '<span style="font-size:10.5px;color:var(--gold-bright);background:var(--gold-bg);border:1px solid rgba(201,160,99,.4);border-radius:6px;padding:2px 7px">'+escapeHtml(t)+'</span>';}).join('');
+    ?'<img class="choice-photo" src="'+pr.photo_url+'">'
+    :'<div class="choice-photo-empty">'+PROFILE_PLACEHOLDER_SVG+'</div>';
+  var tags=(pr.tags||[]).slice(0,3).map(function(t){return '<span>'+escapeHtml(t)+'</span>';}).join('');
   var info=[];
   if(pr.age)info.push(pr.age+'歳');
   if(pr.job)info.push(pr.job);
   var sub=[];
-  if(pr.smoke==='no')sub.push('🚭 非喫煙');
-  if(pr.smoke==='yes')sub.push('🚬 喫煙');
-  if(pr.alcohol!=null)sub.push('🍺 '+ALCOHOL_LEVELS[pr.alcohol]);
-  var purpose=c.purpose?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px">'+purposeLabel(c.purpose)+'</div>':'';
-  return '<div style="flex:1;min-width:0;border:1.5px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface)">'
+  if(pr.smoke==='no')sub.push('非喫煙');
+  if(pr.smoke==='yes')sub.push('喫煙する');
+  if(pr.alcohol!=null)sub.push('お酒：'+ALCOHOL_LEVELS[pr.alcohol]);
+  var purposeData=PURPOSES.find(function(p){return p.id===c.purpose;});
+  var purpose=purposeData?'<div class="choice-purpose">'+escapeHtml(purposeData.label)+'</div>':'';
+  return '<div class="choice-card">'
     +photo
-    +'<div style="padding:12px 12px 8px"><div style="font-size:15px;font-weight:800;color:var(--cream)">'+escapeHtml(pr.nickname||'?')+'</div>'
-    +'<div style="font-size:11.5px;color:var(--muted);margin-top:2px">'+info.join('・')+'</div>'
-    +(sub.length?'<div style="font-size:10.5px;color:var(--muted);margin-top:3px">'+sub.join('　')+'</div>':'')
+    +'<div class="choice-profile"><div class="choice-name">'+escapeHtml(pr.nickname||'?')+'</div>'
+    +'<div class="choice-info">'+info.join('・')+'</div>'
+    +(sub.length?'<div class="choice-sub">'+sub.join('<br>')+'</div>':'')
     +purpose
-    +(tags?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+tags+'</div>':'')
+    +(tags?'<div class="choice-tags">'+tags+'</div>':'')
     +'</div>'
-    +'<div style="padding:0 12px 12px"><button class="btn btn-wine" style="padding:12px;font-size:14px" onclick="submitChoice('+idx+',false)">この人と飲む</button></div>'
+    +'<div class="choice-action"><button class="btn btn-wine" onclick="submitChoice('+idx+',false)">この人と飲む</button></div>'
     +'</div>';
 }
 
 function chooseH(){
   if(!S._choice)return loadingH();
+  var preview=isChoosePreview();
   var cards=S._choice.cands.map(function(c,i){return choiceCardH(c,i);}).join('');
-  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">マッチ候補が見つかりました</div><div class="hdr-title">今夜はどちらと？</div></div><div style="font-size:13px;font-weight:900;color:var(--gold);border:1.5px solid rgba(201,160,99,.45);border-radius:20px;padding:5px 12px" id="choice-timer"></div></div>'
+  return '<div class="screen"><div class="hdr"><div class="hdr-info"><div class="hdr-step">マッチ候補が見つかりました</div><div class="hdr-title">今夜はどちらと？</div></div><div class="choice-timer" id="choice-timer">'+(preview?'90秒':'')+'</div></div>'
     +'<div class="body" style="padding:20px">'
-    +'<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">条件の合う方が2人見つかりました。どちらか一方を選んでください。時間内に選ばない場合は、条件がより近い方と自動で成立します。</div>'
-    +'<div style="display:flex;gap:12px">'+cards+'</div>'
+    +'<div class="choice-intro">'+nb('条件の合う方が2人見つかりました。')+nb('どちらか一方を選んでください。')+'<br>'+nb('時間内に選ばない場合は、')+nb('条件がより近い方と自動で成立します。')+'</div>'
+    +'<div class="choice-grid">'+cards+'</div>'
     +'</div></div>';
+}
+
+function isChoosePreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='choose';}
+  catch(e){return false;}
 }
 
 // LINE通知の共通の窓口。送り先と文面はサーバー側が決めるため、ここでは渡さない
