@@ -719,7 +719,7 @@ body{font-size:15px;background:
 .idv-info-card{padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
 .idv-info-title{margin-bottom:10px;color:var(--cream);font-size:19px;line-height:1.45;font-weight:900;letter-spacing:.015em}
 .idv-info-copy{color:#D3C7BE;font-size:12.5px;line-height:1.75}
-.idv-nowrap{white-space:nowrap}
+.idv-copy-line{display:block;white-space:nowrap}
 .idv-profile-check{margin-top:12px;padding-top:12px;border-top:1px solid rgba(247,240,230,.09);color:var(--muted);font-size:12px;line-height:1.7}
 .idv-details{margin-top:12px;padding-top:12px;border-top:1px solid rgba(247,240,230,.09)}
 .idv-details summary{color:var(--gold-bright);font-size:12px;font-weight:800;cursor:pointer}
@@ -2809,7 +2809,7 @@ function idVerifyH(){
     +'<div class="body" style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
       +'<div class="idv-info-card">'
         +'<div class="idv-info-title">身分証1枚で確認できます</div>'
-        +'<div class="idv-info-copy">運転免許証・マイナンバーカード・パスポートなど、<b>顔写真付きで、<span class="idv-nowrap">生年月日が確認できる</span>有効な身分証</b>をご提出ください。</div>'
+        +'<div class="idv-info-copy"><span class="idv-copy-line">運転免許証・マイナンバーカード・</span><span class="idv-copy-line">パスポートなど、顔写真付きで、</span><b><span class="idv-copy-line">生年月日が確認できる有効な身分証を</span><span class="idv-copy-line">ご提出ください。</span></b></div>'
         +'<div class="idv-profile-check">登録内容：<b style="color:var(--cream)">'+realName+'／'+birthdate+'</b><br>身分証の記載と一致していることをご確認ください。</div>'
         +'<details class="idv-details">'
           +'<summary>写真の取り扱い・注意事項を見る</summary>'
