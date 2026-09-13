@@ -903,6 +903,32 @@ body{font-size:15px;background:
 #app[data-screen="review"] .star-btn svg{filter:drop-shadow(0 3px 7px rgba(212,170,99,.16))}
 #app[data-screen="outcome"].ui-preview-static button,#app[data-screen="review"].ui-preview-static button{pointer-events:none}
 
+/* ===== 2026/9/13 ログイン・メール確認画面 UI試作 =====
+   入力項目・認証・再送処理は変えず、初回画面の情報階層を整理する。 */
+#app[data-screen="email"] .body,#app[data-screen="email_verify"] .body{background:#120A0C}
+#app[data-screen="email"] .body{padding:10px 14px 24px !important;gap:12px !important}
+#app[data-screen="email"] .body::before{margin:11px 0 1px;font-size:30px}
+.auth-lead{text-align:center;margin-bottom:7px;color:var(--muted);font-size:12.5px;line-height:1.7}
+.auth-tabs{display:flex;padding:3px;background:#181014;border:1px solid rgba(247,240,230,.10);border-radius:13px;overflow:hidden}
+#app[data-screen="email"] .auth-tabs .tab-btn{min-height:43px;border-radius:10px}
+#app[data-screen="email"] .auth-tabs .tab-btn[style*="var(--wine)"]{background:#D4AA63 !important;color:#160D10 !important;box-shadow:none}
+.auth-form-card{display:grid;gap:12px;padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.auth-field{display:grid;gap:7px}
+.auth-field-label{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.06em}
+#app[data-screen="email"] .inp{background:#181014;border-color:rgba(247,240,230,.12)}
+#app[data-screen="email"] .ftr .btn-wine{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="email_verify"] .body{padding:12px 14px 24px !important;gap:12px !important}
+.email-verify-intro{padding:17px 16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.email-verify-title{font:700 21px/1.5 'Shippori Mincho',serif;color:var(--cream);letter-spacing:.03em}
+.email-verify-copy{margin-top:7px;color:var(--muted);font-size:12.5px;line-height:1.75}
+.email-delivery-note{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;background:#181014;border:1px solid rgba(247,240,230,.10);border-radius:13px}
+.email-delivery-mark{width:9px;height:9px;flex:none;margin-top:5px;border-radius:50%;background:#D4AA63;box-shadow:0 0 0 4px rgba(212,170,99,.09)}
+.email-code-card{padding:15px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.email-code-label{margin-bottom:8px;color:var(--muted);font-size:11px;letter-spacing:.08em}
+#app[data-screen="email_verify"] #everify-inp{background:#181014;border-color:rgba(247,240,230,.13);font-size:25px}
+#app[data-screen="email_verify"] #everify-btn{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="email"].ui-preview-static button,#app[data-screen="email"].ui-preview-static input,#app[data-screen="email_verify"].ui-preview-static button,#app[data-screen="email_verify"].ui-preview-static input{pointer-events:none}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1910,6 +1936,20 @@ async function init(){
       S.reviewStars=4;
       S.reviewChecks=[true,true,false,true,false,false,false,false,false];
       S.screen='review';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isAuthPreview()){
+      S.authTab='register';
+      S.screen='email';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isEmailVerifyPreview()){
+      S.user={email:'sample@nomi-go.jp'};
+      S.screen='email_verify';
       document.getElementById('app').classList.add('ui-preview-static');
       render();
       return;
@@ -5319,13 +5359,18 @@ function emailH(){
   // ※コピー＆ペーストや思い込みによる間違いは防げないため、
   //   メール確認画面に脱出口（アドレスを間違えた場合はこちら）を併設している。
   var emailConfirmField=isReg
-    ? '<input class="inp" id="einp2" type="email" placeholder="メールアドレス（確認のため再入力）" oninput="checkEmailMatch()">'
+    ? '<label class="auth-field"><span class="auth-field-label">メールアドレス（確認）</span><input class="inp" id="einp2" type="email" placeholder="もう一度入力してください" oninput="checkEmailMatch()"></label>'
       +'<div id="email-match-msg" style="font-size:12px;line-height:1.6;margin-top:-6px"></div>'
     : '';
   var lineReturnNotice=S._lineReturnNotice
     ? '<div style="padding:13px 14px;border:1px solid rgba(205,167,101,.35);border-radius:10px;background:rgba(205,167,101,.10);font-size:12.5px;color:var(--cream);line-height:1.7">LINE連携は完了しています。登録したメールアドレスでログインすると、本人確認へ進みます。</div>'
     : '';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">新規登録 / ログイン</div></div></div><div class="body" style="padding:24px;gap:14px;display:flex;flex-direction:column"><div style="display:flex;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border2)"><button class="tab-btn" style="background:'+(isReg?'var(--wine)':'transparent')+';color:'+(isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'register\';re(\'email\')">新規登録</button><button class="tab-btn" style="background:'+(!isReg?'var(--wine)':'transparent')+';color:'+(!isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'login\';re(\'email\')">ログイン</button></div>'+lineReturnNotice+'<input class="inp" id="einp" type="email" placeholder="メールアドレス" '+(isReg?'oninput="checkEmailMatch()"':'')+'>'+emailConfirmField+'<input class="inp" id="pinp" type="password" placeholder="パスワード（6文字以上）">'+forgotLink+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'</div><div class="ftr"><button class="btn btn-wine" onclick="'+(isReg?'doSignUp':'doSignIn')+'()">'+(isReg?'登録して始める →':'ログイン →')+'</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">新規登録 / ログイン</div></div></div><div class="body" style="padding:24px;gap:14px;display:flex;flex-direction:column"><div class="auth-lead">今夜、一緒に飲める相手を探す</div><div class="auth-tabs"><button class="tab-btn" style="background:'+(isReg?'var(--wine)':'transparent')+';color:'+(isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'register\';re(\'email\')">新規登録</button><button class="tab-btn" style="background:'+(!isReg?'var(--wine)':'transparent')+';color:'+(!isReg?'#fff':'var(--muted)')+'" onclick="S.authTab=\'login\';re(\'email\')">ログイン</button></div>'+lineReturnNotice+'<div class="auth-form-card"><label class="auth-field"><span class="auth-field-label">メールアドレス</span><input class="inp" id="einp" type="email" placeholder="sample@mail.com" '+(isReg?'oninput="checkEmailMatch()"':'')+'></label>'+emailConfirmField+'<label class="auth-field"><span class="auth-field-label">パスワード</span><input class="inp" id="pinp" type="password" placeholder="6文字以上"></label>'+forgotLink+(S.error?'<div class="err-msg">'+S.error+'</div>':'')+'</div></div><div class="ftr"><button class="btn btn-wine" onclick="'+(isReg?'doSignUp':'doSignIn')+'()">'+(isReg?'登録して始める →':'ログイン →')+'</button></div></div>';
+}
+
+function isAuthPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='auth';}
+  catch(e){return false;}
 }
 
 function forgotPasswordH(){
@@ -5555,7 +5600,7 @@ async function submitEmailVerify(){
 
 function emailVerifyH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(1,'メールの確認','届いた番号を入力')+'</div></div><div class="body" style="padding:24px;display:flex;flex-direction:column;gap:16px">'
-    +'<div style="font-size:14px;color:var(--cream);line-height:1.7">'+(S.user?S.user.email:'')+' 宛に確認コードを送りました。届いた6桁の番号を入力してください。</div>'
+    +'<div class="email-verify-intro"><div class="email-verify-title">6桁の番号を入力</div><div class="email-verify-copy"><b style="color:var(--cream)">'+(S.user?S.user.email:'')+'</b><br>このメールアドレスに確認コードを送りました。</div></div>'
     // 【待たせる案内 8/17】
     //  8/17、運営がiCloudのアドレスで登録した際、メールの到着まで数分かかり
     //  「届かない」と判断される事象が発生した。実際には遅れて届いていた。
@@ -5563,15 +5608,15 @@ function emailVerifyH(){
     //  利用者は「壊れている」と受け取って離脱する。
     //  iCloudやキャリアメールでは配送に数分を要することがあるため、
     //  「待てばよい」と分かる形で先に伝える。
-    +'<div style="display:flex;align-items:flex-start;gap:8px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:10px;padding:12px">'
-      +'<div style="font-size:15px;line-height:1.3;flex-shrink:0">📩</div>'
+    +'<div class="email-delivery-note">'
+      +'<span class="email-delivery-mark"></span>'
       +'<div style="font-size:12px;color:var(--lgray);line-height:1.7">'
         +nb('メールが届くまで')+nb('数分かかることがあります。')
         +'<br>'
         +nb('しばらく経っても')+nb('届かない場合は、')+nb('迷惑メールフォルダを')+nb('ご確認ください。')
       +'</div>'
     +'</div>'
-    +'<input class="inp" id="everify-inp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="例：123456" maxlength="6" oninput="digitsOnly(this)">'
+    +'<div class="email-code-card"><div class="email-code-label">確認コード</div><input class="inp" id="everify-inp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" maxlength="6" oninput="digitsOnly(this)"></div>'
     +'<div id="everify-err" class="err-msg"></div>'
     +'<button class="btn btn-wine" id="everify-btn" onclick="submitEmailVerify()">確認する →</button>'
     +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px" onclick="confirmResendEmailCode()">コードを再送する</button>'
@@ -5582,6 +5627,11 @@ function emailVerifyH(){
     //  ここに登録画面へ戻る導線を置いている。
     +'<button style="background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:12px;text-decoration:underline;cursor:pointer;padding:4px 8px 8px" onclick="restartSignUpWithNewEmail()">メールアドレスを間違えた場合はこちら</button>'
     +'</div></div>';
+}
+
+function isEmailVerifyPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='email-verify';}
+  catch(e){return false;}
 }
 
 // 間違ったアドレスで登録してしまった人を、登録画面へ戻す。
