@@ -855,6 +855,26 @@ body{font-size:15px;background:
 #app[data-screen="chat"] .chat-send{width:46px;height:46px;background:#D4AA63;color:#160D10;box-shadow:none}
 #app[data-screen="chat"].ui-preview-static button{pointer-events:none}
 
+/* ===== 2026/9/13 決済確認画面 UI試作 =====
+   金額・同意内容・購入処理は変えず、価格と安全情報の優先順位を整理する。 */
+#app[data-screen="payconsent"] .body{padding:12px 14px 24px !important;background:#120A0C}
+.pay-summary{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding:17px 16px;margin-bottom:12px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.pay-summary-label{color:var(--muted);font-size:11px;letter-spacing:.1em}
+.pay-summary-title{margin-top:4px;color:var(--cream);font-size:15px;font-weight:800}
+.pay-summary-price{white-space:nowrap;color:var(--gold-bright);font-size:27px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums}
+.pay-summary-price small{margin-left:3px;color:var(--muted);font-size:11px;font-weight:600}
+.pay-safe-card{display:flex;align-items:flex-start;gap:11px;padding:15px 16px;margin-bottom:12px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.pay-safe-icon{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:10px;background:rgba(212,170,99,.10);color:var(--gold-bright)}
+.pay-safe-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pay-safe-title{margin-bottom:4px;color:var(--cream);font-size:14px;font-weight:900}
+.pay-safe-copy{color:var(--muted);font-size:12px;line-height:1.7}
+.pay-warning{margin:0 0 12px;padding:12px 13px;border:1px solid rgba(212,170,99,.25);border-radius:12px;background:rgba(212,170,99,.06);color:#D9C5A2;font-size:12px;line-height:1.7}
+.pay-consent-label{margin-bottom:7px;color:var(--muted);font-size:11px;letter-spacing:.04em}
+#app[data-screen="payconsent"] #payconsent-scroll{max-height:180px !important;padding:15px !important;margin-bottom:12px !important;background:#181014 !important;border:1px solid rgba(247,240,230,.10) !important;border-radius:13px !important}
+.pay-check-card{display:flex;align-items:flex-start;gap:11px;padding:14px;margin-bottom:6px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:13px;cursor:pointer}
+#app[data-screen="payconsent"] #payconsent-btn:not(:disabled){background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="payconsent"].ui-preview-static button,#app[data-screen="payconsent"].ui-preview-static label,#app[data-screen="payconsent"].ui-preview-static input{pointer-events:none}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1842,6 +1862,12 @@ async function init(){
         {user_id:'preview-partner',nickname:'みさき',profiles:{nickname:'みさき',gender:'female'},content:'東口の交番前で待っています'}
       ];
       S.screen='chat';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isPayConsentPreview()){
+      S.screen='payconsent';
       document.getElementById('app').classList.add('ui-preview-static');
       render();
       return;
@@ -3888,18 +3914,20 @@ function payConsentH(){
   +'<div class="head"><button class="back" onclick="go(\'splash\')">←</button><div class="head-title">お支払いの前に</div></div>'
   +'<div class="body" style="padding:20px">'
 
+  +'<div class="pay-summary"><div><div class="pay-summary-label">NOMI GO TICKET</div><div class="pay-summary-title">チケット 1枚</div></div><div class="pay-summary-price">3,980円<small>税込</small></div></div>'
+
   // 安全のための手続きであることを最初に示す
-  +'<div style="display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:14px">'
-    +'<div style="font-size:18px;line-height:1.2;flex-shrink:0">🔒</div>'
+  +'<div class="pay-safe-card">'
+    +'<div class="pay-safe-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg></div>'
     +'<div>'
-      +'<div style="font-size:14px;font-weight:900;color:var(--cream);margin-bottom:4px">カード情報はお預かりしません</div>'
-      +'<div style="font-size:12px;color:var(--lgray);line-height:1.65">'+nb('安全のため、')+nb('カード番号の入力は')+nb('専門の決済会社の')+nb('画面で行います。')+nb('Nomi Go が')+nb('カード情報を')+nb('受け取ることは')+nb('ありません。')+'</div>'
+      +'<div class="pay-safe-title">カード情報はお預かりしません</div>'
+      +'<div class="pay-safe-copy">'+nb('安全のため、')+nb('カード番号の入力は')+nb('専門の決済会社の')+nb('画面で行います。')+nb('Nomi Go が')+nb('カード情報を')+nb('受け取ることは')+nb('ありません。')+'</div>'
     +'</div>'
   +'</div>'
 
-  +'<div style="font-size:12px;color:var(--gold);line-height:1.7;margin:-2px 0 14px;padding:11px 12px;border:1px solid rgba(201,160,99,.35);border-radius:10px">決済画面を途中で閉じた場合、購入は完了せず、チケットも付与されません。必ず決済完了の表示までお進みください。</div>'
+  +'<div class="pay-warning">決済画面を途中で閉じた場合、購入は完了せず、チケットも付与されません。必ず決済完了の表示までお進みください。</div>'
 
-  +'<div style="font-size:12px;color:var(--muted);margin-bottom:6px">個人情報の提供について（下にスクロールできます）</div>'
+  +'<div class="pay-consent-label">個人情報の提供について（下にスクロールできます）</div>'
 
   // 同意事項。内容は削らず、枠内スクロールで表示する
   +'<div id="payconsent-scroll" style="background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:12px;line-height:1.75;margin-bottom:14px;max-height:168px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
@@ -3916,7 +3944,7 @@ function payConsentH(){
     +'<div style="text-align:center;padding-top:2px"><span style="font-size:12px;color:var(--muted);text-decoration:underline;cursor:pointer" onclick="S._legalBackTo=\'payconsent\';go(\'privacy\')">プライバシーポリシーを読む</span></div>'
   +'</div>'
 
-  +'<label style="display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,.22);border:1px solid var(--border2);border-radius:10px;padding:13px;margin-bottom:6px;cursor:pointer">'
+  +'<label class="pay-check-card">'
     +'<input type="checkbox" id="payconsent-check" onchange="updatePayConsentBtn()" style="width:18px;height:18px;margin-top:1px;flex-shrink:0">'
     +'<span style="font-size:13px;line-height:1.6;color:var(--cream)">'+nb('上記の内容を確認し、')+nb('決済代行事業者への')+nb('個人情報の提供に')+nb('同意します')+'</span>'
   +'</label>'
@@ -3924,6 +3952,11 @@ function payConsentH(){
   +'<button class="btn btn-wine" id="payconsent-btn" disabled style="opacity:.45;margin-top:10px" onclick="proceedPayConsent()">同意して決済へ進む（3,980円）→</button>'
   +'<button class="btn" style="margin-top:8px;background:transparent;border:1px solid var(--border2);color:var(--lgray)" onclick="go(\'splash\')">やめる</button>'
   +'</div></div>';
+}
+
+function isPayConsentPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='pay-consent';}
+  catch(e){return false;}
 }
 
 // 画面を開いたとき、同意事項の枠が途中から表示されることがあるため、
