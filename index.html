@@ -717,10 +717,9 @@ body{font-size:15px;background:
    提出内容・注意事項・審査処理は変えず、情報のまとまりと操作の見た目だけを調整する。 */
 #app[data-screen="id_verify"] .body{padding:10px 14px 24px !important;gap:12px !important;background:#120A0C}
 .idv-info-card{padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
-.idv-info-kicker{display:flex;align-items:center;gap:7px;margin-bottom:8px;color:#8FCBFF;font-size:10.5px;font-weight:800;letter-spacing:.12em}
-.idv-blue-lamp{width:7px;height:7px;flex:none;border-radius:50%;background:#58B6FF;box-shadow:0 0 0 4px rgba(88,182,255,.10),0 0 13px rgba(88,182,255,.72)}
-.idv-info-title{margin-bottom:12px;color:var(--cream);font-size:19px;line-height:1.45;font-weight:900;letter-spacing:.015em}
-.idv-info-title strong{color:#A9D8FF;font-size:23px;letter-spacing:.025em}
+.idv-info-title{margin-bottom:4px;color:var(--cream);font:700 23px/1.45 'Shippori Mincho',serif;letter-spacing:.035em}
+.idv-info-title strong{color:var(--gold-bright);font-size:28px;font-weight:800}
+.idv-info-sub{margin-bottom:13px;color:var(--muted);font-size:11.5px;letter-spacing:.035em}
 .idv-info-copy{color:#D3C7BE;font-size:12.5px;line-height:1.75}
 .idv-copy-line{display:block;white-space:nowrap}
 .idv-profile-check{margin-top:12px;padding-top:12px;border-top:1px solid rgba(247,240,230,.09);color:var(--muted);font-size:12px;line-height:1.7}
@@ -2811,8 +2810,8 @@ function idVerifyH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','年齢の確認')+'</div></div>'
     +'<div class="body" style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
       +'<div class="idv-info-card">'
-        +'<div class="idv-info-kicker"><span class="idv-blue-lamp"></span>かんたん本人確認</div>'
-        +'<div class="idv-info-title"><strong>身分証1枚</strong>で確認できます</div>'
+        +'<div class="idv-info-title">身分証<strong>1枚</strong>で確認</div>'
+        +'<div class="idv-info-sub">写真を1枚選んで、確認を依頼します</div>'
         +'<div class="idv-info-copy"><span class="idv-copy-line">運転免許証・マイナンバーカード・</span><span class="idv-copy-line">パスポートなど、顔写真付きで、</span><b><span class="idv-copy-line">生年月日が確認できる有効な身分証を</span><span class="idv-copy-line">ご提出ください。</span></b></div>'
         +'<div class="idv-profile-check">登録内容：<b style="color:var(--cream)">'+realName+'／'+birthdate+'</b><br>身分証の記載と一致していることをご確認ください。</div>'
         +'<details class="idv-details">'
