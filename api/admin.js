@@ -913,12 +913,19 @@ module.exports = async (req, res) => {
         changes = await db(`match_meeting_change_history?match_id=eq.${matchId}&select=proposed_by,original_time,original_place,proposed_time,proposed_place,status,responded_by,proposed_at,responded_at,proposer_cancelled_after_decline_at&order=proposed_at.asc`) || [];
       } catch (e) {}
       const m = matches[0];
+      const outcomes = [
+        m.result_a_user_id ? { nickname: names[m.result_a_user_id] || '名前未設定', result: m.result_a } : null,
+        m.result_b_user_id ? { nickname: names[m.result_b_user_id] || '名前未設定', result: m.result_b } : null,
+      ].filter(Boolean);
+      const reason = outcomes.length < 2
+        ? 'missing_outcome_data'
+        : outcomes[0].result !== outcomes[1].result
+          ? 'answers_conflict'
+          : 'stale_review_flag';
       res.status(200).json({ success: true, detail: {
         status: m.status, verdict: m.verdict,
-        outcomes: [
-          m.result_a_user_id ? { nickname: names[m.result_a_user_id] || '名前未設定', result: m.result_a } : null,
-          m.result_b_user_id ? { nickname: names[m.result_b_user_id] || '名前未設定', result: m.result_b } : null,
-        ].filter(Boolean),
+        reason: reason,
+        outcomes: outcomes,
         messages: messages.map((x) => ({ nickname: names[x.user_id] || '名前未設定', content: x.content || '', created_at: x.created_at })),
         changes: changes.map((x) => Object.assign({}, x, {
           proposed_by_name: names[x.proposed_by] || '名前未設定',

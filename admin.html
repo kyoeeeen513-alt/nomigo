@@ -658,8 +658,18 @@ async function openMatchReview(id){
   box.innerHTML='<div class="match-review-panel meta">確認内容を読み込み中...</div>';
   var r=await api({action:'match_review_detail',matchId:id});
   if(!r.success){box.innerHTML='<div class="match-review-panel err">確認内容を読み込めませんでした</div>';return;}
-  var d=r.detail||{}, h='<div class="match-review-panel"><b>双方の回答</b>';
-  for(var i=0;i<(d.outcomes||[]).length;i++)h+='<div class="meta" style="margin-top:5px">'+esc(d.outcomes[i].nickname)+'：<b>'+esc(outcomeLabel(d.outcomes[i].result))+'</b></div>';
+  var d=r.detail||{}, outcomes=d.outcomes||[], h='<div class="match-review-panel">';
+  if(d.reason==='answers_conflict'){
+    h+='<div style="padding:11px;background:rgba(163,58,58,.18);border-radius:8px;margin-bottom:12px"><b>要確認になった理由</b><div style="margin-top:6px">2人の回答が食い違っています。</div></div>';
+  }else if(d.reason==='missing_outcome_data'){
+    h+='<div style="padding:11px;background:rgba(163,58,58,.18);border-radius:8px;margin-bottom:12px"><b>要確認になった理由</b><div style="margin-top:6px">双方の回答記録が揃っていません。過去の処理で「要確認」だけが残ったデータ不整合のため、回答から原因を特定できません。チャット履歴を確認して判断してください。</div></div>';
+  }else{
+    h+='<div style="padding:11px;background:rgba(163,58,58,.18);border-radius:8px;margin-bottom:12px"><b>要確認になった理由</b><div style="margin-top:6px">回答は一致していますが「要確認」が残っています。過去データの不整合です。</div></div>';
+  }
+  h+='<b>双方の回答</b>';
+  if(!outcomes.length)h+='<div class="meta" style="margin-top:5px">回答記録なし</div>';
+  for(var i=0;i<outcomes.length;i++)h+='<div style="margin-top:7px">'+esc(outcomes[i].nickname)+'：<b>'+esc(outcomeLabel(outcomes[i].result))+'</b></div>';
+  if(outcomes.length===1)h+='<div style="margin-top:7px">もう一方：<b>未回答・記録なし</b></div>';
   h+='<div style="margin-top:12px"><b>変更相談の履歴</b></div>';
   if(!(d.changes||[]).length)h+='<div class="meta">履歴なし</div>';
   for(var j=0;j<(d.changes||[]).length;j++){
