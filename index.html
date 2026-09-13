@@ -875,6 +875,28 @@ body{font-size:15px;background:
 #app[data-screen="payconsent"] #payconsent-btn:not(:disabled){background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
 #app[data-screen="payconsent"].ui-preview-static button,#app[data-screen="payconsent"].ui-preview-static label,#app[data-screen="payconsent"].ui-preview-static input{pointer-events:none}
 
+/* ===== 2026/9/13 飲み会終了・評価画面 UI試作 =====
+   回答項目・評価内容・保存処理は変えず、選択の流れと状態を整理する。 */
+#app[data-screen="outcome"] .body,#app[data-screen="review"] .body{background:#120A0C}
+.outcome-intro{padding:17px 16px;margin-bottom:13px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.outcome-intro-title{font:700 21px/1.5 'Shippori Mincho',serif;color:var(--cream);letter-spacing:.03em}
+.outcome-intro-copy{margin-top:7px;color:var(--muted);font-size:12px;line-height:1.75}
+#app[data-screen="outcome"] .outcome-choice{margin-bottom:10px;background:#211518;border:1px solid rgba(247,240,230,.11);border-radius:14px;box-shadow:none}
+#app[data-screen="outcome"] .outcome-choice:first-of-type{border-color:rgba(212,170,99,.34)}
+#app[data-screen="outcome"] .outcome-choice strong{font-size:14px}
+#app[data-screen="outcome"] .outcome-choice small{font-size:11.5px;line-height:1.6}
+#app[data-screen="review"] .review-hero{padding:31px 20px 25px;background:linear-gradient(180deg,#351A22,#28151A);border-bottom:1px solid rgba(212,170,99,.13)}
+.review-hero-mark{width:42px;height:42px;margin:0 auto 11px;display:grid;place-items:center;border-radius:50%;background:rgba(212,170,99,.11);border:1px solid rgba(212,170,99,.30);color:var(--gold-bright)}
+.review-hero-mark svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#app[data-screen="review"] .review-hero-title{font-size:24px}
+.review-rating-card{margin:14px;padding:17px 12px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px;text-align:center}
+.review-tags-card{margin:0 14px 14px;padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.review-tags-title{margin-bottom:11px;color:var(--cream);font-size:13px;font-weight:800}
+#app[data-screen="review"] .review-tags-card .tag-chip{background:#181014;border-color:rgba(247,240,230,.12)}
+#app[data-screen="review"] .review-tags-card .tag-chip.on{background:#D4AA63;border-color:#D4AA63;color:#160D10}
+#app[data-screen="review"] .ftr .btn-wine:not(:disabled){background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:none}
+#app[data-screen="outcome"].ui-preview-static button,#app[data-screen="review"].ui-preview-static button{pointer-events:none}
+
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
   .home-live span{font-size:10.5px !important}
@@ -1868,6 +1890,20 @@ async function init(){
     }
     if(isPayConsentPreview()){
       S.screen='payconsent';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isOutcomePreview()){
+      S.screen='outcome';
+      document.getElementById('app').classList.add('ui-preview-static');
+      render();
+      return;
+    }
+    if(isReviewPreview()){
+      S.reviewStars=4;
+      S.reviewChecks=[true,true,false,true,false,false,false,false,false];
+      S.screen='review';
       document.getElementById('app').classList.add('ui-preview-static');
       render();
       return;
@@ -6218,11 +6254,16 @@ function isChatPreview(){
 function outcomeH(){
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">飲み会の終了</div><div class="hdr-title">今回の結果を教えてください</div></div></div>'
     +'<div class="body" style="padding:22px 20px">'
-    +'<div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:18px">回答は参加者ごとに記録します。あなたの回答だけで、お相手をドタキャン扱いにすることはありません。</div>'
-    +'<button class="choice-btn" style="margin-bottom:12px" onclick="go(\'review\')"><span><strong>会って飲んだ</strong><br><small style="color:var(--muted)">続けてお相手を評価します</small></span><span>→</span></button>'
-    +'<button class="choice-btn" style="margin-bottom:12px" onclick="submitMatchOutcome(\'no_show\')"><span><strong>相手が来なかった</strong><br><small style="color:var(--muted)">双方の回答を確認します</small></span><span>→</span></button>'
-    +'<button class="choice-btn" onclick="submitMatchOutcome(\'cancelled\')"><span><strong>事前にキャンセルになった</strong><br><small style="color:var(--muted)">キャンセルとして記録します</small></span><span>→</span></button>'
+    +'<div class="outcome-intro"><div class="outcome-intro-title">今夜はどうでしたか？</div><div class="outcome-intro-copy">回答は参加者ごとに記録します。あなたの回答だけで、お相手をドタキャン扱いにすることはありません。</div></div>'
+    +'<button class="choice-btn outcome-choice" onclick="go(\'review\')"><span><strong>会って飲んだ</strong><br><small style="color:var(--muted)">続けてお相手を評価します</small></span><span>→</span></button>'
+    +'<button class="choice-btn outcome-choice" onclick="submitMatchOutcome(\'no_show\')"><span><strong>相手が来なかった</strong><br><small style="color:var(--muted)">双方の回答を確認します</small></span><span>→</span></button>'
+    +'<button class="choice-btn outcome-choice" onclick="submitMatchOutcome(\'cancelled\')"><span><strong>事前にキャンセルになった</strong><br><small style="color:var(--muted)">キャンセルとして記録します</small></span><span>→</span></button>'
     +'</div></div>';
+}
+
+function isOutcomePreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='outcome';}
+  catch(e){return false;}
 }
 
 function reviewH(){
@@ -6236,12 +6277,17 @@ function reviewH(){
   }).join('');
   var checksHtml=checks.map(function(c,i){return '<button class="tag-chip '+(S.reviewChecks[i]?'on':'')+'" onclick="S.reviewChecks['+i+']=!S.reviewChecks['+i+'];re(\'review\')">'+c+'</button>';}).join('');
   var otherInput=S.reviewChecks[otherIdx]?'<div style="padding:0 20px 16px"><input class="inp" id="review-other-inp" type="text" placeholder="自由に入力してください" maxlength="50" value="'+(S.reviewOtherText||'')+'" oninput="S.reviewOtherText=this.value;updateReviewSubmitBtn()"></div>':'';
-  var checksSection=S.reviewStars>0?'<div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px">'+checksHtml+'</div>'+otherInput:'';
+  var checksSection=S.reviewStars>0?'<div class="review-tags-card"><div class="review-tags-title">当てはまるものを選んでください</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+checksHtml+'</div></div>'+otherInput:'';
   var anyTagSelected=S.reviewChecks.some(function(c){return c;});
   var otherOk=!S.reviewChecks[otherIdx]||(S.reviewOtherText&&S.reviewOtherText.trim().length>0);
   var canSubmit=S.reviewStars>0&&anyTagSelected&&otherOk&&!_reviewSubmitting;
   var submitBtnLabel=_reviewSubmitting?'送信中...':'評価を送信する';
-  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div class="review-hero"><div class="review-hero-icon">🍺</div><div class="review-hero-title">お疲れ様でした！</div></div><div style="padding:20px 20px 0;text-align:center"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'+checksSection+'</div><div class="ftr"><button class="btn btn-wine" id="review-submit-btn" '+(canSubmit?'':'disabled ')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
+  return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'chat\')">← 戻る</button><div class="hdr-info"><div class="hdr-title">今夜の評価</div></div></div><div class="body"><div class="review-hero"><div class="review-hero-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 12 3 3 7-7"></path><circle cx="12" cy="12" r="9"></circle></svg></div><div class="review-hero-title">お疲れ様でした</div></div><div class="review-rating-card"><div class="sec-label" style="padding:0 0 14px;text-align:center">総合評価</div><div style="display:flex;justify-content:center;gap:8px">'+starsHtml+'</div></div>'+checksSection+'</div><div class="ftr"><button class="btn btn-wine" id="review-submit-btn" '+(canSubmit?'':'disabled ')+'onclick="confirmSubmitReview()">'+submitBtnLabel+'</button></div></div>';
+}
+
+function isReviewPreview(){
+  try{return new URLSearchParams(location.search).get('ui_preview')==='review';}
+  catch(e){return false;}
 }
 
 function updateRecruitSubmitBtn(){
