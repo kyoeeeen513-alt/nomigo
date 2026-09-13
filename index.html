@@ -713,6 +713,26 @@ body{font-size:15px;background:
 #app[data-screen="profile_new"] .ftr,#app[data-screen="profile_edit"] .ftr{padding:11px 14px calc(16px + env(safe-area-inset-bottom,0px))}
 #app[data-screen="profile_new"] .ftr .btn-wine,#app[data-screen="profile_edit"] .ftr .btn-wine{background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:0 7px 18px rgba(0,0,0,.24)}
 
+/* ===== 2026/9/13 本人確認画面 UI試作 =====
+   提出内容・注意事項・審査処理は変えず、情報のまとまりと操作の見た目だけを調整する。 */
+#app[data-screen="id_verify"] .body{padding:10px 14px 24px !important;gap:12px !important;background:#120A0C}
+.idv-info-card{padding:16px;background:#211518;border:1px solid rgba(247,240,230,.10);border-radius:16px}
+.idv-info-title{margin-bottom:9px;color:var(--cream);font-size:15px;font-weight:900;letter-spacing:.015em}
+.idv-info-copy{color:#D3C7BE;font-size:12.5px;line-height:1.75}
+.idv-profile-check{margin-top:12px;padding-top:12px;border-top:1px solid rgba(247,240,230,.09);color:var(--muted);font-size:12px;line-height:1.7}
+.idv-details{margin-top:12px;padding-top:12px;border-top:1px solid rgba(247,240,230,.09)}
+.idv-details summary{color:var(--gold-bright);font-size:12px;font-weight:800;cursor:pointer}
+.idv-details-copy{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.75}
+.idv-preview{width:100%;max-height:230px;padding:4px;border:1px solid rgba(247,240,230,.12);border-radius:16px;display:block;object-fit:contain;background:#0E090B}
+.idv-preview-empty{width:100%;height:156px;border:1px dashed rgba(212,170,99,.42);border-radius:16px;display:flex;align-items:center;justify-content:center;background:#181014;color:var(--muted);font-size:12.5px}
+#app[data-screen="id_verify"] #id-photo-pick-btn{min-height:50px;padding:13px 16px !important;border:1px solid rgba(212,170,99,.58) !important;border-radius:12px !important;background:transparent !important;color:var(--gold-bright) !important;font-family:inherit}
+#app[data-screen="id_verify"] .ftr{padding:11px 14px calc(16px + env(safe-area-inset-bottom,0px))}
+#app[data-screen="id_verify"] .ftr .btn-wine:not(:disabled){background:#D4AA63;border-color:#D4AA63;color:#160D10;box-shadow:0 7px 18px rgba(0,0,0,.24)}
+#app[data-screen="id_verify_pending"] .body{background:#120A0C}
+.idv-state-icon{width:64px;height:64px;display:grid;place-items:center;border:1px solid rgba(212,170,99,.34);border-radius:50%;background:#211518;color:var(--gold-bright)}
+.idv-state-icon svg,.verify-waiting-core svg{width:27px;height:27px;display:block;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.idv-state-icon--warning{border-color:rgba(201,112,91,.42);color:#E1A08F}
+.verify-waiting-core{color:var(--gold-bright);font-size:0}
 
 @media(max-width:360px){
   .home-title{font-size:31px}.home-visual{height:248px}
@@ -2767,23 +2787,23 @@ function retryIdVerify(){
 }
 
 function idVerifyH(){
-  var preview=S._idPhotoPreview?'<img src="'+S._idPhotoPreview+'" style="width:100%;max-height:230px;border-radius:12px;display:block;object-fit:contain;background:#080506">':'<div style="width:100%;height:150px;border-radius:12px;background:var(--card);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">身分証の写真がここに表示されます</div>';
+  var preview=S._idPhotoPreview?'<img class="idv-preview" src="'+S._idPhotoPreview+'">':'<div class="idv-preview-empty">身分証の写真がここに表示されます</div>';
   var ready=!!S._idPhotoFile;
   var realName=escapeHtml(S.profile&&S.profile.real_name?S.profile.real_name:'（未登録）');
   var birthdate=escapeHtml(S.profile&&S.profile.birthdate?S.profile.birthdate:'（未登録）');
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','年齢の確認')+'</div></div>'
     +'<div class="body" style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;-webkit-overflow-scrolling:touch">'
-      +'<div style="background:rgba(0,0,0,.25);border:1px solid rgba(224,176,96,.34);border-radius:12px;padding:14px">'
-        +'<div style="font-size:15px;font-weight:900;color:var(--gold-bright);margin-bottom:8px">身分証1枚で確認できます</div>'
-        +'<div style="font-size:12px;color:var(--cream);line-height:1.75">運転免許証・マイナンバーカード・パスポートなど、<b>生年月日が確認できる有効な身分証</b>をご提出ください。</div>'
-        +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2);font-size:12px;color:var(--lgray);line-height:1.7">登録内容：<b style="color:var(--cream)">'+realName+'／'+birthdate+'</b><br>身分証の記載と一致していることをご確認ください。</div>'
-        +'<details style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">'
-          +'<summary style="font-size:12px;font-weight:800;color:var(--gold);cursor:pointer">写真の取り扱い・注意事項を見る</summary>'
-          +'<div style="font-size:11.5px;color:var(--lgray);line-height:1.75;margin-top:9px">画像は他の利用者に公開されず、年齢確認・登録内容の確認・不正防止のためにのみ使用します。<br>マイナンバーカードは表面のみ提出してください。<br>他人名義や偽造・改ざんされた書類は禁止です。不正が疑われる場合は利用停止等を行い、必要に応じて警察その他の関係機関へ相談・通報することがあります。</div>'
+      +'<div class="idv-info-card">'
+        +'<div class="idv-info-title">身分証1枚で確認できます</div>'
+        +'<div class="idv-info-copy">運転免許証・マイナンバーカード・パスポートなど、<b>生年月日が確認できる有効な身分証</b>をご提出ください。</div>'
+        +'<div class="idv-profile-check">登録内容：<b style="color:var(--cream)">'+realName+'／'+birthdate+'</b><br>身分証の記載と一致していることをご確認ください。</div>'
+        +'<details class="idv-details">'
+          +'<summary>写真の取り扱い・注意事項を見る</summary>'
+          +'<div class="idv-details-copy">画像は他の利用者に公開されず、年齢確認・登録内容の確認・不正防止のためにのみ使用します。<br>マイナンバーカードは表面のみ提出してください。<br>他人名義や偽造・改ざんされた書類は禁止です。不正が疑われる場合は利用停止等を行い、必要に応じて警察その他の関係機関へ相談・通報することがあります。</div>'
         +'</details>'
       +'</div>'
       +preview
-      +'<button type="button" id="id-photo-pick-btn" style="width:100%;padding:14px 16px;border-radius:10px;border:1.5px solid var(--border);background:#FFFFFF;color:#6A4A50;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'身分証を撮り直す・選び直す':'身分証を撮影・選択')+'</button>'
+      +'<button type="button" id="id-photo-pick-btn" style="width:100%;font-size:14px;font-weight:700;cursor:pointer;text-align:center" onclick="openPhotoPicker(\'id_verify\')">'+(S._idPhotoPreview?'身分証を撮り直す・選び直す':'身分証を撮影・選択')+'</button>'
       +'<input type="file" accept="image/*" id="pf-photo-id" style="display:none" onchange="handleIdPhotoSelect(this)">'
       +'<div style="font-size:11px;color:var(--muted);line-height:1.55;text-align:center">文字・生年月日・書類全体が鮮明に見える写真を選んでください。</div>'
       +(S.error?'<div class="err-msg">'+S.error+'</div>':'')
@@ -2824,7 +2844,7 @@ function idVerifyPendingH(){
       btn='<button class="btn btn-wine" onclick="retryIdVerify()">もう一度アップロードする →</button>';
     }
     return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','本人確認')+'</div></div><div class="body" style="padding:36px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px">'
-      +'<div style="font-size:40px">⚠️</div>'
+      +'<div class="idv-state-icon idv-state-icon--warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5"></path><path d="M12 17h.01"></path><path d="M10.3 3.8 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z"></path></svg></div>'
       +'<div style="font-size:16px;font-weight:800;color:var(--cream)">'+title+'</div>'
       +'<div style="font-size:13px;color:var(--muted);line-height:1.75">'+lead+'</div>'
       +noteHtml
@@ -2833,7 +2853,7 @@ function idVerifyPendingH(){
       +'</div><div class="ftr">'+btn+'</div></div>';
   }
   return '<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'splash\')">← 戻る</button><div class="hdr-info">'+stepHeadH(5,'本人確認','確認中です')+'</div></div><div class="body" style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">'
-    +'<div class="verify-waiting"><div class="verify-waiting-ring"></div><div class="verify-waiting-ring verify-waiting-ring2"></div><div class="verify-waiting-core">🔍</div></div>'
+    +'<div class="verify-waiting"><div class="verify-waiting-ring"></div><div class="verify-waiting-ring verify-waiting-ring2"></div><div class="verify-waiting-core"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></div></div>'
     +'<div style="font-size:16px;font-weight:800;color:var(--cream)">運営が確認しています<span class="verify-dots"><span>.</span><span>.</span><span>.</span></span></div>'
     +'<div style="font-size:13px;color:var(--muted);line-height:1.7">身分証の確認には、しばらくお時間をいただく場合があります。<br>確認が完了すると、自動で次の画面に進みます。</div>'
     +homeInstallGuideH(false)
