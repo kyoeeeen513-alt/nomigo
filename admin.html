@@ -37,6 +37,10 @@ button{cursor:pointer;border:none;border-radius:8px;font-size:14px;padding:11px 
 .status.completed{background:var(--ok)}.status.cancelled{background:#a06428}.status.no_show,.status.needs_review{background:var(--ng)}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;}
 .review-box{background:#1e0710;border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-top:8px;font-size:12.5px;line-height:1.65;}
+.match-review-panel{background:#250911;border:1px solid var(--ng);border-radius:10px;padding:12px;margin-top:10px;}
+.match-review-panel textarea{margin:10px 0;min-height:72px;}
+.decision-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.decision-buttons button{padding:9px 5px;font-size:12px;}
 @media(min-width:900px){
   .admin-layout{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:start;}
   .tabs{display:flex;flex-direction:column;overflow:visible;position:sticky;top:16px;margin:0;}
@@ -641,7 +645,42 @@ function matchRow(x){
     }
     h+='</div>';
   }else h+='<div class="meta" style="margin-top:7px">評価はまだありません</div>';
+  if(x.verdict==='needs_review'){
+    h+='<div style="margin-top:9px"><button class="btn-sm" onclick="openMatchReview(\''+esc(x.id)+'\')">内容を確認して対応する</button></div>'
+      +'<div id="match-review-'+esc(x.id)+'"></div>';
+  }
   h+='</div>';return h;
+}
+
+function outcomeLabel(v){return ({completed:'会って飲んだ',cancelled:'事前にキャンセル',no_show:'相手が来なかった'})[v]||'未回答';}
+async function openMatchReview(id){
+  var box=document.getElementById('match-review-'+id);
+  box.innerHTML='<div class="match-review-panel meta">確認内容を読み込み中...</div>';
+  var r=await api({action:'match_review_detail',matchId:id});
+  if(!r.success){box.innerHTML='<div class="match-review-panel err">確認内容を読み込めませんでした</div>';return;}
+  var d=r.detail||{}, h='<div class="match-review-panel"><b>双方の回答</b>';
+  for(var i=0;i<(d.outcomes||[]).length;i++)h+='<div class="meta" style="margin-top:5px">'+esc(d.outcomes[i].nickname)+'：<b>'+esc(outcomeLabel(d.outcomes[i].result))+'</b></div>';
+  h+='<div style="margin-top:12px"><b>変更相談の履歴</b></div>';
+  if(!(d.changes||[]).length)h+='<div class="meta">履歴なし</div>';
+  for(var j=0;j<(d.changes||[]).length;j++){
+    var c=d.changes[j];
+    h+='<div class="meta" style="margin-top:5px">'+esc(c.proposed_by_name)+'：'+esc(fmtDate(c.proposed_at))+'／'+esc(c.status)+'／'+esc(c.original_place||'')+' → '+esc(c.proposed_place||'')+(c.proposer_cancelled_after_decline_at?'／拒否後に提案者がキャンセル':'')+'</div>';
+  }
+  h+='<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">チャット履歴（'+(d.messages||[]).length+'件）</summary>';
+  if(!(d.messages||[]).length)h+='<div class="meta">履歴なし</div>';
+  for(var k=0;k<(d.messages||[]).length;k++)h+='<div class="meta" style="margin-top:6px">'+esc(fmtDate(d.messages[k].created_at))+' '+esc(d.messages[k].nickname)+'：'+esc(d.messages[k].content)+'</div>';
+  h+='</details><textarea id="match-note-'+esc(id)+'" placeholder="判断理由を入力（必須）"></textarea>'
+    +'<div class="decision-buttons"><button class="btn-ok" onclick="resolveMatchReview(\''+esc(id)+'\',\'completed\')">正常に完了</button><button class="btn-main" onclick="resolveMatchReview(\''+esc(id)+'\',\'cancelled\')">キャンセル</button><button class="btn-ng" onclick="resolveMatchReview(\''+esc(id)+'\',\'no_show\')">無断キャンセル</button></div></div>';
+  box.innerHTML=h;
+}
+async function resolveMatchReview(id,decision){
+  var note=document.getElementById('match-note-'+id).value.trim();
+  if(!note){alert('判断理由を入力してください。');return;}
+  var label=outcomeLabel(decision);
+  if(!confirm('このマッチを「'+label+'」として確定しますか？\n\n確定後、「要確認」は解除されます。'))return;
+  var r=await api({action:'resolve_match_review',matchId:id,decision:decision,note:note});
+  if(!r.success){alert(r.error==='already_resolved'?'すでに対応済みです。':'保存できませんでした。');return;}
+  await loadMatches();loadHome();
 }
 
 // ---------- 募集一覧・SNS投稿 ----------

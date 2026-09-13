@@ -834,7 +834,7 @@ module.exports = async (req, res) => {
         }
       }
 
-      let matchPath = 'matches?select=id,area_id,slot,mode,status,created_at,completed_at,verdict';
+      let matchPath = 'matches?select=id,area_id,slot,mode,status,created_at,completed_at,verdict,result_a,result_a_user_id,result_b,result_b_user_id';
       if (status) matchPath += '&status=eq.' + status;
       if (area) matchPath += '&area_id=eq.' + area;
       if (allowedMatchIds) matchPath += '&id=in.(' + allowedMatchIds.join(',') + ')';
@@ -868,6 +868,10 @@ module.exports = async (req, res) => {
         slot: m.slot || '', mode: m.mode || '', status: m.status || '',
         created_at: m.created_at || null, completed_at: m.completed_at || null,
         verdict: m.verdict || null,
+        outcomes: [
+          m.result_a_user_id ? { user_id: m.result_a_user_id, nickname: names[m.result_a_user_id] || '名前未設定', result: m.result_a || null } : null,
+          m.result_b_user_id ? { user_id: m.result_b_user_id, nickname: names[m.result_b_user_id] || '名前未設定', result: m.result_b || null } : null,
+        ].filter(Boolean),
         members: (members || []).filter((x) => x.match_id === m.id).map((x) => ({
           user_id: x.user_id, nickname: names[x.user_id] || '名前未設定', status: x.status || null,
         })),
@@ -879,6 +883,83 @@ module.exports = async (req, res) => {
         })),
       }));
       res.status(200).json({ success: true, list: list, hasMore: hasMore, activeCount: active });
+      return;
+    }
+
+    // ── 要確認マッチの判断材料 ─────────────────────────
+    if (action === 'match_review_detail') {
+      const matchId = body.matchId;
+      if (!matchId || !isUuid.test(matchId)) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      const [matches, members] = await Promise.all([
+        db(`matches?id=eq.${matchId}&select=id,status,verdict,result_a,result_a_user_id,result_b,result_b_user_id`),
+        db(`match_members?match_id=eq.${matchId}&select=user_id`),
+      ]);
+      if (!matches || !matches[0]) {
+        res.status(404).json({ success: false, error: 'not_found' });
+        return;
+      }
+      const ids = Array.from(new Set((members || []).map((x) => x.user_id).filter((id) => isUuid.test(id))));
+      const profiles = ids.length ? await db(`profiles?user_id=in.(${ids.join(',')})&select=user_id,nickname`) : [];
+      const names = {};
+      for (const p of profiles || []) names[p.user_id] = p.nickname || '名前未設定';
+      let messages = [], changes = [];
+      try {
+        messages = await db(`messages?match_id=eq.${matchId}&select=user_id,content,created_at&order=created_at.asc&limit=200`) || [];
+      } catch (e) {}
+      try {
+        changes = await db(`match_meeting_change_history?match_id=eq.${matchId}&select=proposed_by,original_time,original_place,proposed_time,proposed_place,status,responded_by,proposed_at,responded_at,proposer_cancelled_after_decline_at&order=proposed_at.asc`) || [];
+      } catch (e) {}
+      const m = matches[0];
+      res.status(200).json({ success: true, detail: {
+        status: m.status, verdict: m.verdict,
+        outcomes: [
+          m.result_a_user_id ? { nickname: names[m.result_a_user_id] || '名前未設定', result: m.result_a } : null,
+          m.result_b_user_id ? { nickname: names[m.result_b_user_id] || '名前未設定', result: m.result_b } : null,
+        ].filter(Boolean),
+        messages: messages.map((x) => ({ nickname: names[x.user_id] || '名前未設定', content: x.content || '', created_at: x.created_at })),
+        changes: changes.map((x) => Object.assign({}, x, {
+          proposed_by_name: names[x.proposed_by] || '名前未設定',
+          responded_by_name: x.responded_by ? (names[x.responded_by] || '名前未設定') : null,
+        })),
+      }});
+      return;
+    }
+
+    // 判断は matches に反映し、誰が何を選んだかと理由は監査ログへ残す。
+    if (action === 'resolve_match_review') {
+      if (!admin.can_reply && !admin.can_suspend) {
+        res.status(403).json({ success: false, error: 'forbidden' });
+        return;
+      }
+      const matchId = body.matchId;
+      const decision = ['completed', 'cancelled', 'no_show'].includes(body.decision) ? body.decision : '';
+      const note = String(body.note || '').trim().slice(0, 500);
+      if (!matchId || !isUuid.test(matchId) || !decision || !note) {
+        res.status(400).json({ success: false, error: 'bad_request' });
+        return;
+      }
+      const current = await db(`matches?id=eq.${matchId}&select=id,status,verdict,result_a,result_a_user_id,result_b,result_b_user_id`);
+      if (!current || !current[0] || current[0].verdict !== 'needs_review') {
+        res.status(409).json({ success: false, error: 'already_resolved' });
+        return;
+      }
+      const updated = await db(`matches?id=eq.${matchId}&verdict=eq.needs_review`, {
+        method: 'PATCH', prefer: 'return=representation',
+        body: { status: decision, verdict: decision === 'completed' ? 'normal' : decision === 'cancelled' ? 'both_cancelled' : null },
+      });
+      if (!updated || !updated[0]) {
+        res.status(409).json({ success: false, error: 'already_resolved' });
+        return;
+      }
+      await audit(myId, 'match_review_resolved', 'matches', matchId, {
+        decision: decision,
+        previous_status: current[0].status,
+        participant_outcomes: [current[0].result_a, current[0].result_b],
+      }, note);
+      res.status(200).json({ success: true });
       return;
     }
 
