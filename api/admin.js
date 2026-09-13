@@ -130,6 +130,22 @@ async function db(path, options) {
   try { return JSON.parse(text); } catch (e) { return null; }
 }
 
+// 件数だけが必要なときは全行を取得しない。データが増えても通信量を増やさないため。
+async function dbCount(path) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      Prefer: 'count=exact',
+      Range: '0-0',
+    },
+  });
+  if (!r.ok) throw new Error('db_count_error');
+  const range = r.headers.get('content-range') || '';
+  const total = range.split('/')[1];
+  return total && total !== '*' ? Number(total) : 0;
+}
+
 // 保管庫の画像について、一定時間だけ有効なURLを発行する
 async function signUrl(bucket, path, seconds) {
   const r = await fetch(
@@ -759,6 +775,110 @@ module.exports = async (req, res) => {
         can_reply: !!admin.can_reply,
         can_suspend: !!admin.can_suspend,
       });
+      return;
+    }
+
+    // ── 管理ホームの件数 ─────────────────────────────
+    // 一覧そのものは返さず、ホームで必要な件数だけを取得する。
+    if (action === 'admin_summary') {
+      const now = new Date();
+      const today = jstDayRange(now);
+      const [pending, recruitments, activeMatches, needsReview, todayMatches, latestMatches] = await Promise.all([
+        dbCount('profiles?id_verify_status=eq.pending&select=user_id'),
+        dbCount('registrations?status=eq.waiting&expires_at=gt.' + encodeURIComponent(now.toISOString()) + '&select=id'),
+        dbCount('matches?status=eq.confirmed&select=id'),
+        dbCount('matches?verdict=eq.needs_review&select=id'),
+        dbCount('matches?created_at=gte.' + encodeURIComponent(today.start) + '&created_at=lt.' + encodeURIComponent(today.end) + '&select=id'),
+        db('matches?select=id&order=created_at.desc&limit=1'),
+      ]);
+      res.status(200).json({ success: true, summary: {
+        pendingVerify: pending,
+        activeRecruitments: recruitments,
+        activeMatches: activeMatches,
+        needsReview: needsReview,
+        todayMatches: todayMatches,
+        latestMatchId: latestMatches && latestMatches[0] ? latestMatches[0].id : null,
+      }});
+      return;
+    }
+
+    // ── マッチ一覧と、そのマッチに付いた評価 ───────────────
+    // 20件ずつ返すため、件数が増えても管理画面が重くならない。
+    if (action === 'list_matches') {
+      const pageSize = Math.min(50, Math.max(10, Number(body.pageSize) || 20));
+      const page = Math.max(0, Number(body.page) || 0);
+      const status = ['confirmed', 'completed', 'cancelled', 'no_show'].includes(body.status) ? body.status : '';
+      const area = ['shinjuku', 'susukino'].includes(body.area) ? body.area : '';
+      const query = String(body.query || '').trim().slice(0, 40);
+      let allowedMatchIds = null;
+
+      if (query) {
+        const safeQuery = query.replace(/[(),.*%_]/g, '');
+        if (!safeQuery) {
+          res.status(200).json({ success: true, list: [], hasMore: false, activeCount: 0 });
+          return;
+        }
+        const people = await db('profiles?nickname=ilike.*' + encodeURIComponent(safeQuery) + '*&select=user_id&limit=100');
+        const userIds = (people || []).map((p) => p.user_id).filter((id) => isUuid.test(id));
+        if (!userIds.length) {
+          const active = await dbCount('matches?status=eq.confirmed&select=id');
+          res.status(200).json({ success: true, list: [], hasMore: false, activeCount: active });
+          return;
+        }
+        const memberships = await db('match_members?user_id=in.(' + userIds.join(',') + ')&select=match_id');
+        allowedMatchIds = Array.from(new Set((memberships || []).map((m) => m.match_id).filter((id) => isUuid.test(id))));
+        if (!allowedMatchIds.length) {
+          const active = await dbCount('matches?status=eq.confirmed&select=id');
+          res.status(200).json({ success: true, list: [], hasMore: false, activeCount: active });
+          return;
+        }
+      }
+
+      let matchPath = 'matches?select=id,area_id,slot,mode,status,created_at,completed_at,verdict';
+      if (status) matchPath += '&status=eq.' + status;
+      if (area) matchPath += '&area_id=eq.' + area;
+      if (allowedMatchIds) matchPath += '&id=in.(' + allowedMatchIds.join(',') + ')';
+      matchPath += '&order=created_at.desc&offset=' + (page * pageSize) + '&limit=' + (pageSize + 1);
+      const matchRows = await db(matchPath);
+      const hasMore = (matchRows || []).length > pageSize;
+      const rows = (matchRows || []).slice(0, pageSize);
+      const matchIds = rows.map((m) => m.id).filter((id) => isUuid.test(id));
+      const active = await dbCount('matches?status=eq.confirmed&select=id');
+      if (!matchIds.length) {
+        res.status(200).json({ success: true, list: [], hasMore: false, activeCount: active });
+        return;
+      }
+
+      const [members, reviews] = await Promise.all([
+        db('match_members?match_id=in.(' + matchIds.join(',') + ')&select=match_id,user_id,status'),
+        db('reviews?match_id=in.(' + matchIds.join(',') + ')&select=match_id,reviewer_id,reviewee_id,stars,review_tags'),
+      ]);
+      const userIds = Array.from(new Set([].concat(
+        (members || []).map((m) => m.user_id),
+        (reviews || []).map((v) => v.reviewer_id),
+        (reviews || []).map((v) => v.reviewee_id)
+      ).filter((id) => isUuid.test(id))));
+      const profiles = userIds.length
+        ? await db('profiles?user_id=in.(' + userIds.join(',') + ')&select=user_id,nickname') : [];
+      const names = {};
+      for (const p of profiles || []) names[p.user_id] = p.nickname || '名前未設定';
+      const list = rows.map((m) => ({
+        id: m.id,
+        area: areaLabel(m.area_id),
+        slot: m.slot || '', mode: m.mode || '', status: m.status || '',
+        created_at: m.created_at || null, completed_at: m.completed_at || null,
+        verdict: m.verdict || null,
+        members: (members || []).filter((x) => x.match_id === m.id).map((x) => ({
+          user_id: x.user_id, nickname: names[x.user_id] || '名前未設定', status: x.status || null,
+        })),
+        reviews: (reviews || []).filter((x) => x.match_id === m.id).map((x) => ({
+          reviewer_name: names[x.reviewer_id] || '名前未設定',
+          reviewee_name: names[x.reviewee_id] || '名前未設定',
+          stars: Number(x.stars || 0),
+          review_tags: Array.isArray(x.review_tags) ? x.review_tags : [],
+        })),
+      }));
+      res.status(200).json({ success: true, list: list, hasMore: hasMore, activeCount: active });
       return;
     }
 
