@@ -3548,10 +3548,18 @@ function modeSelectH(){
     +'</div></div>';
 }
 
+function recruitAgeReady(f){
+  if(!f||!f.age_confirmed)return false;
+  if(f.age_any)return true;
+  var min=parseInt(f.age_min,10),max=parseInt(f.age_max,10);
+  return Number.isFinite(min)&&Number.isFinite(max)&&min>=20&&max<=99&&min<=max;
+}
+
 async function startRecruit(){
   if(_isSubmitting)return;
   var f=S.form;
   if(!f.area||!f.slot||!f.drink_style||!f.purpose){S.error='すべて選択してください';re('recruit');return;}
+  if(!recruitAgeReady(f)){S.error='希望年齢を選択してください';re('recruit');return;}
   // 2対2は、お友だちの参加が確定していないと募集できない。
   // 以前は年齢を選ぶだけだったが、それでは一緒に来る方の年齢を確かめたことにならない。
   // 本人確認まで済ませた登録者どうしでなければ組めない仕組みに変えた。
@@ -5491,13 +5499,15 @@ function recruitH(){
   var defaultMax=myAgeNum+7;
   if(f.age_min==null||f.age_min===''){f.age_min=defaultMin;}
   if(f.age_max==null||f.age_max===''){f.age_max=defaultMax;}
+  // 初期表示された年齢条件を本人が一度確認するまで募集できない。
+  if(f.age_confirmed==null)f.age_confirmed=false;
   // 利用者が少ない間は、機会損失を減らすため片側を7歳差で固定する。
   // 女性は年下側、男性は年上側を固定し、もう片側だけ希望に合わせて広げられる。
   var isFemaleRecruiter=S.profile&&S.profile.gender==='female';
   if(isFemaleRecruiter)f.age_min=defaultMin;
   else f.age_max=defaultMax;
   // 2対2の条件は、お友だちの参加が確定しているかどうか（年齢の入力は廃止した）
-  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||!!(S._pair&&S._pair.status==='accepted'&&S._pair.partnerVerified));
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&recruitAgeReady(f)&&(!isPair||!!(S._pair&&S._pair.status==='accepted'&&S._pair.partnerVerified));
   var html='<div class="screen"><div class="hdr"><button class="hdr-back" onclick="go(\'mode_select\')">← 戻る</button><div class="hdr-info"><div class="hdr-step">募集作成</div><div class="hdr-title">今夜の条件を選ぶ</div></div></div><div class="body" style="padding:0 0 20px">';
   html+='<div class="recruit-context"><span>'+areaName(f.area)+'</span><span>'+(isPair?'2対2':'1対1')+'</span></div>';
   html+='<section class="form-section"><div class="sec-label">① 時間</div><div style="display:flex;gap:8px;padding:0 20px 4px;flex-wrap:wrap">';
@@ -5527,15 +5537,15 @@ function recruitH(){
   var ageCeil=99;
   var fixedAgeInput='<input class="inp" type="text" readonly disabled style="max-width:130px;opacity:.7" value="'+(isFemaleRecruiter?f.age_min:f.age_max)+'">';
   var editableAgeInput=isFemaleRecruiter
-    ?'<input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="上限" style="max-width:130px" value="'+(f.age_max||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_max=this.value" onblur="this.value=clampAgeMax(this.value,'+defaultMax+');S.form.age_max=this.value;updateRecruitSubmitBtn()">'
-    :'<input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="下限" style="max-width:130px" value="'+(f.age_min||'')+'" onfocus="this.select()" oninput="digitsOnly(this);S.form.age_min=this.value" onblur="this.value=clampAgeMin(this.value,'+defaultMin+');S.form.age_min=this.value;updateRecruitSubmitBtn()">';
+    ?'<input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="上限" style="max-width:130px" value="'+(f.age_max||'')+'" onfocus="this.select();S.form.age_confirmed=true;updateRecruitSubmitBtn()" oninput="digitsOnly(this);S.form.age_max=this.value;updateRecruitSubmitBtn()" onblur="this.value=clampAgeMax(this.value,'+defaultMax+');S.form.age_max=this.value;updateRecruitSubmitBtn()">'
+    :'<input class="inp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="下限" style="max-width:130px" value="'+(f.age_min||'')+'" onfocus="this.select();S.form.age_confirmed=true;updateRecruitSubmitBtn()" oninput="digitsOnly(this);S.form.age_min=this.value;updateRecruitSubmitBtn()" onblur="this.value=clampAgeMin(this.value,'+defaultMin+');S.form.age_min=this.value;updateRecruitSubmitBtn()">';
   var ageRangeInputs=isFemaleRecruiter
     ?fixedAgeInput+'<span style="color:var(--muted)">〜</span>'+editableAgeInput
     :editableAgeInput+'<span style="color:var(--muted)">〜</span>'+fixedAgeInput;
   var ageHelp=isFemaleRecruiter
     ?'年下側はご自身の年齢から7歳下（最低20歳）までです。年上は何歳までOKか変更できます。'
     :'年上側はご自身の年齢から7歳上までです。年下は何歳までOKか変更できます。';
-  html+='<section class="form-section"><div class="sec-label">④ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">何歳でもいい</span></label>'+(f.age_any?'':'<div class="age-range-row" style="display:flex;align-items:center;gap:10px">'+ageRangeInputs+'</div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">'+ageHelp+' 範囲内で、より年齢が近い相手が優先されます。</div></div></section>';
+  html+='<section class="form-section"><div class="sec-label">④ 許容できる年齢</div><div style="padding:0 20px"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px" onclick="event.preventDefault();S.form.age_any=!S.form.age_any;S.form.age_confirmed=true;re(\'recruit\')"><span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:'+(f.age_any?'var(--wine)':'#FFFFFF')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">'+(f.age_any?'✓':'')+'</span><span style="font-size:14px;color:var(--cream);font-weight:600">何歳でもいい</span></label>'+(f.age_any?'':'<div class="age-range-row" style="display:flex;align-items:center;gap:10px">'+ageRangeInputs+'</div>')+'<div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">'+ageHelp+' 範囲内で、より年齢が近い相手が優先されます。</div></div></section>';
   if(isPair){
     // 以前は「もう1人の年齢」を選ぶだけだったが、それでは一緒に来る方の年齢を
     // 確かめたことにならないため廃止した。いまは本人確認まで済ませた
@@ -5918,7 +5928,7 @@ function updateRecruitSubmitBtn(){
   var f=S.form;
   var isPair=f.mode==='2v2';
   // 2対2の条件は、お友だちの参加が確定しているかどうか（年齢の入力は廃止した）
-  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&(!isPair||!!(S._pair&&S._pair.status==='accepted'&&S._pair.partnerVerified));
+  var allOk=f.area&&f.slot&&f.drink_style&&f.purpose&&recruitAgeReady(f)&&(!isPair||!!(S._pair&&S._pair.status==='accepted'&&S._pair.partnerVerified));
   btn.disabled=!(allOk&&!_isSubmitting);
 }
 
