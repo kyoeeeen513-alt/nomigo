@@ -4699,6 +4699,9 @@ function pickChoiceCard(button,idx){
   var card=button&&button.closest?button.closest('.choice-card'):null;
   var grid=card&&card.parentNode;
   if(grid&&!isChoosePreview()&&grid.querySelector('.choice-picked'))return;
+  var nameEl=card&&card.querySelector?card.querySelector('.choice-name'):null;
+  var choiceName=nameEl?(nameEl.textContent.trim()+'さん'):'この方';
+  if(!confirm(choiceName+'を選びます。\nよろしいですか？'))return;
   if(grid){
     Array.prototype.forEach.call(grid.children,function(item){
       item.classList.toggle('choice-picked',item===card);
