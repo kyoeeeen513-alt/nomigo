@@ -110,14 +110,14 @@
     .hero-photo.is-leaving{opacity:0}
     .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,9,11,.58) 0%,rgba(18,9,11,.24) 22%,rgba(27,11,14,.86) 58%,var(--ink) 100%)}
     .hero-in{position:relative;z-index:2;width:min(1100px,92vw);margin:0 auto;min-height:calc(100svh - var(--header));display:flex;flex-direction:column;justify-content:flex-end;padding:118px 0 24px}
-    .hero h1{font-family:"Shippori Mincho",serif;font-weight:800;margin:0;font-size:clamp(30px,8.9vw,56px);line-height:1.24;text-shadow:0 4px 26px rgba(0,0,0,.8);white-space:nowrap;text-wrap:nowrap}
+    .hero h1{font-family:"Shippori Mincho",serif;font-weight:800;margin:0;font-size:clamp(31px,9.2vw,58px);line-height:1.16;letter-spacing:-.025em;text-shadow:0 4px 26px rgba(0,0,0,.8);white-space:nowrap;text-wrap:nowrap}
     .hero h1 span{
       background:linear-gradient(180deg,#fdf4e2 0%,#f6e1b4 26%,#e3bd79 58%,#c79a4e 82%,#a97b35 100%);
       -webkit-background-clip:text;background-clip:text;
       -webkit-text-fill-color:transparent;color:transparent;
       filter:drop-shadow(0 4px 22px rgba(0,0,0,.85));
     }
-    .hero-sub{margin:12px 0 0;font-size:clamp(15px,4.3vw,20px);font-weight:700;color:var(--paper);text-shadow:0 2px 14px rgba(0,0,0,.85)}
+    .hero-sub{margin:10px 0 0;font-size:clamp(16px,4.8vw,22px);font-weight:700;line-height:1.45;letter-spacing:-.01em;color:var(--paper);text-shadow:0 2px 14px rgba(0,0,0,.85)}
     .hero-area{display:flex;align-items:center;gap:6px;margin:9px 0 0;font-size:12.5px;color:#e8ddcf;text-shadow:0 2px 12px rgba(0,0,0,.85)}
     .hero-area .ico{font-size:15px}
     .hero-rule{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:13px 0 0;opacity:.75}
@@ -154,15 +154,21 @@
     /* 2026/9/14：ファーストビューの情報量を減らす整理（色・書体・写真・導線は変更なし） */
     .hero-sub{text-align:center}
     .hero-quick{
-      display:flex;align-items:center;justify-content:center;gap:8px;
-      margin:16px 0 0;font-size:clamp(13px,3.7vw,15px);font-weight:800;
-      color:var(--gold-text-pale);text-shadow:0 2px 12px rgba(0,0,0,.85);
+      display:flex;align-items:center;justify-content:center;gap:12px;
+      margin:14px 0 0;font-size:clamp(14px,4.1vw,17px);font-weight:800;
+      color:var(--paper);text-shadow:0 2px 12px rgba(0,0,0,.85);
     }
-    .hero-quick .ico{font-size:19px;flex:none}
-    .hero-quick b{font-size:1.2em}
-    .hero-quick::before,.hero-quick::after{content:"";width:16px;height:1px;background:linear-gradient(90deg,transparent,var(--gold));opacity:.7;flex:none}
-    .hero-quick::after{background:linear-gradient(90deg,var(--gold),transparent)}
-    .hero-age{margin:12px 0 0;text-align:center;font-size:11.5px;letter-spacing:.1em;color:var(--muted)}
+    .hero-quick .hq-in{display:inline-block;white-space:nowrap;letter-spacing:-.01em}
+    .hero-quick .ico{font-size:1.35em;vertical-align:-.22em;margin-right:7px;color:var(--gold-text-pale)}
+    .hero-quick b{font-size:1.2em;color:var(--paper)}
+    .hero-quick::before,.hero-quick::after{content:"";flex:none;width:1px;height:20px;background:var(--gold);opacity:.75}
+    .hero-quick::before{transform:rotate(-22deg)}
+    .hero-quick::after{transform:rotate(22deg)}
+    .hero-age{
+      display:flex;align-items:center;justify-content:center;gap:12px;
+      margin:14px 0 0;font-size:12px;letter-spacing:.12em;color:var(--muted);
+    }
+    .hero-age::before,.hero-age::after{content:"";flex:none;width:34px;height:1px;background:currentColor;opacity:.5}
     .hero-scroll{display:flex;justify-content:center;margin:18px 0 0;color:var(--gold-text-pale);opacity:.8}
     .hero-scroll svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 
@@ -176,9 +182,10 @@
     .hero-notes .hero-tagline{margin-top:18px}
     @media(min-width:980px){
       .hero h1{font-size:clamp(30px,4.3vw,50px)}
-      .hero-sub,.hero-quick,.hero-age{text-align:left;max-width:460px}
+      .hero-sub{text-align:left;max-width:520px}
       .hero-sub br{display:none}
-      .hero-quick{justify-content:flex-start}
+      .hero-quick,.hero-age{max-width:460px;justify-content:flex-start}
+      .hero-quick::before,.hero-age::before{display:none}
       .hero-scroll{display:none}
       .hero-notes .cta-note{text-align:left}
       .hero-notes .btn-ghost{margin-left:0}
@@ -434,7 +441,7 @@ fbq('track','PageView');
           <h1 id="hero-title">「今、飲みたい」が、<br><span>出会いになる。</span></h1>
           <p class="hero-sub">今日の飲み友達・ご飯友達を<br>今から探そう</p>
 
-          <p class="hero-quick"><svg class="ico" aria-hidden="true"><use href="#ic-clock"></use></svg>最短<b>1分</b>で募集完了</p>
+          <p class="hero-quick"><span class="hq-in"><svg class="ico" aria-hidden="true"><use href="#ic-clock"></use></svg>最短<b>1分</b>で募集完了</span></p>
 
           <div class="hero-actions">
             <a class="btn-primary" id="hero-cta" href="https://www.nomi-go.jp/?start=register">無料で登録する<span class="arw">›</span></a>
