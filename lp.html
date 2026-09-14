@@ -111,8 +111,13 @@
     .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,9,11,.58) 0%,rgba(18,9,11,.24) 22%,rgba(27,11,14,.86) 58%,var(--ink) 100%)}
     .hero-in{position:relative;z-index:2;width:min(1100px,92vw);margin:0 auto;min-height:calc(100svh - var(--header));display:flex;flex-direction:column;justify-content:flex-end;padding:118px 0 24px}
     .hero h1{font-family:"Shippori Mincho",serif;font-weight:800;margin:0;font-size:clamp(30px,8.9vw,56px);line-height:1.24;text-shadow:0 4px 26px rgba(0,0,0,.8);white-space:nowrap;text-wrap:nowrap}
-    .hero h1 span{color:var(--gold-text-pale)}
-    .hero-sub{margin:9px 0 0;font-size:clamp(14px,4vw,19px);font-weight:700;color:var(--gold-text-pale);text-shadow:0 2px 14px rgba(0,0,0,.85)}
+    .hero h1 span{
+      background:linear-gradient(180deg,#fdf4e2 0%,#f6e1b4 26%,#e3bd79 58%,#c79a4e 82%,#a97b35 100%);
+      -webkit-background-clip:text;background-clip:text;
+      -webkit-text-fill-color:transparent;color:transparent;
+      filter:drop-shadow(0 4px 22px rgba(0,0,0,.85));
+    }
+    .hero-sub{margin:12px 0 0;font-size:clamp(15px,4.3vw,20px);font-weight:700;color:var(--paper);text-shadow:0 2px 14px rgba(0,0,0,.85)}
     .hero-area{display:flex;align-items:center;gap:6px;margin:9px 0 0;font-size:12.5px;color:#e8ddcf;text-shadow:0 2px 12px rgba(0,0,0,.85)}
     .hero-area .ico{font-size:15px}
     .hero-rule{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:13px 0 0;opacity:.75}
