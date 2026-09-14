@@ -106,11 +106,10 @@
 
     /* ===== ファーストビュー ===== */
     .hero{position:relative;overflow:hidden;padding:0}
-    .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:var(--hero-x,68%) 30%;transform:scaleX(var(--hero-flip,1));transition:opacity .5s ease}
-    .hero-photo.is-leaving{opacity:0}
+    .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 32%}
     .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,9,11,.58) 0%,rgba(18,9,11,.24) 22%,rgba(27,11,14,.86) 58%,var(--ink) 100%)}
     .hero-in{position:relative;z-index:2;width:min(1100px,92vw);margin:0 auto;min-height:calc(100svh - var(--header));display:flex;flex-direction:column;justify-content:flex-end;padding:118px 0 24px}
-    .hero h1{font-family:"Shippori Mincho",serif;font-weight:800;margin:0;font-size:clamp(31px,9.2vw,58px);line-height:1.16;letter-spacing:-.025em;text-shadow:0 4px 26px rgba(0,0,0,.8);white-space:nowrap;text-wrap:nowrap}
+    .hero h1{font-family:"Shippori Mincho",serif;font-weight:800;margin:0;font-size:clamp(31px,9.2vw,58px);line-height:1.16;letter-spacing:-.025em;text-align:center;text-shadow:0 4px 26px rgba(0,0,0,.8);white-space:nowrap;text-wrap:nowrap}
     .hero h1 span{
       background:linear-gradient(180deg,#fdf4e2 0%,#f6e1b4 26%,#e3bd79 58%,#c79a4e 82%,#a97b35 100%);
       -webkit-background-clip:text;background-clip:text;
@@ -182,6 +181,7 @@
     .hero-notes .hero-tagline{margin-top:18px}
     @media(min-width:980px){
       .hero h1{font-size:clamp(30px,4.3vw,50px)}
+      .hero h1{text-align:left}
       .hero-sub{text-align:left;max-width:520px}
       .hero-sub br{display:none}
       .hero-quick,.hero-age{max-width:460px;justify-content:flex-start}
@@ -195,7 +195,7 @@
     .hero-visual{display:none}
     @media(min-width:980px){
       .hero-in{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding:64px 0}
-      .hero-photo{object-position:78% 28%}
+      .hero-photo{object-position:62% 30%}
       .hero::after{background:linear-gradient(100deg,rgba(18,9,11,.95) 0%,rgba(27,11,14,.86) 46%,rgba(18,9,11,.5) 78%,rgba(18,9,11,.72) 100%)}
       .hero-visual{display:block;justify-self:center;perspective:1200px;transform:translateX(clamp(18px,3vw,48px))}
       .phone{
@@ -1007,7 +1007,8 @@ fbq('track','PageView');
           },420);
         },4600);
       }
-      startHeroRotation();
+      /* 2026/9/14：ファーストビューの写真の自動切り替えは廃止。乾杯写真で固定する */
+      // startHeroRotation();
 
       // キャンペーンの残り時間。10/1 0:00（JST）を過ぎたら関連表示が自動で消える
       var PROMO_END=new Date('2026-10-01T00:00:00+09:00').getTime();
