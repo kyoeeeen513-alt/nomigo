@@ -254,6 +254,24 @@
     .merit p{margin:6px 0 0;font-size:12.5px;color:var(--muted);line-height:1.7}
     @media(min-width:760px){.merit-grid{grid-template-columns:repeat(3,1fr)}}
 
+    /* ===== 募集通知イメージ ===== */
+    .recruit-preview{margin-top:34px;padding-top:28px;border-top:1px solid var(--line-soft)}
+    .recruit-preview h3{margin:0 0 20px;text-align:center;font-family:"Shippori Mincho",serif;font-size:clamp(18px,5vw,24px);font-weight:700;color:var(--gold-text-pale);letter-spacing:.04em}
+    .recruit-marquee{width:100vw;margin-left:calc(50% - 50vw);overflow:hidden}
+    .recruit-track{display:flex;width:max-content;gap:14px;animation:recruitMarquee 22s linear infinite;will-change:transform}
+    .recruit-group{display:flex;flex:none;gap:14px}
+    .recruit-card{flex:none;width:82vw;max-width:360px;margin:0;overflow:hidden;border-radius:14px;border:1px solid var(--line);background:rgba(18,9,11,.55);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+    .recruit-card img{width:100%;height:auto;aspect-ratio:1374/1145;object-fit:contain}
+    @keyframes recruitMarquee{to{transform:translateX(calc(-50% - 7px))}}
+    @media(min-width:760px){
+      .recruit-preview{margin-top:40px;padding-top:34px}
+      .recruit-preview h3{margin-bottom:24px}
+      .recruit-track,.recruit-group{gap:18px}
+      .recruit-track{animation-duration:24s}
+      .recruit-card{width:320px}
+      @keyframes recruitMarquee{to{transform:translateX(calc(-50% - 9px))}}
+    }
+
     /* ===== こんな夜に ===== */
     .scenes{background:linear-gradient(180deg,rgba(27,11,14,.8),var(--ink))}
     .scene-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -570,6 +588,25 @@ fbq('track','PageView');
             <h3>本人確認完了後のみ募集</h3>
             <p>公的な身分証による年齢・登録内容の確認が完了した20歳以上の方のみ募集できます。</p>
           </article>
+        </div>
+        <div class="recruit-preview" aria-labelledby="recruit-preview-title">
+          <h3 id="recruit-preview-title">＼ こんな募集が来ます ／</h3>
+          <div class="recruit-marquee">
+            <div class="recruit-track">
+              <div class="recruit-group">
+                <figure class="recruit-card"><img src="/recruit-notification-1.webp" width="1374" height="1145" loading="lazy" decoding="async" alt="すすきので19時から飲める相手を探す募集通知イメージ"></figure>
+                <figure class="recruit-card"><img src="/recruit-notification-2.webp" width="1374" height="1145" loading="lazy" decoding="async" alt="すすきので今から飲める相手を探す募集通知イメージ"></figure>
+                <figure class="recruit-card"><img src="/recruit-notification-3.webp" width="1374" height="1145" loading="lazy" decoding="async" alt="新宿で今から2対2で飲める相手を探す募集通知イメージ"></figure>
+                <figure class="recruit-card"><img src="/recruit-notification-4.webp" width="1374" height="1145" loading="lazy" decoding="async" alt="新宿で20時から飲める相手を探す募集通知イメージ"></figure>
+              </div>
+              <div class="recruit-group" aria-hidden="true">
+                <figure class="recruit-card"><img src="/recruit-notification-1.webp" width="1374" height="1145" loading="lazy" decoding="async" alt=""></figure>
+                <figure class="recruit-card"><img src="/recruit-notification-2.webp" width="1374" height="1145" loading="lazy" decoding="async" alt=""></figure>
+                <figure class="recruit-card"><img src="/recruit-notification-3.webp" width="1374" height="1145" loading="lazy" decoding="async" alt=""></figure>
+                <figure class="recruit-card"><img src="/recruit-notification-4.webp" width="1374" height="1145" loading="lazy" decoding="async" alt=""></figure>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
