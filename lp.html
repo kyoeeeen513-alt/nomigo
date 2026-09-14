@@ -244,6 +244,7 @@
     .concept-quote span{display:block;color:var(--gold-text-pale)}
     .concept-photo{margin:20px 0 0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);position:relative}
     .concept-photo img{width:100%;height:clamp(170px,42vw,300px);object-fit:cover;object-position:50% 40%}
+    @media(min-width:760px){.concept-photo img{object-position:50% 20%}}
     .concept-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,9,11,.1),rgba(72,19,27,.35))}
     .concept-lead{margin:16px auto 0;max-width:640px;text-align:center;font-size:13px;color:var(--muted);line-height:1.85}
     .merit-grid{display:grid;gap:10px;margin-top:22px}
