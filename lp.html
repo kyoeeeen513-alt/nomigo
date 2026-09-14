@@ -105,8 +105,8 @@
     .cta-note{margin-top:11px;font-size:12px;line-height:1.7;color:var(--gold-text-pale);overflow-wrap:anywhere}
 
     /* ===== ファーストビュー ===== */
-    .hero{position:relative;overflow:hidden;padding:0;min-height:calc(100svh - var(--header))}
-    .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%}
+    .hero{position:relative;overflow:hidden;padding:0;min-height:calc(100svh - var(--header));background:var(--ink)}
+    .hero-photo{position:absolute;top:0;left:0;width:100%;height:auto;object-fit:contain;object-position:top center}
     .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,9,11,.58) 0%,rgba(18,9,11,.24) 22%,rgba(27,11,14,.86) 58%,var(--ink) 100%)}
     .hero-in{position:relative;z-index:2;width:min(1100px,92vw);margin:0 auto;height:calc(100svh - var(--header));min-height:560px;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(72px,15svh,118px) 0 clamp(16px,3svh,24px)}
     .hero h1{font-family:"Shippori Mincho",serif;font-weight:800;margin:0;font-size:clamp(31px,9.2vw,58px);line-height:1.16;letter-spacing:-.025em;text-align:center;text-shadow:0 4px 26px rgba(0,0,0,.8);white-space:nowrap;text-wrap:nowrap}
@@ -205,7 +205,7 @@
     .hero-visual{display:none}
     @media(min-width:980px){
       .hero-in{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding:64px 0}
-      .hero-photo{object-position:50% 42%}
+      .hero-photo{inset:0;height:100%;object-fit:cover;object-position:50% 38%}
       .hero::after{background:linear-gradient(100deg,rgba(18,9,11,.95) 0%,rgba(27,11,14,.86) 46%,rgba(18,9,11,.5) 78%,rgba(18,9,11,.72) 100%)}
       .hero-visual{display:block;justify-self:center;perspective:1200px;transform:translateX(clamp(18px,3vw,48px))}
       .phone{
@@ -370,9 +370,15 @@
     .news-new{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:900;color:#20120a;background:var(--gold-bright);border-radius:999px;padding:0 7px;vertical-align:middle}
 
     /* ===== 追従CTA ===== */
-    .mobile-sticky{position:fixed;left:0;right:0;bottom:0;z-index:70;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(18,9,11,.35),rgba(18,9,11,.97) 42%);backdrop-filter:blur(8px);border-top:1px solid var(--line-soft)}
+    .mobile-sticky{position:fixed;left:0;right:0;bottom:0;z-index:70;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(18,9,11,.35),rgba(18,9,11,.97) 42%);backdrop-filter:blur(8px);border-top:1px solid var(--line-soft);transition:opacity .2s ease,transform .2s ease}
+    body.hero-visible .mobile-sticky{opacity:0;transform:translateY(100%);pointer-events:none}
     .mobile-sticky .btn-primary{min-height:56px;font-size:17px;animation:none;max-width:520px;margin:0 auto}
     .mobile-sticky p{margin:6px 0 0;text-align:center;font-size:10px;color:var(--muted)}
+
+    @media(min-width:980px) and (max-width:1300px){
+      .hero-in{grid-template-columns:1.18fr .82fr;gap:24px}
+      .phone{width:290px}
+    }
 
     /* ===== フッター ===== */
     footer{padding:34px 0 26px;text-align:center;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--muted);line-height:1.9}
@@ -397,7 +403,7 @@ fbq('track','PageView');
 </script>
 <!-- End Meta Pixel Code -->
 </head>
-<body>
+<body class="hero-visible">
 <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1497344388781811&ev=PageView&noscript=1"></noscript>
 
 <!-- 線画アイコン定義（ゴールド系。CSSのcurrentではなくstrokeで色指定） -->
@@ -965,6 +971,16 @@ fbq('track','PageView');
           link.href=target.toString();
         }catch(e){}
       });
+
+      // ファーストビュー内では本体の登録ボタンを優先し、追従ボタンの重なりを防ぐ
+      (function(){
+        var hero=document.querySelector('.hero');
+        if(!hero)return;
+        if(!('IntersectionObserver' in window))return;
+        new IntersectionObserver(function(entries){
+          document.body.classList.toggle('hero-visible',entries[0].isIntersecting);
+        },{threshold:0.05}).observe(hero);
+      })();
 
       // 同じ写真を2か所以上で使う箇所は、base64を二重に埋め込まずJavaScriptで複製する。
       // （ファイルサイズを小さくして、スマホでの表示を速くするため）
