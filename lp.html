@@ -9,12 +9,12 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.nomi-go.jp/lp.html">
   <meta property="og:title" content="Nomi Go｜今日空いている飲み友達を、今から。">
-  <meta property="og:description" content="恋愛じゃなく、今夜の飲み友達。新宿・すすきので利用できます。">
+  <meta property="og:description" content="恋愛じゃなく、今、一緒に飲める人。新宿・すすきので利用できます。">
   <meta property="og:image" content="https://www.nomi-go.jp/ogp.jpeg?v=3">
   <meta property="og:image:type" content="image/jpeg">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Nomi Go｜今日空いている飲み友達を、今から。">
-  <meta name="twitter:description" content="恋愛じゃなく、今夜の飲み友達。新宿・すすきので利用できます。">
+  <meta name="twitter:description" content="恋愛じゃなく、今、一緒に飲める人。新宿・すすきので利用できます。">
   <meta name="twitter:image" content="https://www.nomi-go.jp/ogp.jpeg?v=3">
   <link rel="canonical" href="https://www.nomi-go.jp/lp.html">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -182,13 +182,15 @@
     }
 
     /* ファーストビュー直下：安心のための補足情報 */
-    .hero-notes{padding:30px 0 36px}
-    .hero-notes .hero-info{margin:0}
-    .hero-notes .promo-bar{margin-top:14px}
-    .hero-notes .hero-trust{margin-top:14px}
-    .hero-notes .cta-note{margin-top:14px;text-align:center}
-    .hero-notes .btn-ghost{margin-top:16px;max-width:420px;margin-left:auto;margin-right:auto}
-    .hero-notes .hero-tagline{margin-top:18px}
+    .hero-notes{padding:18px 0 22px}
+    .lawyer-box{max-width:620px;margin:0 auto;padding:12px 16px;border:1px solid var(--gold);border-radius:12px;background:linear-gradient(135deg,rgba(232,200,135,.1),rgba(107,29,41,.18));text-align:center;box-shadow:0 8px 26px rgba(0,0,0,.22)}
+    .lawyer-box .ico{font-size:21px;margin-right:7px;vertical-align:-4px}
+    .lawyer-box strong{font-family:"Shippori Mincho",serif;font-size:clamp(16px,4vw,21px);color:var(--gold-text-pale)}
+    .trust-notice{margin:10px 0 0;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7}
+    .hero-actions .lawyer-box{max-width:420px;margin:13px auto 0;padding:9px 12px}
+    .hero-actions .lawyer-box .ico{font-size:17px}
+    .hero-actions .lawyer-box strong{font-size:13px}
+    .hero-actions .trust-notice{max-width:420px;margin:7px auto 0;font-size:9px;color:#d5c7b5}
     @media(min-width:980px){
       .hero h1{font-size:clamp(30px,4.3vw,50px)}
       .hero h1{text-align:left}
@@ -242,18 +244,52 @@
     .concept{background:linear-gradient(180deg,var(--ink),rgba(27,11,14,.8))}
     .concept-quote{font-family:"Shippori Mincho",serif;font-weight:800;text-align:center;margin:0;font-size:clamp(21px,5.6vw,32px);line-height:1.55}
     .concept-quote span{display:block;color:var(--gold-text-pale)}
-    .concept-photo{margin:20px 0 0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);position:relative}
-    .concept-photo img{width:100%;height:clamp(170px,42vw,300px);object-fit:cover;object-position:50% 40%}
-    @media(min-width:760px){.concept-photo img{object-position:50% 20%}}
-    .concept-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,9,11,.1),rgba(72,19,27,.35))}
     .concept-lead{margin:16px auto 0;max-width:640px;text-align:center;font-size:13px;color:var(--muted);line-height:1.85}
-    .merit-grid{display:grid;gap:10px;margin-top:22px}
-    .merit{padding:18px 16px;border-radius:var(--radius);border:1px solid var(--line);background:var(--card)}
+    .merit-grid{display:grid;gap:18px;margin-top:28px}
+    .merit{padding:0;border-radius:18px;border:1px solid rgba(232,200,135,.52);background:linear-gradient(145deg,rgba(68,22,29,.94),rgba(18,9,11,.98));box-shadow:0 18px 48px rgba(0,0,0,.35)}
+    .merit-image{height:165px;position:relative;overflow:hidden}
+    .merit-image img{width:100%;height:100%;object-fit:cover}
+    .merit-image::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 38%,rgba(18,9,11,.92))}
+    .merit-body{padding:15px 16px 17px}
+    .merit-need{position:relative;margin:13px 0 16px;padding:12px 13px;border:1px solid rgba(232,200,135,.28);border-radius:14px;background:rgba(255,255,255,.045)}
+    .merit-need::after{content:"";position:absolute;left:50%;bottom:-8px;width:14px;height:14px;border-right:1px solid rgba(232,200,135,.28);border-bottom:1px solid rgba(232,200,135,.28);background:#321219;transform:translateX(-50%) rotate(45deg)}
+    .merit-need-label{margin:0 0 8px!important;text-align:center;color:var(--gold-text-pale)!important;font-family:"Shippori Mincho",serif;font-size:15px!important;font-weight:800}
+    .merit-situations{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0}
+    .merit-situations span{display:inline-flex;align-items:center;min-height:30px;padding:5px 9px;border-radius:999px;background:rgba(18,9,11,.7);font-size:11px;font-weight:700;color:#f4ede4;line-height:1.35}
+    .merit-situations span::before{content:"•";margin-right:5px;color:var(--gold-bright)}
+    .merit-arrow{margin:0 0 2px;text-align:center;color:var(--gold-bright);font-size:20px;line-height:1}
+    .merit-solution{margin:0 0 9px!important;text-align:center;color:var(--gold-text-bright)!important;font-family:"Shippori Mincho",serif;font-size:18px!important;font-weight:800;letter-spacing:.03em}
+    .merit-answer{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .merit-answer span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:7px 8px;border-radius:10px;background:linear-gradient(135deg,rgba(232,200,135,.16),rgba(107,29,41,.25));border:1px solid rgba(232,200,135,.18);text-align:center;font-size:11.5px;color:#eee3d7;line-height:1.4}
+    .merit-answer b{color:var(--gold-text-pale);font-size:13px}
     .merit .ico{font-size:26px}
-    .merit .m-no{font-size:10px;letter-spacing:.24em;color:var(--gold-text);margin:10px 0 4px}
+    .merit .m-no{font-size:10px;letter-spacing:.24em;color:var(--gold-text);margin:0 0 5px}
     .merit h3{margin:0;font-size:16px;font-weight:800;font-family:"Shippori Mincho",serif}
     .merit p{margin:6px 0 0;font-size:12.5px;color:var(--muted);line-height:1.7}
-    @media(min-width:760px){.merit-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:760px){.merit-grid{grid-template-columns:repeat(2,1fr)}}
+    .merit{position:relative;overflow:hidden}
+    .merit::after{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(var(--gold-bright),var(--wine))}
+    .merit h3{font-size:clamp(18px,3.8vw,24px)}
+    .merit p{font-size:13px}
+    .merit-points{display:grid;gap:7px;margin-top:13px}
+    .merit-points span{display:block;padding:8px 10px;border-radius:9px;background:rgba(232,200,135,.07);font-size:11.5px;color:var(--paper)}
+    .merit-points b{color:var(--gold-text-pale)}
+
+    /* ===== Nomi Goの比較 ===== */
+    .comparison{background:radial-gradient(circle at 50% 0,rgba(195,139,55,.2),transparent 35%),#050505;color:#fff}
+    .comparison .sec-head h2{color:var(--gold-text-bright);font-size:clamp(28px,6.6vw,42px)}
+    .comparison .sec-head p{color:#e9ddcb}
+    .comparison-table{overflow:hidden;border:2px solid var(--gold);border-radius:16px;background:#080808;box-shadow:0 0 0 1px rgba(255,225,164,.16),0 22px 60px rgba(0,0,0,.5)}
+    .comparison-row{display:grid;grid-template-columns:.8fr 1.05fr 1.15fr}
+    .comparison-row>div{padding:15px 10px;border-bottom:1px solid rgba(232,200,135,.38);font-size:11.5px;line-height:1.55}
+    .comparison-row:last-child>div{border-bottom:0}
+    .comparison-row>div+div{border-left:1px solid rgba(232,200,135,.38)}
+    .comparison-row.head{background:linear-gradient(90deg,#171717,#2b2116);font-weight:800;color:var(--gold-text-bright)}
+    .comparison-row .nomigo{background:linear-gradient(135deg,rgba(117,75,18,.72),rgba(63,36,10,.9));font-weight:900;color:#fff3d3}
+    .comparison-row.head .nomigo{background:linear-gradient(135deg,#f0c96f,#a66b1f);color:#1b1005;font-size:14px}
+    .comparison-note{display:grid;gap:4px;margin:14px 0 0;font-size:12px;line-height:1.65;color:#e5d8c7}
+    .comparison-note span{display:block}
+    @media(min-width:760px){.comparison-row>div{padding:17px 18px;font-size:13px}}
 
     /* ===== 募集通知イメージ ===== */
     .recruit-preview{margin-top:34px;padding-top:28px;border-top:1px solid var(--line-soft)}
@@ -273,7 +309,7 @@
       @keyframes recruitMarquee{to{transform:translateX(calc(-50% - 9px))}}
     }
 
-    /* ===== こんな夜に ===== */
+    /* ===== こんな時に ===== */
     .scenes{background:linear-gradient(180deg,rgba(27,11,14,.8),var(--ink))}
     .scene-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .scene{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column}
@@ -480,6 +516,11 @@ fbq('track','PageView');
 
           <div class="hero-actions">
             <a class="btn-primary" id="hero-cta" href="https://www.nomi-go.jp/?start=register">無料で登録する<span class="arw">›</span></a>
+            <div class="lawyer-box">
+              <svg class="ico" aria-hidden="true"><use href="#ic-scale"></use></svg>
+              <strong>顧問弁護士事務所と契約済み</strong>
+            </div>
+            <p class="trust-notice">※本人確認必須 ／ 全会員年齢確認・本人確認済み ／ 営業・勧誘禁止</p>
             <p class="hero-age">20歳以上限定</p>
           </div>
 
@@ -529,65 +570,34 @@ fbq('track','PageView');
       })();
     </script>
 
-    <!-- ===== ファーストビュー直下：安心のための補足情報（2026/9/14にFVから移動） ===== -->
-    <section class="hero-notes" aria-labelledby="hero-notes-title">
-      <div class="wrap">
-        <h2 id="hero-notes-title" class="sr-only">はじめての方へ：料金と安心のしくみ</h2>
-
-        <ul class="hero-info">
-          <li><svg class="ico" aria-hidden="true"><use href="#ic-id"></use></svg>20歳以上・本人確認必須</li>
-          <li><svg class="ico" aria-hidden="true"><use href="#ic-yen"></use></svg>女性はいつでも<b>0円</b></li>
-          <li><svg class="ico" aria-hidden="true"><use href="#ic-gift"></use></svg>男性は9月限定 初回マッチ<b>0円</b></li>
-        </ul>
-
-        <div class="promo-bar" id="hero-promo">
-          <svg class="ico" aria-hidden="true"><use href="#ic-gift"></use></svg>
-          <span class="pb-tag">9月限定</span>
-          <span>男性も初回マッチ <s>通常3,980円</s>0円</span>
-        </div>
-
-        <div class="hero-trust">
-          <div class="trust-chip"><svg class="ico" aria-hidden="true"><use href="#ic-scale"></use></svg>顧問弁護士<br>事務所と契約</div>
-          <div class="trust-chip"><svg class="ico" aria-hidden="true"><use href="#ic-ban"></use></svg>営業・勧誘<br>禁止</div>
-          <div class="trust-chip"><svg class="ico" aria-hidden="true"><use href="#ic-photo"></use></svg>成立前は<br>写真ぼかし</div>
-          <div class="trust-chip"><svg class="ico" aria-hidden="true"><use href="#ic-users"></use></svg>1対1・2対2<br>対応</div>
-        </div>
-
-        <p class="cta-micro cta-note">ご登録無料・月額料金なし<br>女性0円｜男性も9月中の新規登録で初回マッチ0円</p>
-
-        <a class="btn-ghost" href="#howto">使い方を見る<span class="arw">›</span></a>
-
-        <p class="hero-tagline">今夜、いい人と飲みに行こう。</p>
-      </div>
-    </section>
-
     <!-- ===== Nomi Goとは ===== -->
     <section class="concept" aria-labelledby="concept-title">
       <div class="wrap">
-        <p class="eyebrow" style="text-align:center">Tonight, not someday.</p>
+        <p class="eyebrow" style="text-align:center">Anytime, not someday.</p>
         <h2 class="concept-quote" id="concept-title">「いつか会える人」ではなく、<span>「今日、飲める人」を。</span></h2>
-        <div class="concept-photo">
-          <img data-copy-from=".scene-grid .scene:nth-child(6) .scene-img img" width="1536" height="1024" alt="夜の街で待ち合わせをする大人">
-        </div>
-        <p class="concept-lead">長いやりとりや恋愛前提ではなく、今夜の予定と飲み方が合う人を探す。Nomi Goは、その一杯のためのサービスです。</p>
+        <p class="concept-lead">長いやりとりや恋愛前提ではなく、「今、飲みたい」という気持ちが合う人を探す。Nomi Goなら、人数とタイミングをその時の予定に合わせて選べます。</p>
         <div class="merit-grid">
           <article class="merit">
-            <svg class="ico" aria-hidden="true"><use href="#ic-clock"></use></svg>
-            <p class="m-no">01 / TODAY</p>
-            <h3>募集は、今日の予定だけ</h3>
-            <p>「今すぐ」「19:00〜」など、今夜の時間に合わせて募集できます。</p>
+            <div class="merit-image"><img src="lp-anytime.webp" width="1536" height="1024" alt="急に予定が空きスマートフォンで相手を探す女性"></div>
+            <div class="merit-body">
+              <p class="m-no">01 / TODAY</p>
+              <h3>募集は24時間、いつでも。</h3>
+              <div class="merit-need"><p class="merit-need-label">こんな悩み、ありませんか？</p><div class="merit-situations"><span>急に予定が空いた</span><span>今すぐ誘える人がいない</span><span>連絡・予定調整が面倒</span></div></div>
+              <div class="merit-arrow" aria-hidden="true">↓</div>
+              <p class="merit-solution">そんな時は、Nomi Go。</p>
+              <div class="merit-answer"><span><b>24時間<br>「今すぐ」募集</b></span><span><b>19〜22時<br>時間指定も可能</b></span></div>
+            </div>
           </article>
           <article class="merit">
-            <svg class="ico" aria-hidden="true"><use href="#ic-users"></use></svg>
-            <p class="m-no">02 / STYLE</p>
-            <h3>1対1・2対2など飲み方を選べる</h3>
-            <p>軽く一杯、食事中心など、その日の気分に合わせて選べます。</p>
-          </article>
-          <article class="merit">
-            <svg class="ico" aria-hidden="true"><use href="#ic-id"></use></svg>
-            <p class="m-no">03 / VERIFY</p>
-            <h3>本人確認完了後のみ募集</h3>
-            <p>公的な身分証による年齢・登録内容の確認が完了した20歳以上の方のみ募集できます。</p>
+            <div class="merit-image"><img src="lp-style.webp" width="1536" height="1024" alt="1対1と2対2で楽しく飲む利用イメージ"></div>
+            <div class="merit-body">
+              <p class="m-no">02 / STYLE</p>
+              <h3>1対1も、友達と2対2も。</h3>
+              <div class="merit-need"><p class="merit-need-label">こんな悩み、ありませんか？</p><div class="merit-situations"><span>ひとり飲みは寂しい</span><span>2人組の相手がいない</span><span>相席・知人探しが面倒</span></div></div>
+              <div class="merit-arrow" aria-hidden="true">↓</div>
+              <p class="merit-solution">そんな時は、Nomi Go。</p>
+              <div class="merit-answer"><span><b>ひとりなら<br>1対1</b></span><span><b>友達となら<br>2対2</b></span></div>
+            </div>
           </article>
         </div>
         <div class="recruit-preview" aria-labelledby="recruit-preview-title">
@@ -612,12 +622,31 @@ fbq('track','PageView');
       </div>
     </section>
 
-    <!-- ===== こんな夜に ===== -->
+    <!-- ===== 比較 ===== -->
+    <section class="comparison" aria-labelledby="comparison-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="eyebrow">Simple comparison</p>
+          <h2 id="comparison-title">「今、誰かと飲みたい」に合わせた仕組み。</h2>
+          <p>ほかの方法を否定せず、Nomi Goならではの違いを比べました。</p>
+          <div class="divider"></div>
+        </div>
+        <div class="comparison-table" role="table" aria-label="一般的な飲みマッチングアプリとNomi Goの比較">
+          <div class="comparison-row head" role="row"><div role="columnheader">比較項目</div><div role="columnheader">一般的な飲み<br>マッチングアプリ</div><div role="columnheader" class="nomigo">Nomi Go</div></div>
+          <div class="comparison-row" role="row"><div role="rowheader">利用タイミング</div><div role="cell">日時指定が一般的</div><div role="cell" class="nomigo">24時間利用可能<br>今すぐ／時間指定</div></div>
+          <div class="comparison-row" role="row"><div role="rowheader">対応エリア</div><div role="cell">一部エリアのみ</div><div role="cell" class="nomigo">全国展開予定</div></div>
+          <div class="comparison-row" role="row"><div role="rowheader">成立前の<br>写真表示</div><div role="cell">公開が一般的</div><div role="cell" class="nomigo">マッチ成立まで<br>非公開</div></div>
+        </div>
+        <p class="comparison-note"><span>※2026年9月15日時点 当社調べ</span><span>※各サービス公式サイト等の公開情報をもとに比較</span></p>
+      </div>
+    </section>
+
+    <!-- ===== こんな時に ===== -->
     <section class="scenes" aria-labelledby="scenes-title">
       <div class="wrap">
         <div class="sec-head">
           <p class="eyebrow">For this moment</p>
-          <h2 id="scenes-title">こんな夜に、<em>Nomi Go</em>。</h2>
+          <h2 id="scenes-title">こんな時に、<em>Nomi Go</em>。</h2>
           <div class="divider"></div>
         </div>
         <div class="scene-grid">
@@ -686,7 +715,7 @@ fbq('track','PageView');
       <div class="wrap">
         <div class="sec-head">
           <p class="eyebrow">Simple 3 steps</p>
-          <h2 id="howto-title">今夜の一杯まで、3ステップ。</h2>
+          <h2 id="howto-title">一緒に飲むまで、3ステップ。</h2>
           <div class="divider"></div>
         </div>
         <div class="steps">
@@ -699,7 +728,7 @@ fbq('track','PageView');
           <div class="step-arrow" aria-hidden="true">›</div>
           <article class="step">
             <p class="step-no">STEP 2</p>
-            <h3>今夜の予定を募集</h3>
+            <h3>飲みたい時間で募集</h3>
             <svg class="ico" aria-hidden="true"><use href="#ic-pin"></use></svg>
             <p>新宿・すすきので、1対1・2対2を選べる</p>
           </article>
@@ -778,7 +807,7 @@ fbq('track','PageView');
       <div class="wrap">
         <div class="sec-head">
           <p class="eyebrow">Available areas</p>
-          <h2 id="area-title">今夜、探せるのは2エリア。</h2>
+          <h2 id="area-title">今、探せるのは2エリア。</h2>
           <p>現在利用できる2エリアと、今後展開予定のエリアです。</p>
         </div>
         <div class="area-grid">
@@ -806,7 +835,7 @@ fbq('track','PageView');
           </article>
           <article class="faq-item">
             <button class="faq-q" type="button" aria-expanded="false"><span class="qa-badge">Q</span><span>いつから利用できますか？</span></button>
-            <div class="faq-a"><div><div class="faq-a-in"><span class="qa-badge a">A</span><p>登録・本人確認の完了後、今夜の募集を作成できます。</p></div></div></div>
+            <div class="faq-a"><div><div class="faq-a-in"><span class="qa-badge a">A</span><p>登録・本人確認の完了後、24時間いつでも募集を作成できます。</p></div></div></div>
           </article>
           <article class="faq-item">
             <button class="faq-q" type="button" aria-expanded="false"><span class="qa-badge">Q</span><span>お酒を飲まなくても使えますか？</span></button>
@@ -830,7 +859,7 @@ fbq('track','PageView');
       <div class="final-in">
         <p class="eyebrow">Nomi Go</p>
         <h2 id="final-title">帰るには、<br>まだ少し早い。</h2>
-        <p class="final-sub">恋愛じゃなく、今夜の飲み友達を。</p>
+        <p class="final-sub">恋愛じゃなく、今、一緒に飲める人を。</p>
         <a class="btn-primary" href="https://www.nomi-go.jp/?start=register">無料で登録する<span class="arw">›</span></a>
         <p class="cta-micro">20歳以上限定・本人確認必須</p>
       </div>
@@ -856,7 +885,7 @@ fbq('track','PageView');
           <div class="news-date">2026.09.01</div>
           <div class="news-body">
             <h4>新宿・すすきのでサービスを開始しました<span class="news-new">NEW</span></h4>
-            <p>2026年9月1日より、新宿・すすきのでご利用いただけます。ご登録と本人確認の完了後、今夜の募集を作成できます。</p>
+            <p>2026年9月1日より、新宿・すすきのでご利用いただけます。ご登録と本人確認の完了後、24時間いつでも募集を作成できます。</p>
           </div>
         </div>
         <div class="news-item" id="news-promo">
